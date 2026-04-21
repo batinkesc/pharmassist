@@ -1,0 +1,280 @@
+{
+  "test_date": "2026-04-11T15:58:50.792669",
+  "test_type": "user_queries",
+  "evaluator": "haiku",
+  "queries": [
+    {
+      "query_id": "user_q1",
+      "question": "COZAAR böbrek yetmezliğinde nasıl kullanılmalı?",
+      "patient": {
+        "age": 68,
+        "gender": "erkek",
+        "gfr": 32,
+        "pregnancy": false,
+        "current_drugs": [],
+        "indications": [
+          "Hipertansiyon"
+        ],
+        "allergies": []
+      },
+      "target_drugs": [
+        "COZAAR"
+      ],
+      "answer": "**Dikkatle kullanılır, doz ayarı gerekebilir — ancak Evre 3b böbrek yetmezliğinde (GFR 30-44) KÜB belgelerinde spesifik pozoloji bulunmamaktadır.**\n\nİncelenen COZAAR KÜB belgelerinde böbrek yetmezliği bölümü yer almakla birlikte, sağlanan metin kısmi olup, Evre 3b düzeyindeki GFR değerleri (30-44 mL/dak/1,73m²) için detaylı pozoloji talimatları sunmamaktadır. [COZAAR 50 mg | Madde 4.2 | Böbrek Yetmezliği bölümü]\n\nKÜB belgesinin Kontrendikasyonlar bölümünde, losartanın aliskiren içeren ilaçlarla birlikte kullanımı GFR<60 mL/dak/1,73m² olan hastalarda kontrendike olduğu belirtilmektedir [COZAAR 50 mg | Madde 4.3 | Sayfa 3]. Bununla birlikte bu kontrendikasyon aliskiren kombinasyonuna özgüdür ve COZAAR'ın tek başına kullanımına ilişkin değildir.\n\nElektrolit dengesizlikleri riski dikkate alınmalıdır: KÜB belgelerine göre, elektrolit dengesizlikleri böbrek fonksiyonu bozulmuş hastalarda yaygındır [COZAAR 50 mg | Madde 4.4 | Sayfa 3].\n\nBu hastanın Evre 3b böbrek yetmezliği durumunda COZAAR kullanımı hakkında kesin pozoloji önerileri almak için, tam KÜB belgesinin (özellikle sağlanan metinde [... devamı mevcut] ifadesinin ardında yer alan bölümün) gözden geçirilmesi ve klinik karar verici hekim tarafından değerlendirilmesi gerekir. Böbrek fonksiyonu takibi ve potasyum seviyeleri yakın izlem altında tutulmalıdır.",
+      "sources": [
+        {
+          "ilac_adi": "COZAAR 50 mg film kaplı tablet",
+          "madde_no": "4.2",
+          "madde_baslik": "Pozoloji ve Uygulama Şekli — Böbrek Yetmezliği",
+          "icerik": "[Pozoloji ve Uygulama Şekli — Böbrek Yetmezliği]\n\n4.2. Pozoloji ve uygulama şekli \nPozoloji: \nHipertansiyon \nCOZAAR'ın başlangıç dozu genellikle günde bir defa 50 mg'dır. Maksimum antihipertansif \netk",
+          "sayfa": 1,
+          "score": 0.8895
+        },
+        {
+          "ilac_adi": "COZAAR 50 mg film kaplı tablet",
+          "madde_no": "4.2",
+          "madde_baslik": "Pozoloji ve Uygulama Şekli — Karaciğer Yetmezliği",
+          "icerik": "[Pozoloji ve Uygulama Şekli — Karaciğer Yetmezliği]\n\n4.2. Pozoloji ve uygulama şekli \nPozoloji: \nHipertansiyon \nCOZAAR'ın başlangıç dozu genellikle günde bir defa 50 mg'dır. Maksimum antihipertansif \n",
+          "sayfa": 1,
+          "score": 0.8796
+        },
+        {
+          "ilac_adi": "COZAAR 50 mg film kaplı tablet",
+          "madde_no": "4.6",
+          "madde_baslik": "Gebelik ve Laktasyon",
+          "icerik": "4.6. Gebelik ve laktasyon \n \nGenel tavsiye \nGebelik kategorisi D’dir \n \n \nÇocuk doğurma potansiyeli bulunan kadınlar/Doğum kontrolü (Kontrasepsiyon) \nPlanlı bir hamilelikten önce, uygun bir alternatif",
+          "sayfa": 6,
+          "score": 0.8616
+        },
+        {
+          "ilac_adi": "COZAAR 50 mg film kaplı tablet",
+          "madde_no": "4.4",
+          "madde_baslik": "Özel Kullanım Uyarıları ve Önlemleri",
+          "icerik": "4.4. Özel kullanım uyarıları ve önlemleri \nAşırı duyarlılık: \nAnjiyoödem. Anjiyoödem (yüz, dudaklar, boğaz ve/veya dilde şişme) öyküsü olan hastalar \nyakından takip edilmelidir (bkz. bölüm 4.8). \n \nBa",
+          "sayfa": 3,
+          "score": 0.8663
+        },
+        {
+          "ilac_adi": "COZAAR 50 mg film kaplı tablet",
+          "madde_no": "4.3",
+          "madde_baslik": "Kontrendikasyonlar",
+          "icerik": "4.3. Kontrendikasyonlar \nCOZAAR, \n• Etkin madde losartan veya içeriğindeki bölüm 4.4. ve 6.1’de listelenen yardımcı \nmaddelerden herhangi birine aşırı duyarlılığı olanlarda, \n• Gebelikte, \n• Şiddetli ",
+          "sayfa": 2,
+          "score": 0.8882
+        },
+        {
+          "ilac_adi": "COZAAR 50 mg film kaplı tablet",
+          "madde_no": "4.2",
+          "madde_baslik": "Pozoloji ve Uygulama Şekli — Geriyatrik Popülasyon",
+          "icerik": "[Pozoloji ve Uygulama Şekli — Geriyatrik Popülasyon]\n\n4.2. Pozoloji ve uygulama şekli \nPozoloji: \nHipertansiyon \nCOZAAR'ın başlangıç dozu genellikle günde bir defa 50 mg'dır. Maksimum antihipertansif ",
+          "sayfa": 1,
+          "score": 0.8698
+        },
+        {
+          "ilac_adi": "COZAAR 50 mg film kaplı tablet",
+          "madde_no": "4.2",
+          "madde_baslik": "Pozoloji ve Uygulama Şekli — Pediyatrik Popülasyon",
+          "icerik": "[Pozoloji ve Uygulama Şekli — Pediyatrik Popülasyon]\n\n4.2. Pozoloji ve uygulama şekli \nPozoloji: \nHipertansiyon \nCOZAAR'ın başlangıç dozu genellikle günde bir defa 50 mg'dır. Maksimum antihipertansif ",
+          "sayfa": 1,
+          "score": 0.8648
+        }
+      ],
+      "n_sources": 7,
+      "tokens": {
+        "input": 5619,
+        "output": 598
+      }
+    },
+    {
+      "query_id": "user_q2",
+      "question": "ELİQUİS ile ASPİRİN birlikte kullanılabilir mi?",
+      "patient": {
+        "age": 72,
+        "gender": "erkek",
+        "gfr": null,
+        "pregnancy": false,
+        "current_drugs": [
+          "ASPİRİN 100 mg"
+        ],
+        "indications": [
+          "Atriyal fibrilasyon"
+        ],
+        "allergies": []
+      },
+      "target_drugs": [
+        "ELİQUİS",
+        "ASPİRİN"
+      ],
+      "answer": "**KESİN KARAR:** ASPİRİN ile ELİQUİS birlikte kullanımı dikkatle yapılmalıdır — kontrendikasyon yoktur ancak kanama riski belirgin şekilde artar.\n\nELİQUİS KÜB belgelerine göre, antitrombosit ajanlarla eş zamanlı kullanımı kanama riskini arttırmaktadır [ELİQUİS® 2,5 mg | Madde 4.4 | Sayfa 9]. Aspirin antitrombosit ajan olduğundan, bu kombinasyon kanama riskini yükseltir.\n\nASPİRİN KÜB belgesinde, heparin tedavisi gören hastalar için kullanım kontrendike edilmekle birlikte, direkt oral antikoagülanlarla (DOAC) etkileşim spesifik olarak kontrendikasyon başlığında yer almamaktadır [ASPİRİN® 100 mg | Madde 4.3]. Bununla birlikte, ASPİRİN Madde 4.5'te düşük doz aspirinin hemostaza etkisinden söz edilmektedir [ASPİRİN® 100 mg | Madde 4.5].\n\nBu hastada (72 yaş, atriyal fibrilasyon, böbrek fonksiyonu bilinmiyor):\n\n1. **Kanama riski dikkat gerektirir:** ELİQUİS kullanan hastalar kanama belirtileri açısından dikkatle izlenmelidir ve aktif kanama riski barındıran durumlarda ELİQUİS dikkatle kullanılmalıdır [ELİQUİS® 2,5 mg | Madde 4.4 | Sayfa 9].\n\n2. **Hasta izlenmesi zorunludur:** Gastrointestinal kanama dahil kanama belirtileri ve komplikasyonları için klinik takip yapılmalıdır.\n\n3. **Böbrek fonksiyonunun bilinmesi önemlidir:** ELİQUİS'in böbrek klirensinde rol oynayan metabolizması nedeniyle böbrek fonksiyonu değerlendirilmesi gerekliliği KÜB belgelerinde geçmektedir. ASPİRİN için de böbrek yetmezliği durumunda kontrendikasyon mevcuttur [ASPİRİN® 100 mg | Madde 4.3].\n\nKesin klinik karar sağlık profesyoneline aittir ve birlikte kullanılacaksa hasta yakından izlenmelidir.",
+      "sources": [
+        {
+          "ilac_adi": "ELİQUİS® 2,5 mg film kaplı tablet",
+          "madde_no": "4.5",
+          "madde_baslik": "Diğer Tıbbi Ürünlerle Etkileşimler",
+          "icerik": "4.5. Diğer tıbbi ürünlerle etkileşimler ve diğer etkileşim şekilleri \n \nCYP3A4 ve P-gp inhibitörleri \nHem CYP3A4 hem de P-gp’nin güçlü bir inhibitörü olan ketokonazol (günde bir kez 400 mg) ile \nELİQU",
+          "sayfa": 8,
+          "score": 0.861
+        },
+        {
+          "ilac_adi": "ELİQUİS® 2,5 mg film kaplı tablet",
+          "madde_no": "4.4",
+          "madde_baslik": "Özel Kullanım Uyarıları ve Önlemleri",
+          "icerik": "4.4.Özel kullanım uyarıları ve önlemleri \n \nKanama riski \nDiğer antikoagülanlar ile olduğu gibi, ELİQUİS kullanan hastalar da kanama belirtileri açısından \ndikkatle izlenmelidir. Aktif kanama riski ba",
+          "sayfa": 5,
+          "score": 0.8655
+        },
+        {
+          "ilac_adi": "ELİQUİS® 5 mg film kaplı tablet",
+          "madde_no": "4.5",
+          "madde_baslik": "Diğer Tıbbi Ürünlerle Etkileşimler",
+          "icerik": "4.5. Diğer tıbbi ürünlerle etkileşimler ve diğer etkileşim şekilleri \n \nCYP3A4 ve P-gp inhibitörleri \nHem CYP3A4 hem de P-gp’nin güçlü bir inhibitörü olan ketokonazol (günde bir kez 400 mg) ile \nELİQU",
+          "sayfa": 8,
+          "score": 0.8588
+        },
+        {
+          "ilac_adi": "ELİQUİS® 5 mg film kaplı tablet",
+          "madde_no": "4.4",
+          "madde_baslik": "Özel Kullanım Uyarıları ve Önlemleri",
+          "icerik": "4.4. Özel kullanım uyarıları ve önlemleri \n \nKanama riski \nDiğer antikoagülanlar ile olduğu gibi, ELİQUİS kullanan hastalar da kanama belirtileri açısından \ndikkatle izlenmelidir. Aktif kanama riski b",
+          "sayfa": 5,
+          "score": 0.864
+        },
+        {
+          "ilac_adi": "ASPİRİN® 100 mg tablet",
+          "madde_no": "4.3",
+          "madde_baslik": "Kontrendikasyonlar",
+          "icerik": "4.3. \nKontrendikasyonlar \nASPİRİN, aşağıda belirtilen durumlarda kullanılmamalıdır: \n- Asetilsalisilik aside, diğer salisilatlara veya ilacın herhangi bir bileşenine karşı aşırı duyarlılık, \n- Salisil",
+          "sayfa": 3,
+          "score": 0.8581
+        },
+        {
+          "ilac_adi": "ELİQUİS® 2,5 mg film kaplı tablet",
+          "madde_no": "4.6",
+          "madde_baslik": "Gebelik ve Laktasyon",
+          "icerik": "4.6.Gebelik ve laktasyon \n \nGenel tavsiye \nGebelik kategorisi: B \n \n\n \n \n \n \n11/28 \n \n \nÇocuk doğurma potansiyeli bulunan kadınlar/Doğum kontrolü (Kontrasepsiyon) \nÇocuk doğurma potansiyeli bulunan ka",
+          "sayfa": 10,
+          "score": 0.8645
+        },
+        {
+          "ilac_adi": "ELİQUİS® 5 mg film kaplı tablet",
+          "madde_no": "4.6",
+          "madde_baslik": "Gebelik ve Laktasyon",
+          "icerik": "4.6. Gebelik ve laktasyon \n \nGenel tavsiye \nGebelik kategorisi: B \n \nÇocuk doğurma potansiyeli bulunan kadınlar/Doğum kontrolü (Kontrasepsiyon) \nÇocuk doğurma potansiyeli bulunan kadınların, apiksaban",
+          "sayfa": 10,
+          "score": 0.8656
+        },
+        {
+          "ilac_adi": "ELİQUİS® 2,5 mg film kaplı tablet",
+          "madde_no": "4.9",
+          "madde_baslik": "Doz Aşımı",
+          "icerik": "4.9. Doz aşımı ve tedavisi \n \nELİQUİS doz aşımı daha yüksek kanama riskine neden olabilir. Hemorajik komplikasyonlar \ngörüldüğünde tedavi kesilmeli ve kanamanın kaynağı incelenmelidir. Cerrahi hemosta",
+          "sayfa": 14,
+          "score": 0.861
+        },
+        {
+          "ilac_adi": "ELİQUİS® 5 mg film kaplı tablet",
+          "madde_no": "4.9",
+          "madde_baslik": "Doz Aşımı",
+          "icerik": "4.9. Doz aşımı ve tedavisi \n \nELİQUİS doz aşımı daha yüksek kanama riskine neden olabilir. Hemorajik komplikasyonlar \ngörüldüğünde tedavi kesilmeli ve kanamanın kaynağı incelenmelidir. Cerrahi hemosta",
+          "sayfa": 14,
+          "score": 0.861
+        },
+        {
+          "ilac_adi": "ASPİRİN® 100 mg tablet",
+          "madde_no": "4.5",
+          "madde_baslik": "Diğer Tıbbi Ürünlerle Etkileşimler",
+          "icerik": "4.5. \nDiğer tıbbi ürünler ile etkileşimler ve diğer etkileşim şekilleri \nKontrendike etkileşimler: \n15mg/hafta ya da daha yüksek dozda metotreksat kullanımı: \nMetotreksatın hematolojik toksisitesinde ",
+          "sayfa": 4,
+          "score": 0.8543
+        },
+        {
+          "ilac_adi": "ELİQUİS® 5 mg film kaplı tablet",
+          "madde_no": "4.8",
+          "madde_baslik": "İstenmeyen Etkiler",
+          "icerik": "4.8. İstenmeyen etkiler \n \nGüvenlilik profilinin özeti \nELİQUİS’in güvenliliği, 15.000’den fazla hastayı içeren 4 Faz III çalışmasında araştırılmıştır: NVAF \nçalışmalarında 11.000’den fazla hasta ve V",
+          "sayfa": 11,
+          "score": 0.8587
+        },
+        {
+          "ilac_adi": "ELİQUİS® 2,5 mg film kaplı tablet",
+          "madde_no": "4.8",
+          "madde_baslik": "İstenmeyen Etkiler",
+          "icerik": "4.8.İstenmeyen etkiler \n \nGüvenlilik profilinin özeti \nELİQUİS’in güvenliliği, 21.000’den fazla hastayı içeren 7 Faz III çalışmasında araştırılmıştır: VTE \nönlenmesi çalışmalarında 5.000’den fazla has",
+          "sayfa": 11,
+          "score": 0.864
+        }
+      ],
+      "n_sources": 12,
+      "tokens": {
+        "input": 9298,
+        "output": 698
+      }
+    },
+    {
+      "query_id": "user_q3",
+      "question": "LUSTRAL gebelikte kullanılabilir mi?",
+      "patient": {
+        "age": 31,
+        "gender": "kadın",
+        "gfr": null,
+        "pregnancy": true,
+        "current_drugs": [],
+        "indications": [
+          "Depresyon"
+        ],
+        "allergies": []
+      },
+      "target_drugs": [
+        "LUSTRAL"
+      ],
+      "answer": "LUSTRAL gebelikte kullanılması önerilmez. Bununla birlikte, bu bir mutlak kontrendikasyon değildir.\n\nKÜB belgesine göre, LUSTRAL (sertralin) Gebelik Kategorisi C olarak sınıflandırılmıştır. [LUSTRAL® 50 mg | Madde 4.6 | Gebelik ve Laktasyon] Gebelerde yapılmış kontrollü çalışma yoktur, ancak mevcut veriler sertralinin konjenital malformasyonları indüklediğine dair kanıt göstermemiştir. [LUSTRAL® 50 mg | Madde 4.6 | Gebelik ve Laktasyon]\n\nÖnemli uyarı: Hamilelik sırasında sertralinin kullanımı bazı yenidoğanlardaki geri çekilme reaksiyonları ile uyumlu semptomlara neden olduğu bildirilmiştir. Bu durum diğer SSRI antidepresanlar ile de gözlenmiştir. [LUSTRAL® 50 mg | Madde 4.6 | Gebelik ve Laktasyon] Ayrıca SSRI maruziyetini takiben doğumdan önceki ay içinde postpartum hemoraji riski artabilir. [LUSTRAL® 50 mg | Madde 4.6 | Gebelik ve Laktasyon]\n\nKÜB belgesinde belirtildiği üzere, \"Annenin tedavisinden beklenen yararın öngörülen risklerden fazla olduğuna karar verilmediği sürece sertralin kullanımı önerilmez.\" [LUSTRAL® 50 mg | Madde 4.6 | Gebelik ve Laktasyon]\n\nBu hastada tedavi kararı, depresyonun ciddiyeti, alternatif tedavi seçenekleri ve fetal risk-yarar dengesi göz önünde bulundurularak, hasta yakından takip edilmek şartıyla sadece bir hekim tarafından verilmelidir.",
+      "sources": [
+        {
+          "ilac_adi": "LUSTRAL® 50 mg çentikli film kaplı tablet",
+          "madde_no": "4.6",
+          "madde_baslik": "Gebelik ve Laktasyon",
+          "icerik": "4.6. Gebelik ve laktasyon \nGenel tavsiye \nGebelik kategorisi: C \n \nÇocuk doğurma potansiyeli bulunan kadınlar/Doğum kontrolü (Kontrasepsiyon) \nÇocuk doğurma potansiyeli olan kadınlar, sertralin kullan",
+          "sayfa": 12,
+          "score": 0.8529
+        },
+        {
+          "ilac_adi": "LUSTRAL® 50 mg çentikli film kaplı tablet",
+          "madde_no": "4.2",
+          "madde_baslik": "Pozoloji ve Uygulama Şekli — Geriyatrik Popülasyon",
+          "icerik": "[Pozoloji ve Uygulama Şekli — Geriyatrik Popülasyon]\n\n4.2. Pozoloji ve uygulama şekli \nBu belge, güvenli elektronik imza ile imzalanmıştır.\nBelge Doğrulama Kodu: 1ZW56YnUyYnUyYnUyak1USHY3Z1AxSHY3\nBelg",
+          "sayfa": 1,
+          "score": 0.855
+        },
+        {
+          "ilac_adi": "LUSTRAL® 50 mg çentikli film kaplı tablet",
+          "madde_no": "4.2",
+          "madde_baslik": "Pozoloji ve Uygulama Şekli — Pediyatrik Popülasyon",
+          "icerik": "[Pozoloji ve Uygulama Şekli — Pediyatrik Popülasyon]\n\n4.2. Pozoloji ve uygulama şekli \nBu belge, güvenli elektronik imza ile imzalanmıştır.\nBelge Doğrulama Kodu: 1ZW56YnUyYnUyYnUyak1USHY3Z1AxSHY3\nBelg",
+          "sayfa": 1,
+          "score": 0.8544
+        },
+        {
+          "ilac_adi": "LUSTRAL® 50 mg çentikli film kaplı tablet",
+          "madde_no": "4.2",
+          "madde_baslik": "Pozoloji ve Uygulama Şekli — Böbrek Yetmezliği",
+          "icerik": "[Pozoloji ve Uygulama Şekli — Böbrek Yetmezliği]\n\n4.2. Pozoloji ve uygulama şekli \nBu belge, güvenli elektronik imza ile imzalanmıştır.\nBelge Doğrulama Kodu: 1ZW56YnUyYnUyYnUyak1USHY3Z1AxSHY3\nBelge Ta",
+          "sayfa": 1,
+          "score": 0.8583
+        },
+        {
+          "ilac_adi": "LUSTRAL® 50 mg çentikli film kaplı tablet",
+          "madde_no": "4.2",
+          "madde_baslik": "Pozoloji ve Uygulama Şekli — Karaciğer Yetmezliği",
+          "icerik": "[Pozoloji ve Uygulama Şekli — Karaciğer Yetmezliği]\n\n4.2. Pozoloji ve uygulama şekli \nBu belge, güvenli elektronik imza ile imzalanmıştır.\nBelge Doğrulama Kodu: 1ZW56YnUyYnUyYnUyak1USHY3Z1AxSHY3\nBelge",
+          "sayfa": 1,
+          "score": 0.8548
+        }
+      ],
+      "n_sources": 5,
+      "tokens": {
+        "input": 4767,
+        "output": 564
+      }
+    }
+  ]
+}

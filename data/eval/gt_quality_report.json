@@ -1,0 +1,83 @@
+{
+  "toplam_soru": 33,
+  "sorunlu_soru_sayisi": 11,
+  "sonuclar": [
+    {
+      "soru_id": "v3_q02",
+      "flags": [
+        "GT_KI_CLAIM"
+      ],
+      "gt_ozet": "Dabigatran (PRADAXA) GFR 30 mL/dak altında kontrendikedir. GFR 20 olan hastada PRADAXA kullanılmamal"
+    },
+    {
+      "soru_id": "v3_q04",
+      "flags": [
+        "GT_KI_CLAIM"
+      ],
+      "gt_ozet": "Amitriptilin (LAROXYL) gebelikte kullanımı önerilmez. Gebelik kategorisi C olup hayvansal çalışmalar"
+    },
+    {
+      "soru_id": "v3_q05",
+      "flags": [
+        "GT_KI_CLAIM"
+      ],
+      "gt_ozet": "Rivaroksaban (ONAXAN) Child-Pugh B ve C karaciğer hastalığında kontrendikedir. Karaciğer yetmezliği "
+    },
+    {
+      "soru_id": "v3_q09",
+      "flags": [
+        "GT_KI_CLAIM"
+      ],
+      "gt_ozet": "Karvedilol (ARLEC) reaktif hava yolu hastalığı ve bronkospazm geçmişi olan hastalarda kontrendikedir"
+    },
+    {
+      "soru_id": "v3_q14",
+      "flags": [
+        "GT_KI_CLAIM"
+      ],
+      "gt_ozet": "İbuprofen (BRUFEN) aktif peptik ülser hastalığında kontrendikedir. KÜB belgesinde aktif gastrointest"
+    },
+    {
+      "soru_id": "v3_q18",
+      "flags": [
+        "GT_KI_CLAIM"
+      ],
+      "gt_ozet": "Losartan (COZAAR) gebelikte kontrendikedir. Gebelik kategorisi D olup özellikle 2. ve 3. trimesterde"
+    },
+    {
+      "soru_id": "v3_q20",
+      "flags": [
+        "GT_KI_CLAIM"
+      ],
+      "gt_ozet": "Atorvastatin (LİPİTOR) aktif karaciğer hastalığında kontrendikedir. Child-Pugh A hastalarda dikkatli"
+    },
+    {
+      "soru_id": "v3_q23",
+      "flags": [
+        "GT_KI_CLAIM"
+      ],
+      "gt_ozet": "Moksifloksasin (AVELOX) miyastenia gravis hastalarında kontrendikedir veya dikkatle kullanılmalıdır."
+    },
+    {
+      "soru_id": "v3_q26",
+      "flags": [
+        "GT_KI_CLAIM"
+      ],
+      "gt_ozet": "Valsartan/hidroklorotiyazid (CO-DIOVAN) kombinasyonunda valsartan bileşeni potasyum düzeyini artırab"
+    },
+    {
+      "soru_id": "v3_q29",
+      "flags": [
+        "GT_KI_CLAIM"
+      ],
+      "gt_ozet": "Haloperidol (NORODOL) feokromasitomada kontrendikedir. Dopamin reseptör blokajı nedeniyle hipertansi"
+    },
+    {
+      "soru_id": "v3_q30",
+      "flags": [
+        "GT_KI_CLAIM"
+      ],
+      "gt_ozet": "Metformin (METAFORMAL) GFR 30 mL/dak altında kontrendikedir. GFR 15 şiddetli böbrek yetmezliği olup "
+    }
+  ]
+}

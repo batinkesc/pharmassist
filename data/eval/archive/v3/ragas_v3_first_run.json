@@ -1,0 +1,252 @@
+{
+  "scores": {
+    "faithfulness": 0.7565,
+    "context_recall": 0.7377
+  },
+  "n_questions": 30,
+  "provider": "claude",
+  "evaluator": "local",
+  "questions_file": "data/eval/ragas_v3_questions.json",
+  "per_question": [
+    {
+      "question_id": 1,
+      "question": "TEGRETOL kullanan hastaya SANORONE eklenebilir mi?",
+      "faithfulness": 0.8,
+      "context_recall": 1.0,
+      "answer_length": 1945,
+      "n_contexts": 9
+    },
+    {
+      "question_id": 2,
+      "question": "GFR 20 olan hastada PRADAXA dozu nasıl ayarlanmalı?",
+      "faithfulness": null,
+      "context_recall": 1.0,
+      "answer_length": 1472,
+      "n_contexts": 5
+    },
+    {
+      "question_id": 3,
+      "question": "SPORANOX kullanan hastada CORDARONE kan düzeyi nasıl etkilenir?",
+      "faithfulness": null,
+      "context_recall": 1.0,
+      "answer_length": 1756,
+      "n_contexts": 9
+    },
+    {
+      "question_id": 4,
+      "question": "Gebelikte LAROXYL kullanımı güvenli midir?",
+      "faithfulness": null,
+      "context_recall": 1.0,
+      "answer_length": 1223,
+      "n_contexts": 5
+    },
+    {
+      "question_id": 5,
+      "question": "Child-Pugh C karaciğer yetmezliği olan hastada ONAXAN kullanılabilir mi?",
+      "faithfulness": 1.0,
+      "context_recall": 0.5,
+      "answer_length": 1131,
+      "n_contexts": 5
+    },
+    {
+      "question_id": 6,
+      "question": "8 yaşındaki 25 kg ağırlığında epilepsi hastasında KEPPRA dozu nasıl belirlenmeli?",
+      "faithfulness": 0.6667,
+      "context_recall": null,
+      "answer_length": 2013,
+      "n_contexts": 5
+    },
+    {
+      "question_id": 7,
+      "question": "İSOPTİN kullanan hastaya CONCOR eklenirse ne olur?",
+      "faithfulness": null,
+      "context_recall": 1.0,
+      "answer_length": 1600,
+      "n_contexts": 7
+    },
+    {
+      "question_id": 8,
+      "question": "GFR 35 olan hastada LAMICTAL DC dozu nasıl ayarlanmalı?",
+      "faithfulness": 0.5714,
+      "context_recall": 0.3333,
+      "answer_length": 2134,
+      "n_contexts": 5
+    },
+    {
+      "question_id": 9,
+      "question": "Astım hastasına ARLEC başlanabilir mi?",
+      "faithfulness": 0.8333,
+      "context_recall": null,
+      "answer_length": 981,
+      "n_contexts": 5
+    },
+    {
+      "question_id": 10,
+      "question": "PLAVIX kullanan hastaya CANDİDİN başlanırsa antiplatelet etki nasıl değişir?",
+      "faithfulness": null,
+      "context_recall": 0.75,
+      "answer_length": 1825,
+      "n_contexts": 9
+    },
+    {
+      "question_id": 11,
+      "question": "Emziren annede LUSTRAL kullanımı güvenli midir?",
+      "faithfulness": null,
+      "context_recall": 0.3333,
+      "answer_length": 1734,
+      "n_contexts": 6
+    },
+    {
+      "question_id": 12,
+      "question": "NORODOL ile CORDARONE birlikte kullanılabilir mi?",
+      "faithfulness": null,
+      "context_recall": 1.0,
+      "answer_length": 3099,
+      "n_contexts": 9
+    },
+    {
+      "question_id": 13,
+      "question": "85 yaşındaki hastada XANAX başlangıç dozu ne olmalı?",
+      "faithfulness": 1.0,
+      "context_recall": 0.6667,
+      "answer_length": 1304,
+      "n_contexts": 4
+    },
+    {
+      "question_id": 14,
+      "question": "Aktif mide ülseri olan hastada BRUFEN kullanılabilir mi?",
+      "faithfulness": 1.0,
+      "context_recall": 0.5,
+      "answer_length": 1266,
+      "n_contexts": 5
+    },
+    {
+      "question_id": 15,
+      "question": "ALDACTONE kullanan hastada PLASORİN dozu neden değişebilir?",
+      "faithfulness": 1.0,
+      "context_recall": 1.0,
+      "answer_length": 1870,
+      "n_contexts": 5
+    },
+    {
+      "question_id": 16,
+      "question": "GFR 40 olan hastada COLCHICUM DISPERT dozu nasıl ayarlanmalı?",
+      "faithfulness": null,
+      "context_recall": 0.3333,
+      "answer_length": 1152,
+      "n_contexts": 3
+    },
+    {
+      "question_id": 17,
+      "question": "CYMBALTA kullanan hastada ALTİZEM SR eklenirse ne olur?",
+      "faithfulness": null,
+      "context_recall": 0.6667,
+      "answer_length": 3177,
+      "n_contexts": 9
+    },
+    {
+      "question_id": 18,
+      "question": "Gebelikte COZAAR kullanılabilir mi?",
+      "faithfulness": null,
+      "context_recall": 1.0,
+      "answer_length": 1303,
+      "n_contexts": 6
+    },
+    {
+      "question_id": 19,
+      "question": "CLEXANE kullanan hastaya PLAVIX eklenmesi kanama riskini nasıl etkiler?",
+      "faithfulness": null,
+      "context_recall": 1.0,
+      "answer_length": 2524,
+      "n_contexts": 8
+    },
+    {
+      "question_id": 20,
+      "question": "Child-Pugh A karaciğer yetmezliği olan hastada LİPİTOR dozu nasıl ayarlanmalı?",
+      "faithfulness": null,
+      "context_recall": null,
+      "answer_length": 2341,
+      "n_contexts": 8
+    },
+    {
+      "question_id": 21,
+      "question": "PROPYCIL kullanan hastaya AMİODARON (SANORONE) eklenirse ne olur?",
+      "faithfulness": null,
+      "context_recall": 1.0,
+      "answer_length": 2313,
+      "n_contexts": 8
+    },
+    {
+      "question_id": 22,
+      "question": "GFR 25 olan hastada JANUVIA'ya alternatif olarak AMARYL kullanılabilir mi?",
+      "faithfulness": null,
+      "context_recall": 0.0,
+      "answer_length": 1404,
+      "n_contexts": 5
+    },
+    {
+      "question_id": 23,
+      "question": "Miyastenia gravis hastasına AVELOX başlanabilir mi?",
+      "faithfulness": 0.0,
+      "context_recall": 0.0,
+      "answer_length": 706,
+      "n_contexts": 1
+    },
+    {
+      "question_id": 24,
+      "question": "TEGRETOL kullanan hastada LAMICTAL DC dozu neden artırılmalıdır?",
+      "faithfulness": null,
+      "context_recall": 1.0,
+      "answer_length": 2201,
+      "n_contexts": 15
+    },
+    {
+      "question_id": 25,
+      "question": "JARDIANCE başlanan hastada üriner enfeksiyon riski hakkında neler söylenebilir?",
+      "faithfulness": 0.75,
+      "context_recall": 1.0,
+      "answer_length": 654,
+      "n_contexts": 4
+    },
+    {
+      "question_id": 26,
+      "question": "Hiperpotasemi olan hastada CO-DIOVAN kullanılabilir mi?",
+      "faithfulness": 0.6,
+      "context_recall": 1.0,
+      "answer_length": 1461,
+      "n_contexts": 4
+    },
+    {
+      "question_id": 27,
+      "question": "80 yaşındaki hastada RENITEC başlangıç dozu ne olmalı?",
+      "faithfulness": null,
+      "context_recall": 1.0,
+      "answer_length": 1538,
+      "n_contexts": 4
+    },
+    {
+      "question_id": 28,
+      "question": "İMURAN kullanan hastada ÜRİKOLİZ başlanırsa ne olur?",
+      "faithfulness": null,
+      "context_recall": 0.6667,
+      "answer_length": 1831,
+      "n_contexts": 8
+    },
+    {
+      "question_id": 29,
+      "question": "Feokromasitoma hastasına NORODOL başlanabilir mi?",
+      "faithfulness": 0.8571,
+      "context_recall": 0.6667,
+      "answer_length": 1374,
+      "n_contexts": 4
+    },
+    {
+      "question_id": 30,
+      "question": "GFR 15 olan hastada METAFORMAL kullanılabilir mi?",
+      "faithfulness": null,
+      "context_recall": 0.5,
+      "answer_length": 1217,
+      "n_contexts": 5
+    }
+  ]
+}

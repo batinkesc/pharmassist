@@ -1,0 +1,113 @@
+[
+  {
+    "question_id": 1,
+    "question": "Penisilin alerjisi olan bir çocuğa Augmentin yazılabilir mi?",
+    "expected": "Hayır, kontrendikedir",
+    "actual_answer": "Penisilin alerjisi olan hastalara Augmentin (amoksisilin/klavulanik asit) yazılması kontrendikedir.\n\nAUGMENTİN 500 mg/125 mg film kaplı tablet KÜB belgesinin 4.3 (Kontrendikasyonlar) bölümüne göre, \"Etkin maddelere, penisilinlerden herhangi birine ya da bölüm 6.1'de listelenen yardımcı maddelerin herhangi birine aşırı duyarlılığı olanlarda kontrendikedir.\" [AUGMENTİN 500 mg/125 mg | Madde 4.3]\n\nAynı KÜB belgesinin 4.3 bölümünde ayrıca belirtilmiştir: \"AUGMENTİN, diğer beta-laktam ajanlara karşı (örn. sefalosporin, karbapenem veya monobaktam) aşırı duyarlılık hikayesi (örn. anafilaksi) olanlarda kontrendikedir.\" [AUGMENTİN 500 mg/125 mg | Madde 4.3]\n\nMadde 4.4'te (Özel Kullanım Uyarıları ve Önlemleri) vurgulanmaktadır: \"AUGMENTİN ile tedaviye başlanılmadan önce geçmişte penisilin, sefalosporin veya diğer beta-laktam ajanlarına karşı aşırı duyarlılık hikayesi varlığı dikkatlice sorgulanmalıdır.\" [AUGMENTİN 500 mg/125 mg | Madde 4.4]\n\nSöz konusu hastalık/enfeksiyona yönelik amoksisiline duyarlı organizmalar söz konusu ise, \"resmi kılavuzlara göre amoksisilin/klavulanik asitten amoksisiline geçiş göz önünde bulundurulmalıdır.\" [AUGMENTİN 400 mg/57 mg oral süspansiyon | Madde 4.4]\n\nPenisilin alerjisi öyküsü bulunan herhangi bir hastaya—çocuk veya erişkin—Augmentin yazılmadan önce ayrıntılı alerjik reaksiyon tarihçesi değerlendirilmeli ve reaksiyonun türü (anafilaksi, kutanöz reaksiyon vb.) belirlenmelidir. Bu bilgi klinik karar veren hekimin sorumluluğundadır.",
+    "source_count": 12,
+    "quality_check": {
+      "q_id": 1,
+      "answer_length": 1479,
+      "key_tokens_found": [
+        "kontrendikedir",
+        "Augmentin",
+        "penisilin"
+      ],
+      "key_tokens_missing": [],
+      "has_sources": true,
+      "has_uncertainty": false,
+      "seems_hallucinated": false,
+      "hallucination_signs": []
+    }
+  },
+  {
+    "question_id": 2,
+    "question": "GFR 25 olan böbrek yetmezliği hastasında Augmentin dozu nasıl olmalı?",
+    "expected": "Doz ayarlaması gerekir",
+    "actual_answer": "Augmentin'in böbrek yetmezliği olan hastalarda dozlanması konusunda incelenen KÜB belgelerinde ayrıntılı bilgi yer almamaktadır. Sağlanan KÜB metinlerinde böbrek fonksiyonunun doza etkisine ilişkin genel bir referans bulunmakta, ancak GFR 25 mL/dak gibi belirli bir değer için özel dozlama önerileri açıkça tanımlanmamıştır.\n\nAugmentin 500 mg/125 mg film kaplı tablet KÜB'ünde Madde 4.2 \"Pozoloji ve uygulama şekli\" bölümünde, seçilen dozu belirlerken \"hastanın yaşı, ağırlığı ve böbrek fonksiyonu\" dikkate alınması gerektiği ifade edilmektedir. Ancak GFR değerine göre spesifik doz düzeltmesi talimatları bu belgede yer almamaktadır.\n\nAugmentin 400 mg/57 mg oral süspansiyon KÜB'ünde yer alan Madde 4.4 \"Özel kullanım uyarıları ve önlemleri\" kısmında \"böbrek fonksiyonunda bozukluk olan veya yüksek dozlarda\" bir uyarı başlangıcı görülmekle birlikte, bu uyarının tam metni sağlanan belge bölümlerinde tamamlanmamıştır.\n\nBu hastada Augmentin kullanımı kararı alınırsa, GFR 25 mL/dak olan ciddi böbrek yetmezliğinin varlığı nedeniyle tedavi öncesinde, hastanın böbrek fonksiyonunun tıbbi takibi altında değerlendirilmesi ve renal klirens temelinde doza karar verilmesi önemlidir. Belirtilen KÜB belgelerine dayanarak spesifik bir doz tavsiyesi sunulamadığından, bu hastaya özel dozlama kararı reçete eden hekimin klinik yargısına ve mevcut rehberlere göre verilmelidir.",
+    "source_count": 12,
+    "quality_check": {
+      "q_id": 2,
+      "answer_length": 1368,
+      "key_tokens_found": [
+        "doz",
+        "böbrek"
+      ],
+      "key_tokens_missing": [
+        "ayarla"
+      ],
+      "has_sources": false,
+      "has_uncertainty": false,
+      "seems_hallucinated": true,
+      "hallucination_signs": [
+        "kritik token ayarla eksik",
+        "uzun cevap ama kaynak yok"
+      ]
+    }
+  },
+  {
+    "question_id": 3,
+    "question": "Warfarin kullanan hastaya Plavix eklenebilir mi?",
+    "expected": "Etkileşim riski vardır",
+    "actual_answer": "Warfarin kullanan hastaya Plavix (klopidogrel) eklenmesi konusunda KÜB belgelerine dayalı önemli hususlar bulunmaktadır.\n\nPLAVIX KÜB'inde, klopidogrel ile ASA, heparin, glikoprotein IIb/IIIa inhibitörleri, Cox-2 inhibitörleri dahil non-steroid anti-inflamatuar ilaçlar (NSAİİ) veya selektif serotonin geri alım inhibitörleri gibi kanama riski ile ilişkilendirilebilecek ilaçları birlikte alan hastalarda dikkatle kullanılması gerektiği belirtilmektedir. [PLAVIX | Madde 4.4 | Sayfa 4] Ancak warfarin ile klopidogrel etkileşimi hakkında PLAVIX KÜB'inde spesifik bilgi yer almamaktadır.\n\nVİCTOZA KÜB'inde varfarin ile liraglutid kombinasyonu söz konusu olduğunda, varfarin gibi düşük çözünürlüğü veya dar terapötik indeksi olan etkin maddelerin liraglutid tedavisiyle klinik olarak anlamlı etkileşimler göz ardı edilememesi ve varfarin kullanan hastalarda liraglutid tedavisine başlanırken daha sık INR takibi önerilmektedir. [VİCTOZA | Madde 4.5 | Sayfa 2]\n\nPLASORİN KÜB'inde ise warfarin ile diğer ilaçların kombinasyonu söz konusu olduğunda, ilaç değişikliklerinin hastanın varfarin dahil antikoagülanlara yanıtını etkileyebileceği ve başka bir ilaç başlanırken, kesilirken veya dozu değiştirilirken daha sık INR izlemi yapılması gerektiği belirtilmektedir. [PLASORİN | Madde 4.5 | Sayfa 3] PLASORİN KÜB'inde ayrıca kanama riski açısından kritik uyarılar bulunmaktadır: PLASORİN majör ve fatal kanamaya neden olabilir, kanama ihtimali tedavinin ilk ayında yüksektir ve kanama açısından risk faktörleri arasında yüksek yoğunlukta antikoagülasyon (INR > 4,0) yer almaktadır. [PLASORİN | Madde 4.4 | Sayfa 3]\n\nMevcut KÜB belgelerinde warfarin ve klopidogrel kombinasyonunun güvenliği veya kontrendikasyonu hakkında doğrudan bir ifade bulunmamaktadır. Ancak her iki ilacın da kanama riski ile ilişkilendirilmesi ve warfarin kullanımında INR parametrelerinin önemli olması dikkate alındığında, bu kombinasyon klinisyen tarafından dikkatle değerlendirilmeli ve gerekli takip protokolleri (sık INR izlemi dahil) uygulanmalıdır. Hasta 45 yaşında olmasına rağmen, böbrek fonksiyonunun bilinmiyor olması ve mevcut klinik durumunun tam olarak bilinmemesi nedeniyle, tedavi kararı sorumlu sağlık profesyoneli tarafından verilmelidir.",
+    "source_count": 12,
+    "quality_check": {
+      "q_id": 3,
+      "answer_length": 2222,
+      "key_tokens_found": [
+        "etkileşim",
+        "Warfarin",
+        "Plavix"
+      ],
+      "key_tokens_missing": [],
+      "has_sources": true,
+      "has_uncertainty": true,
+      "seems_hallucinated": false,
+      "hallucination_signs": []
+    }
+  },
+  {
+    "question_id": 4,
+    "question": "Siprofloksasin gebelikte kullanılabilir mi?",
+    "expected": "Kontrendikedir",
+    "actual_answer": "Siprofloksasin gebelikte kullanılmamalıdır.\n\nKÜB belgesine göre, siprofloksasinin hamile kadınlarda kullanımından elde edilen veriler malformasyon veya fetüs/yenidoğan toksisitesini göstermemektedir. Ancak, jüvenil ve doğum öncesi dönemde kinolonlara maruz kalan hayvanlarda tam olarak gelişmemiş kıkırdağa etkileri gözlenmiştir. Bu nedenle, ilacın olgunlaşmamış insan organizmasında/fetüste artiküler kıkırdak hasarına sebebiyet verebileceği dışlanamaz. Sonuç olarak, hamilelik boyunca siprofloksasin kullanımından kaçınılmalıdır. [CİPRO® 250 mg | Madde 4.6 | Gebelik ve Laktasyon]\n\nHastanız yaşı itibariyle çocuk doğurma potansiyeli bulunan bir kadındır. Eğer gebe ise veya gebe kalma olasılığı varsa, bu ilaç başlanmamalıdır. Siprofloksasin gerekli görülüyorsa, hamileyse uygun bir alternatif antibiyotik tercih edilmelidir. Uygun bir kontrasepsiyon yöntemi kullanılması önerilmektedir. [CİPRO® 250 mg | Madde 4.6]",
+    "source_count": 12,
+    "quality_check": {
+      "q_id": 4,
+      "answer_length": 917,
+      "key_tokens_found": [
+        "gebelik",
+        "siprofloksasin"
+      ],
+      "key_tokens_missing": [
+        "kontrendikedir"
+      ],
+      "has_sources": true,
+      "has_uncertainty": false,
+      "seems_hallucinated": true,
+      "hallucination_signs": [
+        "kritik token kontrendikedir eksik"
+      ]
+    }
+  },
+  {
+    "question_id": 5,
+    "question": "Karaciğer yetmezliği olan hastada Crestor kullanılabilir mi?",
+    "expected": "Dikkatle kullanılır veya kontrendikedir",
+    "actual_answer": "Karaciğer yetmezliği olan hastada CRESTOR kullanımı hakkında KÜB belgelerinde sunulan bilgiler aşağıdaki gibidir:\n\nCRESTOR 5 mg film kaplı tablet KÜB belgesinin 4.3 (Kontrendikasyonlar) bölümünde, ağır böbrek yetmezliğine (kreatinin klerensi < 30 mL/dk) ilişkin özel bir kontrendikasyon belirtilmektedir. Ayrıca CRESTOR 40 mg'lık dozun, miyopati/rabdomiyolize karşı hastayı duyarlı hale getirebilecek faktörlerin bulunduğu hastalarda kontrendikedir ifadesi yer almaktadır [CRESTOR 5 mg | Madde 4.3 | Sayfa 5/22]. Ancak karaciğer yetmezliğinin özellikle kontrendikasyon listesinde yer almadığını belirtmeliyim.\n\nİncelenen CRESTOR KÜB belgelerinde karaciğer fonksiyon bozukluğuna yönelik özel uyarılar veya kullanım kısıtlamalarına ilişkin detaylı bilgiye rastlanmamıştır. CRESTOR'un karaciğer tarafından metabolize edildiği bilinmektedir, ancak bu spesifik konuya yönelik KÜB belgesinde yer alan açık kılavuzluk bulunmamaktadır.\n\nBu hasta profili (45 yaşında kadın, böbrek fonksiyonu bilinmiyor) için CRESTOR kullanımının uygunluğu değerlendirilirken, KÜB belgesinde belirtilen kontrendikasyonlar gözden geçirilmesi gerekir. Karaciğer yetmezliğinin derecesi ve hasta özellikleri hakkında daha fazla klinik bilgi, sağlık profesyonelinin risk-yarar değerlendirmesi yapmasını ve uygun klinik takip protokolünü belirlemesini gerektirir.",
+    "source_count": 12,
+    "quality_check": {
+      "q_id": 5,
+      "answer_length": 1331,
+      "key_tokens_found": [
+        "karaciğer",
+        "Crestor"
+      ],
+      "key_tokens_missing": [],
+      "has_sources": true,
+      "has_uncertainty": true,
+      "seems_hallucinated": false,
+      "hallucination_signs": []
+    }
+  }
+]

@@ -1,0 +1,190 @@
+=== v3_q01 — TEGRETOL kullanan hastaya SANORONE eklenebilir mi?
+YANIT: Hayýr, TEGRETOL kullanan hastaya SANORONE eklenmesi kontrendikedir ve bu kombinasyon kullanýlmamalýdýr.
+
+**Temel neden — Atriyoventriküler blok riski:**
+
+TEGRETOL'ün kontrendikasyonlarý arasýnda "atriyoventriküler bloðu olan hastalar" yer almaktadýr [TEGRETOL® 200 mg | Madde 4.3 | Kontrendikasyonlar
+GROUND TRUTH: Karbamazepin (TEGRETOL) ile amiodaron (SANORONE) kombinasyonu kontrendike deðildir ancak her ikisi de CYP3A4 substratýdýr; karbamazepin güçlü CYP3A4 indükleyicisi olarak amiodaronun plazma düzeyini dü
+
+=== v3_q02 — GFR 20 olan hastada PRADAXA dozu nasýl ayarlanmalý?
+YANIT: **KESÝN KARAR:** Hayýr, bu hastaya standart doz PRADAXA uygulanmaz; doz azaltýlmasý gerekir.
+
+Bu 72 yaþýndaki hastanýn GFR deðeri 20 mL/dak/1.73m² olup, Evre 4 (G4, GFR 15-29) kronik böbrek hastalýðý tanýsýndadýr. KÜB belgelerine göre þiddetli böbrek yetmezliðinin sýnýrý CrCL <30 ml/dk'dýr ve bu sýn
+GROUND TRUTH: Dabigatran (PRADAXA) GFR 30 mL/dak altýnda kontrendikedir. GFR 20 olan hastada PRADAXA kullanýlmamalýdýr.
+
+=== v3_q03 — SPORANOX kullanan hastada CORDARONE kan düzeyi nasýl etkilen
+YANIT: SPORANOX kullanan bu hastada CORDARONE kan düzeyinin artma riski vardýr ve dikkatli izlem gerektirilir.
+
+Ýtrakonazol güçlü bir CYP3A4 inhibitörüdür. [SPORANOX | Madde 4.5] Amiodaron CYP3A4 ile metabolize edildiðinden, SPORANOX tarafýndan bu enzimin inhibisyonu amiodaronun plazma konsantrasyonunu art
+GROUND TRUTH: Ýtrakonazol (SPORANOX) güçlü CYP3A4 inhibitörüdür. Amiodaron (CORDARONE) CYP3A4 substratýdýr. Birlikte kullanýmda amiodaronun plazma konsantrasyonu artar, QT uzamasý ve kardiyak toksisite riski yüksel
+
+=== v3_q04 — Gebelikte LAROXYL kullanýmý güvenli midir?
+YANIT: Hayýr, LAROXYL gebelikte kontrendikedir.
+
+KÜB belgesine göre LAROXYL'in gebelik kategorisi D'dir ve "gebelik döneminde özellikle de ilk ve son trimesterde kullanýlmamalýdýr" [LAROXYL 25 mg | Madde 4.6 | Gebelik ve laktasyon]. Ayrýca KÜB'de açýkça "Gebelik ve emzirmede kontrendikedir" belirtilmektedi
+GROUND TRUTH: Amitriptilin (LAROXYL) gebelikte kullanýmý önerilmez. Gebelik kategorisi C olup hayvansal çalýþmalarda fetal risk gösterilmiþtir. Özellikle üçüncü trimesterde neonatal yoksunluk sendromu riski vardýr.
+
+=== v3_q05 — Child-Pugh C karaciðer yetmezliði olan hastada ONAXAN kullan
+YANIT: Hayýr, kontrendikedir.
+
+ONAXAN® Child-Pugh C karaciðer yetmezliði olan bu hastada kullanýlamaz. KÜB belgesinin 4.3 Kontrendikasyonlar bölümünde açýkça belirtildiði üzere, "Child Pugh B ve C'li siroz hastalarý dahil olmak üzere koagülopati ve klinik açýdan anlamlý kanama riskiyle iliþkili hepatik has
+GROUND TRUTH: Rivaroksaban (ONAXAN) Child-Pugh B ve C karaciðer hastalýðýnda kontrendikedir. Karaciðer yetmezliði koagülopati ile iliþkili olduðundan ve rivaroksaban hepatik metabolizma ile atýlýmýna baðlý olduðund
+
+=== v3_q06 — 8 yaþýndaki 25 kg aðýrlýðýnda epilepsi hastasýnda KEPPRA doz
+YANIT: Epilepsi tedavisiyle 8 yaþýndaki 25 kg aðýrlýðýndaki bu hasta için KEPPRA dozu klinik yanýt ve toleransa göre belirlenmelidir. Böbrek fonksiyonu bilinmediði için öncelikle normal böbrek fonksiyonu varsayýmý altýnda dozlama yapýlabilir; ancak böbrek fonksiyonu deðerlendirmesi kritik öneme sahiptir.
+
+
+GROUND TRUTH: Levetirasetam (KEPPRA) 4-11 yaþ arasý çocuklarda baþlangýç dozu günde iki kez 10 mg/kg (vücut aðýrlýðýna göre). 25 kg için baþlangýç dozu günde iki kez 250 mg'dýr. Ýdame doz titrasyon ile günde iki ke
+
+=== v3_q07 — ÝSOPTÝN kullanan hastaya CONCOR eklenirse ne olur?
+YANIT: **Hayýr, kontrendikedir.**
+
+ÝSOPTÝN® SR 240 mg kullanan hastaya CONCOR® (bisoprolol) eklenmesi mutlak kontrendikedir. Bu kombinasyon, ÝSOPTÝN® SR 240 mg KÜB belgesi Madde 4.3'te açýkça yasaklanmýþtýr.
+
+ÝSOPTÝN® SR 240 mg Film Tablet kullanýmý "Eþ zamanlý beta-blokör kullanan hastalar" durumunda kont
+GROUND TRUTH: Verapamil (ÝSOPTÝN) ve bisoprolol (CONCOR) kombinasyonu AV blok ve bradikardi riskini artýrýr. Her ikisi de kalp hýzýný yavaþlattýðýndan bu kombinasyondan kaçýnýlmalý veya çok yakýn kardiyak izlem alt
+
+=== v3_q08 — GFR 35 olan hastada LAMICTAL DC dozu nasýl ayarlanmalý?
+YANIT: Dikkatle kullanýlýr, doz ayarý gerekli olabilir.
+
+Ýncelenen LAMICTAL DC KÜB belgesine göre, böbrek yetmezliði olan hastalara lamotrijin verilirken dikkatli olunmalýdýr. Son aþamada böbrek yetmezliði olan hastalar için, LAMICTAL baþlangýç dozlarý, hastalarýn eþ zamanlý kullandýðý ilaçlara dayandýrýlm
+GROUND TRUTH: Lamotrijin (LAMICTAL DC) böbrek yetmezliðinde dikkatli kullanýlmalýdýr. Þiddetli böbrek yetmezliðinde baþlangýç ve idame dozlarýnýn azaltýlmasý gerekebilir. GFR 35 orta-þiddetli böbrek bozukluðu kateg
+
+=== v3_q09 — Astým hastasýna ARLEC baþlanabilir mi?
+YANIT: **Hayýr, ARLEC (karvedilol) bu hastaya kontrendikedir.**
+
+KÜB Madde 4.3'te açýk olarak belirtildiði üzere, karvedilol "bronkospazm ya da astým öyküsü olan hastalar"da kullanýlmamalýdýr. [ARLEC® 6,25 mg tablet | Madde 4.3 | Kontrendikasyonlar] Bu hastanýn astým tanýsý vardýr, bu nedenle karvedilol ba
+GROUND TRUTH: Karvedilol (ARLEC) reaktif hava yolu hastalýðý ve bronkospazm geçmiþi olan hastalarda kontrendikedir. Astým, karvedilol için mutlak kontrendikasyondur; kardiyoselektif olmayan beta-bloker özelliði ned
+
+=== v3_q10 — PLAVIX kullanan hastaya CANDÝDÝN baþlanýrsa antiplatelet etk
+YANIT: # YANIT
+
+CANDÝDÝN kullanýrken PLAVIX'in antiplatelet etkisinde önemli bir deðiþim beklenmemektedir, ancak kombinasyon önemli güvenlik endiþeleri taþýmaktadýr.
+
+CANDÝDÝN (flukonazol) ve PLAVIX (klopidogrel) arasýnda direkt bir farmakodinamik etkileþim nedeniyle antiplatelet etkinliðin azalmasý konusu
+GROUND TRUTH: Flukonazol (CANDÝDÝN) güçlü CYP2C19 inhibitörüdür. Klopidogrel (PLAVIX) CYP2C19 üzerinden aktif metabolite dönüþtürülür. Flukonazol bu dönüþümü inhibe ederek klopidogrelin antiplatelet etkisini önemli
+
+=== v3_q11 — Emziren annede LUSTRAL kullanýmý güvenli midir?
+YANIT: Emziren annede LUSTRAL (sertralin) kullanýmý hakkýnda KÜB belgelerinde spesifik bilgi yer almamaktadýr.
+
+Ýncelenen KÜB metninin 4.6 maddesinde (Gebelik ve Laktasyon) gebelik dönemindeki kullaným, yenidoðan geri çekilme reaksiyonlarý ve hamilelik sýrasýndaki postpartum hemoraji riski detaylý olarak a
+GROUND TRUTH: Sertralin (LUSTRAL) anne sütüne geçer. Emzirme döneminde kullanýmý önerilmez; ancak klinik gereklilik varsa bebek yakýndan izlenmelidir. KÜB belgesinde emzirme döneminde kullanýlmamasý tavsiye edilmek
+
+=== v3_q12 — NORODOL ile CORDARONE birlikte kullanýlabilir mi?
+YANIT: **HAYIR, bu kombinasyon dikkatle kullanýlýr ve ciddi kardiyak riskleri içerir.**
+
+NORODOL® (haloperidol) ile CORDARONE® (amiodaron) birlikte kullanýmý önemli etkileþim ve yan etki riskleri taþýr. Ýncelenen KÜB belgelerine göre her iki ilaç da QT aralýðýnda uzamaya neden olabilir ve bu kombinasyon To
+GROUND TRUTH: Haloperidol (NORODOL) ve amiodaron (CORDARONE) her ikisi de QT intervalini uzatýr. Bu kombinasyon Torsades de Pointes ve ventriküler aritmiler açýsýndan yüksek risk taþýr. Birlikte kullanýmdan kaçýnýl
+
+=== v3_q13 — 85 yaþýndaki hastada XANAX baþlangýç dozu ne olmalý?
+YANIT: Dikkatle kullanýlýr, doz ayarý gerekir.
+
+85 yaþýndaki bu hasta geriyatrik popülasyona dahildir ve XANAX kullanýmý için özel doz ayarlamasý gerekmektedir. KÜB'de açýkça belirtildiði üzere, yaþlýlarda ya da debil hastalarda aþýrý sedasyon ya da ataksi geliþmesini önlemek amacýyla, en düþük etkili dozu
+GROUND TRUTH: Alprazolam (XANAX) geriyatrik hastalarda en düþük etkin dozda baþlanmalýdýr. KÜB belgesine göre yaþlý hastalarda baþlangýç dozu 0.25 mg günde 2-3 kez olarak önerilir. Sedatif etkiye karþý duyarlýlýk a
+
+=== v3_q14 — Aktif mide ülseri olan hastada BRUFEN kullanýlabilir mi?
+YANIT: Hayýr, BRUFEN bu hastada kontrendikedir.
+
+KÜB belgesinin 4.3 Kontrendikasyonlar bölümüne göre, BRUFEN aktif mide veya baðýrsak ülseri/kanamasý olan hastalarda kontrendikedir [BRUFEN 400 mg | Madde 4.3 | Sayfa 2]. Bu hastada aktif mide ülseri bulunmaktadýr, dolayýsýyla ibuprofen içeren BRUFEN ürünü k
+GROUND TRUTH: Ýbuprofen (BRUFEN) aktif peptik ülser hastalýðýnda kontrendikedir. KÜB belgesinde aktif gastrointestinal ülser veya kanama, BRUFEN için mutlak kontrendikasyon olarak belirtilmiþtir.
+
+=== v3_q15 — ALDACTONE kullanan hastada PLASORÝN dozu neden deðiþebilir?
+YANIT: Evet, ALDACTONE kullanan bu hastada PLASORÝN dozu deðiþebilir ve dikkatli izleme gerekir.
+
+PLASORÝN (varfarin) ve ALDACTONE (spironolakton) arasýnda önemli bir etkileþim mekanizmasý bulunmaktadýr. Otomatik CYP450 enzim analizi bulgularýna göre, her iki ilaç CYP2C9 substratidir ve bu enzim için rekab
+GROUND TRUTH: Spironolakton (ALDACTONE) varfarin (PLASORÝN) metabolizmasýný etkileyebilir; birlikte kullanýmda INR deðerinin deðiþebileceði bildirilmiþtir. Varfarin dozu ayarlamasý gerekebilir; INR yakýn izlenmelid
+
+=== v3_q16 — GFR 40 olan hastada COLCHICUM DISPERT dozu nasýl ayarlanmalý
+YANIT: Dikkatle kullanýlýr, doz ayarý gerekir.
+
+Bu hastada COLCHICUM DISPERT® kullanýmý mümkündür, ancak böbrek fonksiyonunun bozulmasý nedeniyle dozun dikkatle ayarlanmasý gereklidir. Hastanýn GFR deðeri 40 mL/dak/1.73m² olup, kreatinin klerensi 10 mL/dak'tan yüksektir. KÜB'de belirtilen kontrendikasyon "
+GROUND TRUTH: Kolþisin (COLCHICUM DISPERT) böbrek yetmezliðinde dikkatli kullanýlmalýdýr. Orta dereceli böbrek yetmezliðinde (GFR 30-60) doz azaltýlmalý ve tedavi süresi kýsaltýlmalýdýr. Nöromiyopati ve miyelosüpre
+
+=== v3_q17 — CYMBALTA kullanan hastada ALTÝZEM SR eklenirse ne olur?
+YANIT: ALTÝZEM SR (diltiazem) CYMBALTA (duloksetin) ile birlikte kullanýrken dikkat gerektirir; bu kombinasyon KÜB belgelerinde spesifik kontrendikasyon olarak yer almamakla birlikte, önemli klinik hususlar mevcuttur.
+
+**Kardiyak ve hemodynamik etkileþim:** ALTÝZEM SR, AV nodal iletiyi ve AV düðümde refrak
+GROUND TRUTH: Duloksetin (CYMBALTA) CYP1A2 ve CYP2D6 substratýdýr. Diltiazem (ALTÝZEM SR) orta düzey CYP3A4 inhibitörüdür. Duloksetin metabolizmasý üzerinde belirgin etkisi sýnýrlýdýr ancak birlikte kullanýmda dulo
+
+=== v3_q18 — Gebelikte COZAAR kullanýlabilir mi?
+YANIT: Hayýr, COZAAR gebelikte kontrendikedir ve kullanýlmamalýdýr.
+
+COZAAR (losartan) gebelik kategorisi D'dir ve KÜB belgesinde açýkça "COZAAR gebelik döneminde kullanýlmamalýdýr" ifadesi yer almaktadýr [COZAAR 50 mg | Madde 4.6 | Gebelik kategorisi ve Gebelik dönemi]. Ayrýca Madde 4.3'te "gebelikte" COZ
+GROUND TRUTH: Losartan (COZAAR) gebelikte kontrendikedir. Gebelik kategorisi D olup özellikle 2. ve 3. trimesterde fetüste böbrek hasarý, oligohidramniyos ve ölüm riskiyle iliþkilidir. KÜB belgesinde gebelik mutlak
+
+=== v3_q19 — CLEXANE kullanan hastaya PLAVIX eklenmesi kanama riskini nas
+YANIT: CLEXANE ile birlikte PLAVIX eklenmesi kanama riskini **önemli ölçüde artýrýr** ve dikkatli klinik izlem gerektirir.
+
+KÜB belgelerine göre, PLAVIX (klopidogrel) birlikte kullanýldýðýnda kanama riski artmasý nedeniyle özel uyarýlar söz konusudur. PLAVIX KÜB Madde 4.4'te belirtildiði üzere, "diðer anti
+GROUND TRUTH: Enoksaparin (CLEXANE) ve klopidogrel (PLAVIX) kombinasyonu kanama riskini artýrýr. Her ikisi de antitrombotik etki gösterir; birlikte kullanýmda majör kanama ve gastrointestinal kanama riski yükselir.
+
+=== v3_q20 — Child-Pugh A karaciðer yetmezliði olan hastada LÝPÝTOR dozu 
+YANIT: Child-Pugh A karaciðer yetmezliði olan bu hastada LÝPÝTOR kullanýmý mümkündür ancak dikkatli takip gereklidir; doz ayarlamasýna gerek yoktur fakat karaciðer fonksiyon testleri düzenli olarak yapýlmalýdýr.
+
+KÜB belgesinde karaciðer yetmezliði için özel bir doz azaltmasý belirtilmemektedir. Bölüm 4.2'
+GROUND TRUTH: Atorvastatin (LÝPÝTOR) aktif karaciðer hastalýðýnda kontrendikedir. Child-Pugh A hastalarda dikkatli kullaným önerilir; karaciðer fonksiyon testleri yakýn takip edilmelidir. ALT ve AST normalin 3 katý
+
+=== v3_q21 — PROPYCIL kullanan hastaya AMÝODARON (SANORONE) eklenirse ne 
+YANIT: **AÇIK KARAR:** Bu kombinasyon kontrendikedir ve kesinlikle kullanýlmamalýdýr.
+
+**Kontrendikasyon Nedenleri:**
+
+SANORONE (amiodaron) KÜB'de "Tiroid hastalýklarýnda" kullanýmý kontrendike olarak belirtilmiþtir [SANORONE 200 mg | Madde 4.3 | Kontrendikasyonlar]. Hastanýn hipertiroidizm tanýsý bulunmak
+GROUND TRUTH: Propiltiourasil (PROPYCIL) ve amiodaron (SANORONE) kombinasyonunda dikkatli olunmalýdýr. Amiodaron yüksek iyot içerir ve tiroid fonksiyonunu bozabilir; propiltiourasil ile birlikte hem hipotiroidizm h
+
+=== v3_q22 — GFR 25 olan hastada JANUVIA'ya alternatif olarak AMARYL kull
+YANIT: Hayýr, AMARYL bu hastada kontrendikedir.
+
+GFR=25 mL/dak/1.73m² ile seyreden Evre 4 böbrek yetmezliði nedeniyle AMARYL kullanýmý uygun deðildir. KÜB belgelerine göre, ciddi böbrek fonksiyon bozukluðu olan hastalarda AMARYL kontrendikedir ve insüline geçilmesi gereklidir. [AMARYL 2 mg tablet | Madde 4
+GROUND TRUTH: Glimepirid (AMARYL) böbrek yetmezliðinde hipoglisemi riski nedeniyle dikkatli kullanýlmalýdýr. Þiddetli böbrek yetmezliðinde (GFR <30) kullanýmýndan kaçýnýlmasý önerilir çünkü aktif metabolitler birik
+
+=== v3_q23 — Miyastenia gravis hastasýna AVELOX baþlanabilir mi?
+YANIT: [BÝLGÝ YOK: Bu konu incelenen KÜB belgelerinde yer almamaktadýr.]
+
+Ýncelenen KÜB belgelerinde AVELOX ile miyastenia gravis arasýnda spesifik bir kontrendikasyon veya etkileþim bilgisi yer almamaktadýr. Ayrýca Graf veritabaný bulgularýnda da miyastenia gravis ile ilgili bilgi mevcut deðildir. Bu nede
+GROUND TRUTH: Moksifloksasin (AVELOX) miyastenia gravis hastalarýnda kontrendikedir veya dikkatle kullanýlmalýdýr. Florokinolonlarýn nöromüsküler blokajý artýrabileceði ve miyasteniya semptomlarýný þiddetlendirebil
+
+=== v3_q24 — TEGRETOL kullanan hastada LAMICTAL DC dozu neden artýrýlmalý
+YANIT: TEGRETOL (karbamazepin) kullanan bir hastaya LAMICTAL DC baþlanýrken doz artýrýlmasý gerekebilir, çünkü karbamazepin lamotrijinin metabolizmasýný önemli ölçüde hýzlandýrmaktadýr.
+
+Karbamazepin, lamotrijinin metabolizmasýndan sorumlu olan UDP glukuronil transferaz (UGT) enzimlerini indüklemektedir. [
+GROUND TRUTH: Karbamazepin (TEGRETOL) güçlü CYP3A4 indükleyicisidir ve ayný zamanda lamotrijin glukuronidasyonunu hýzlandýrýr. Lamotrijin (LAMICTAL DC) karbamazepin ile birlikte kullanýldýðýnda plazma yarýlanma ömr
+
+=== v3_q25 — JARDIANCE baþlanan hastada üriner enfeksiyon riski hakkýnda 
+YANIT: [BÝLGÝ YOK: Bu konu incelenen KÜB belgelerinde yer almamaktadýr.]
+
+Ýncelenen JARDIANCE 10 mg film kaplý tablet KÜB belgesinin Madde 4.4 (Özel Kullaným Uyarýlarý ve Önlemleri) ve Madde 4.5 (Diðer Týbbi Ürünlerle Etkileþimler) bölümlerinde üriner enfeksiyon riski hakkýnda spesifik bilgi yer almamaktad
+GROUND TRUTH: Empagliflozin (JARDIANCE) üriner glukoz atýlýmýný artýrdýðýndan genitoüriner enfeksiyon riskini yükseltir. KÜB belgesinde tekrarlayan üriner enfeksiyon öyküsü olan hastalarda dikkatli kullaným önerilm
+
+=== v3_q26 — Hiperpotasemi olan hastada CO-DIOVAN kullanýlabilir mi?
+YANIT: Hayýr, hiperpotasemisi olan bu hastada CO-DIOVAN kullanýmý kontrendikedir.
+
+KÜB belgesine göre, CO-DIOVAN'ýn kontrendikasyonlarý arasýnda "refrakter hipokalemi, hiponatremi, hiperkalsemi ve semptomatik hiperürisemi" yer almaktadýr [CO-DIOVAN® 160 mg/12,5 mg | Madde 4.3 | Kontrendikasyonlar]. Mevcut 
+GROUND TRUTH: Valsartan/hidroklorotiyazid (CO-DIOVAN) kombinasyonunda valsartan bileþeni potasyum düzeyini artýrabilir. Hiperpotasemisi olan hastalarda ARB içeren ilaçlar dikkatle kullanýlmalýdýr. Serum potasyum iz
+
+=== v3_q27 — 80 yaþýndaki hastada RENITEC baþlangýç dozu ne olmalý?
+YANIT: Dikkatle kullanýlýr, doz ayarý gerekir.
+
+Bu 80 yaþýndaki kadýn hasta için RENITEC baþlangýç dozu belirlenirken, geriyatrik popülasyona özgü kurallara uyulmasý gerekir. KÜB'de geriyatrik hasta grubu için "Doz, yaþlý hastanýn böbrek fonksiyonuna uygun olmalýdýr" belirtilmektedir [RENITEC 5 mg tablet |
+GROUND TRUTH: Enalapril (RENITEC) yaþlý hastalarda böbrek fonksiyonu azalmýþ olabileceðinden düþük baþlangýç dozuyla baþlanmalýdýr. Geriyatrik hastalarda 2.5 mg baþlangýç dozu önerilir, böbrek fonksiyonu ve kan bas
+
+=== v3_q28 — ÝMURAN kullanan hastada ÜRÝKOLÝZ baþlanýrsa ne olur?
+YANIT: **ÖNEMLÝ: ÝMURAN ve ÜRÝKOLÝZ birlikte kullanýlmamalýdýr — doz ayarý zorunludur.**
+
+ÝMURAN (azatioprin) kullanan hastaya ÜRÝKOLÝZ (allopurinol) baþlanmasý ciddi bir ilaç etkileþimidir ve bu kombinasyon kontrollü bir biçimde uygulanmalýdýr. Þu nedenlerden dikkat edilmelidir:
+
+**Kritik Etkileþim Mekani
+GROUND TRUTH: Allopurinol (ÜRÝKOLÝZ) azatioprinin (ÝMURAN) metabolizmasýný inhibe eder; ksantin oksidaz inhibisyonu nedeniyle azatioprin toksisite riski dramatik biçimde artar. Birlikte kullanýmda azatioprin dozu d
+
+=== v3_q29 — Feokromasitoma hastasýna NORODOL baþlanabilir mi?
+YANIT: Hayýr, feokromasitoma hastasýna NORODOL baþlanmasý kontrendikedir.
+
+NORODOL® (haloperidol) KÜB belgesinin 4.3. Kontrendikasyonlar bölümünde "bazal gangliyon lezyonlarýnda kontrendikedir" ifadesi yer almaktadýr [NORODOL® 5 mg tablet | Madde 4.3]. Feokromasitoma, endokrin sistemin bir tümörü olup, has
+GROUND TRUTH: Haloperidol (NORODOL) feokromasitomada kontrendikedir. Dopamin reseptör blokajý nedeniyle hipertansif kriz tetiklenebilir. KÜB belgesinde feokromasitoma kontrendikasyon olarak yer almaktadýr.
+
+=== v3_q30 — GFR 15 olan hastada METAFORMAL kullanýlabilir mi?
+YANIT: **Hayýr, kontrendikedir.**
+
+Bu hasta GFR=15 mL/dak/1.73m² ile Evre 4 böbrek yetmezliðine sahiptir. METAFORMAL KÜB belgelerinde açýkça belirtilmiþtir: "Þiddetli böbrek yetmezliði (GFR <30 mL/dak)" metformin kullanýmýnýn kontrendikasyonudur [METAFORMAL 1000 mg film kaplý tablet | Madde 4.3 | Kontrendi
+GROUND TRUTH: Metformin (METAFORMAL) GFR 30 mL/dak altýnda kontrendikedir. GFR 15 þiddetli böbrek yetmezliði olup laktik asidoz riski nedeniyle METAFORMAL bu hastada kesinlikle kullanýlmamalýdýr.
+

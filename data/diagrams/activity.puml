@@ -1,0 +1,37 @@
+@startuml PharmAssist_Activity
+
+skinparam backgroundColor #FEFEFE
+skinparam ActivityBackgroundColor #E1F5FF
+skinparam ActivityBorderColor #0277BD
+
+start
+:Klinisyen sorguyu girer\n(soru + hasta profili);
+:Sorgu Augmentation\n(soru tipini tespit et);
+:ChromaDB Retrieval\nbatch_search(k=15);
+:Cross-Encoder Reranking\n(top-12 seç);
+:Neo4j Graph Query\n(kontrendikasyon/etkileşim);
+:Kümülatif Risk Analizi\n(Phase 8);
+:CYP450 Enzim Mapping\n(etkileşim tespiti);
+:Prompt Build\n(bağlam + hasta + analiz);
+:Claude Haiku API Call\n(parallel, max_workers=2);
+:Yanıt Validasyonu\n(bağlam kontrol + "güvenlidir" yasağı);
+
+if (Yanıt geçerli mi?) then (evet)
+  :Cevap formatla\n(kaynak etiketi ekle);
+  :RAGAS Evaluation\n(faithfulness, context_recall);
+else (hayır)
+  :Yanıtı düzelt\n(uygunsuz token/ifade kaldır);
+  :Yeniden validasyon;
+endif
+
+:Yanıt + Kaynakları\nKullanıcıya dön;
+:Risk Uyarılarını\nUI'da göster;
+stop
+
+note right
+  ChromaDB: 1036 chunk
+  Neo4j: 60 ilaç
+  RAGAS: 25 test soru
+end note
+
+@enduml

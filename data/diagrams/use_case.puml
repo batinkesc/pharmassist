@@ -1,0 +1,44 @@
+@startuml PharmAssist_UseCase
+
+left to right direction
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F0F0F0
+skinparam classBorderColor #333333
+
+actor Klinisyen as KC
+rectangle PharmAssist {
+    usecase "Hasta Profili Gir\n(yaş, GFR, ilaçlar, alerjiler)" as UC1
+    usecase "İlaç Kombinasyonu Sor\n(ör: Augmentin + Warfarin)" as UC2
+    usecase "Kontrendikasyon Kontrol\nEt" as UC3
+    usecase "İlaç Etkileşimi Analiz\nEt" as UC4
+    usecase "Kümülatif Risk Hesapla" as UC5
+    usecase "CYP450 Enzim Mapping\nYap" as UC6
+    usecase "Cevap + Kaynakları\nGöster" as UC7
+    usecase "Risk Uyarılarını\nEkle" as UC8
+}
+
+database ChromaDB as CDB
+database Neo4j as NEO
+database "Claude Haiku\nAPI" as LLM
+
+KC --> UC1 : giriş
+KC --> UC2 : soruyor
+UC2 --> UC3
+UC2 --> UC4
+UC2 --> UC5
+UC2 --> UC6
+UC3 --> LLM
+UC4 --> LLM
+UC5 --> LLM
+UC6 --> LLM
+UC7 <-- LLM
+UC8 <-- UC7
+KC <-- UC7
+
+UC3 --> NEO : kontrendikasyon sorgula
+UC4 --> NEO : etkileşim sorgula
+UC4 --> CDB : KÜB ara
+
+UC1 -.-> UC2 : profil bilgisi
+
+@enduml

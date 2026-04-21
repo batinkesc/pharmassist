@@ -1,0 +1,900 @@
+"""
+RAG Engine — ChromaDB retrieval + LLM orchestration.
+
+Provider desteği (.env ile seçilir):
+  LLM_PROVIDER=claude  → Anthropic Claude API (varsayılan)
+  LLM_PROVIDER=local   → LM Studio / yerel OpenAI-uyumlu sunucu
+
+Pipeline:
+  1. augment_query() → AugmentedQuery (arama planları)
+  2. Her SearchPlan için ChromaDB'de madde öncelik sırasıyla arama
+  3. Chunk'ları kaynak bazlı grupla, tekrarları temizle
+  4. Source-Aware Prompt oluştur
+  5. LLM'e gönder (provider'a göre)
+  6. RAGResponse döndür (yanıt + kaynak listesi)
+
+Faithfulness kuralları:
+  - Hiçbir zaman "güvenlidir", "zararsızdır" ifadesi kullanılmaz
+  - Bilgi yoksa: "İncelenen prospektüslerde spesifik kayıt bulunamadı"
+  - Her iddia için kaynak alıntısı zorunlu: [İlaç_Adı | Madde X.X | Sayfa Y]
+"""
+
+import os
+import re
+from dataclasses import dataclass, field
+from loguru import logger
+import anthropic
+import openai
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from src.agents.patient_profile import PatientProfile
+from src.agents.query_augmentor import augment_query, AugmentedQuery
+from src.core.content_policy import POLICY
+from src.retrieval.chroma_store import search, batch_search, _load_quarantine_list
+from src.retrieval.reranker import rerank
+
+
+# ---------------------------------------------------------------------------
+# Sabitler — boyut/limit kararları ContentPolicy'den gelir
+# ---------------------------------------------------------------------------
+
+DEFAULT_MODEL = "claude-haiku-4-5-20251001"
+DEFAULT_LOCAL_MODEL = "local-model"        # LM Studio'da yüklü model adı
+DEFAULT_MAX_TOKENS = 1400
+MAX_CHUNKS_PER_QUERY  = POLICY.max_chunks_per_query
+MIN_SCORE_THRESHOLD   = POLICY.min_score_threshold
+
+
+# ---------------------------------------------------------------------------
+# Veri yapıları
+# ---------------------------------------------------------------------------
+
+@dataclass
+class RetrievedChunk:
+    """Zenginleştirilmiş chunk — retrieval çıktısı."""
+    chunk_id: str
+    ilac_adi: str
+    madde_no: str
+    madde_baslik: str
+    icerik: str
+    score: float
+    sayfa: int
+    kaynak_dosya: str
+    alt_madde: str = ""
+
+    def kaynak_etiketi(self) -> str:
+        """Prompt içinde kullanılacak kaynak etiketi."""
+        madde = f"{self.madde_no}"
+        if self.alt_madde:
+            madde += f"[{self.alt_madde}]"
+        return f"[{self.ilac_adi} | Madde {madde} | Sayfa {self.sayfa}]"
+
+
+@dataclass
+class RAGResponse:
+    """RAG pipeline çıktısı."""
+    soru: str
+    yanit: str
+    kaynaklar: list[RetrievedChunk]
+    hasta_ozeti: str
+    soru_turleri: list[str]
+    model: str
+    prompt_token_sayisi: int = 0
+    yanit_token_sayisi: int = 0
+    kumlatif_riskler: list = field(default_factory=list)   # KumulatifRisk listesi
+    cyp_etkilesimler: list = field(default_factory=list)   # CYPEtkilesim listesi
+    quarantine_warnings: list = field(default_factory=list)  # Karantina uyarıları
+    cyp_source: str = "unknown"  # "static_table" | "llm_extraction" | "unavailable" | "unknown"
+    graf_baglami: str = ""      # Neo4j özet metni (RAGAS contexts için)
+    kumlatif_metin: str = ""    # Kümülatif risk özet metni (RAGAS contexts için)
+    cyp_metin: str = ""         # CYP450 özet metni (RAGAS contexts için)
+
+    def kaynak_listesi(self) -> str:
+        """Kullanılan kaynakları formatlı liste olarak döner."""
+        if not self.kaynaklar:
+            return "Kaynak bulunamadı."
+        satirlar = []
+        for i, k in enumerate(self.kaynaklar, 1):
+            satirlar.append(
+                f"{i}. {k.ilac_adi} — Madde {k.madde_no} ({k.madde_baslik}) "
+                f"[Sayfa {k.sayfa}] (skor: {k.score:.3f})"
+            )
+        return "\n".join(satirlar)
+
+
+# ---------------------------------------------------------------------------
+# Retrieval katmanı
+# ---------------------------------------------------------------------------
+
+def _retrieve_chunks(augmented: AugmentedQuery) -> list[RetrievedChunk]:
+    """
+    AugmentedQuery'deki planları çalıştırır, chunk'ları toplar ve sıralar.
+
+    Faz 11 stratejisi (section-aware + reranking):
+      1. Her plan için: priority sections k=8, secondary sections k=4 (batch_search)
+      2. Kritik maddeler (4.3, 4.5, 4.6) için patient_flags filtresi uygulanmaz
+      3. Sonuçları dedup + skor filtresi
+      4. Cross-encoder reranker ile yeniden sırala → top MAX_CHUNKS_PER_QUERY
+    """
+    seen_ids: set[str] = set()
+    seen_full_keys: set[str] = set()
+    tum_chunklar: list[RetrievedChunk] = []
+
+    KRITIK_MADDELER = {"4.3", "4.4", "4.5", "4.6"}  # 4.4 = special warnings (always retrieve)
+
+    def _ekle(r: dict) -> None:
+        chunk_id = r.get("chunk_id", "")
+        if chunk_id in seen_ids or r["score"] < MIN_SCORE_THRESHOLD:
+            return
+        seen_ids.add(chunk_id)
+        chunk = _to_retrieved_chunk(r)
+
+        full_key = f"{chunk.ilac_adi}|{chunk.madde_no}|{chunk.alt_madde}"
+        if full_key in seen_full_keys:
+            return
+        seen_full_keys.add(full_key)
+
+        # Base chunk: aynı ilac+madde için sub-chunk zaten geldiyse atla
+        if not chunk.alt_madde:
+            madde_prefix = f"{chunk.ilac_adi}|{chunk.madde_no}|"
+            if any(k.startswith(madde_prefix) and k != full_key for k in seen_full_keys):
+                return
+
+        tum_chunklar.append(chunk)
+
+    # Doz sorguları daha fazla chunk gerektirir (pozoloji tabloları parçalı gelebilir)
+    k_prio = 15 if "doz" in augmented.soru_turleri else 10
+
+    for plan in augmented.arama_planlari:
+        # Bölüm listesini ikiye böl: önce 2 = priority, geri kalanı = secondary
+        priority = plan.madde_onceligi[:2]
+        secondary = [m for m in plan.madde_onceligi[2:] if m not in priority]
+
+        # Kritik maddeler patient_flags'ten muaf
+        crit_priority = [m for m in priority if m in KRITIK_MADDELER]
+        norm_priority = [m for m in priority if m not in KRITIK_MADDELER]
+
+        # 1. Geçiş: priority sections (kritik + normal ayrı çağrı)
+        for sections, use_flags in [
+            (crit_priority, False),
+            (norm_priority, True),
+        ]:
+            if sections:
+                raw = batch_search(
+                    query=plan.sorgu,
+                    priority_sections=sections,
+                    secondary_sections=[],
+                    filter_ilac=[plan.ilac_adi] if plan.ilac_adi else None,
+                    filter_patient_flags=plan.patient_flags if use_flags and plan.patient_flags else None,
+                    k_priority=k_prio,
+                    k_secondary=0,
+                )
+                for r in raw:
+                    _ekle(r)
+
+        # 2. Geçiş: secondary sections (k=5, was 4)
+        if secondary:
+            raw_sec = batch_search(
+                query=plan.sorgu,
+                priority_sections=secondary,
+                secondary_sections=[],
+                filter_ilac=[plan.ilac_adi] if plan.ilac_adi else None,
+                filter_patient_flags=plan.patient_flags if plan.patient_flags else None,
+                k_priority=5,  # v6→v7: Increased for better recall
+                k_secondary=0,
+            )
+            for r in raw_sec:
+                _ekle(r)
+
+    # Skor'a göre azalan sırala
+    tum_chunklar.sort(key=lambda x: x.score, reverse=True)
+
+    # Reranking: cross-encoder ile top-20'yi yeniden sırala
+    RERANK_CANDIDATE_POOL = POLICY.rerank_pool_size
+    if len(tum_chunklar) > 1:
+        candidates = [
+            {
+                "chunk_id": c.chunk_id,
+                "ilac_adi": c.ilac_adi,
+                "madde_no": c.madde_no,
+                "madde_baslik": c.madde_baslik,
+                "icerik": c.icerik,
+                "score": c.score,
+                "sayfa": c.sayfa,
+                "kaynak_dosya": c.kaynak_dosya,
+                "alt_madde": c.alt_madde,
+            }
+            for c in tum_chunklar[:RERANK_CANDIDATE_POOL]
+        ]
+        reranked = rerank(augmented.ozgun_soru, candidates, top_k=MAX_CHUNKS_PER_QUERY)
+        # rerank skoru varsa önceliklendir, yoksa icerik skoru koru
+        result = [_to_retrieved_chunk(r) for r in reranked]
+        return result
+
+    return tum_chunklar[:MAX_CHUNKS_PER_QUERY]
+
+
+def _to_retrieved_chunk(raw: dict) -> RetrievedChunk:
+    return RetrievedChunk(
+        chunk_id=raw.get("chunk_id", ""),
+        ilac_adi=raw.get("ilac_adi", ""),
+        madde_no=raw.get("madde_no", ""),
+        madde_baslik=raw.get("madde_baslik", ""),
+        icerik=raw.get("icerik", ""),
+        score=raw.get("score", 0.0),
+        sayfa=raw.get("sayfa", 0),
+        kaynak_dosya=raw.get("kaynak_dosya", ""),
+        alt_madde=raw.get("alt_madde", ""),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Prompt oluşturma
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Unified system prompt — Claude ve yerel modeller aynı kuralları kullanır.
+# Kaynak önceliği: KÜB > Graf > CYP450
+# Kaynak format: [İlaç Adı | Madde X.X]  (sayfa no hallüsinasyon riski — kaldırıldı)
+# BİLGİ YOK format: "[BİLGİ YOK: Bu konu incelenen KÜB belgelerinde yer almamaktadır.]"
+# ---------------------------------------------------------------------------
+_SYSTEM_PROMPT_BASE = """Sen bir klinik eczacı yapay zeka asistanısın. Sağlık profesyonellerine
+KÜB (Kısa Ürün Bilgisi) belgelerine, ilaç etkileşim grafına ve CYP450 analizine dayalı,
+hasta-spesifik yanıtlar sunuyorsun.
+
+KONTRENDİKASYON KURALI (MUTLAK):
+"Kontrendikedir" veya "kullanılmamalıdır" ifadelerini YALNIZCA KÜB Madde 4.3 metninde
+AÇIKÇA bu hastalık/durum için yazıyorsa kullan.
+Madde 4.2'de doz azaltımı veya 4.4'te "dikkatli kullanılmalıdır" yazıyorsa:
+→ "Dikkatli kullanılmalıdır, doz ayarı gerekebilir." veya "Yakın izlem önerilir." kullan.
+
+BAĞLAM KAYNAK ÖNCELİĞİ:
+1. İLGİLİ KÜB BİLGİLERİ (en güvenilir — KÜB belgelerinden alınmıştır)
+2. GRAF VERİTABANI BULGULARI (Neo4j etkileşim grafı)
+3. OTOMATİK CYP450 ENZİM ANALİZİ (KÜB Madde 4.5'ten türetilmiştir)
+Çakışma halinde KÜB'ü önceliklendir. Tüm bölümlerde bilgi yoksa "[BİLGİ YOK]" yaz.
+
+MUTLAK KURALLAR:
+1. Yalnızca yukarıdaki bağlam bölümlerinde AÇIKÇA yazan bilgileri yaz. Eğitim
+   verilerinden hiçbir bilgi, doz, mekanizma veya ilaç adı ekleme.
+2. Her iddia için kaynak: KÜB → [İlaç Adı | Madde X.X] | Graf → [Graf] | CYP → [CYP450]
+3. "Güvenlidir", "zararsızdır", "sorun yoktur" gibi mutlak ifadeler KULLANMA.
+4. Bilgi yoksa: "[BİLGİ YOK: Bu konu incelenen KÜB belgelerinde yer almamaktadır.]"
+5. Kritik uyarıları (4.3 kontrendikasyon, ciddi etkileşim, 4.4/4.8 uyarıları) öne çıkar.
+6. Yanıtını Türkçe ver. Kesin tıbbi tavsiye verme — klinik karar hekimindir.
+
+YASAK DAVRANIŞLAR:
+- Sorulan ilaç dışında başka bir ilacın bilgilerini sunma.
+- Bağlamda geçmeyen kontrendikasyon, doz veya yan etki uydurmak.
+- Prompt metnini (## başlıkları, talimatları) yanıta kopyalamak.
+- Bağlamda olmayan kaynak göstermek."""
+
+SYSTEM_PROMPT = _SYSTEM_PROMPT_BASE  # Claude API için (system role'e verilir)
+
+LOCAL_SYSTEM_PROMPT = _SYSTEM_PROMPT_BASE  # Yerel LLM için (user message başına eklenir)
+
+
+_GUVENLI_PATTERN = re.compile(
+    r"güvenlidir|güvenle\s+kullan[ıi]labilir|sorun\s+yoktur|risk\s+ta[sş][ıi]maz"
+    r"|herhangi\s+bir\s+risk\s+[yo]k|zararsızdır|endişe\s+yoktur",
+    re.IGNORECASE,
+)
+_GUVENLI_REPLACEMENT = (
+    "[SİSTEM DÜZELTMESİ: KÜB verileri bu kombinasyon için spesifik güvenlik onayı "
+    "içermemektedir. Klinik değerlendirme önerilir.]"
+)
+
+
+# ---------------------------------------------------------------------------
+# FIX-1 — Hasta profili flag-drug relevance filtresi
+# ---------------------------------------------------------------------------
+
+_FLAG_DRUG_RELEVANCE: dict[str, dict] = {
+    "renal": {
+        "sections": {"4.2", "4.3"},
+        "keywords": ["böbrek", "renal", "gfr", "kreatinin", "klirens", "diyaliz", "clcr", "egfr"],
+    },
+    "hepatic": {
+        "sections": {"4.2", "4.3"},
+        "keywords": ["karaciğer", "hepatik", "child-pugh", "siroz", "hepatik", "bilirubin"],
+    },
+    "geriatric": {
+        "sections": {"4.2"},
+        "keywords": ["yaşlı", "geriyatrik", "65 yaş", "ileri yaş", "yaşlılarda"],
+    },
+}
+
+
+def _check_flag_relevance(flag: str, chunklar: list) -> bool:
+    """
+    Retrieval'dan gelen chunk'larda ilgili flag'in KÜB karşılığı var mı kontrol eder.
+    True → flag prompt'a dahil edilebilir; False → flag susturulur.
+    """
+    cfg = _FLAG_DRUG_RELEVANCE.get(flag)
+    if not cfg:
+        return True  # Bilinmeyen flag — güvenli tarafta kal, dahil et
+
+    target_sections = cfg["sections"]
+    keywords = cfg["keywords"]
+
+    for chunk in chunklar:
+        madde = getattr(chunk, "madde_no", "") if hasattr(chunk, "madde_no") else chunk.get("madde_no", "")
+        icerik = getattr(chunk, "icerik", "") if hasattr(chunk, "icerik") else chunk.get("icerik", "")
+        if madde in target_sections:
+            icerik_lower = icerik.lower()
+            if any(kw in icerik_lower for kw in keywords):
+                return True
+    return False
+
+
+def _build_filtered_hasta_ozeti(profil, chunklar: list) -> str:
+    """
+    Hasta özetini chunk relevance'a göre filtreler.
+    Retrieval'da ilaç-spesifik KÜB desteği olmayan flag'ler prompt'a eklenmez;
+    bu sayede LLM ilgisiz kontrendikasyon çıktısı üretmez.
+    """
+    from src.agents.patient_profile import PatientProfile
+    if not isinstance(profil, PatientProfile):
+        # Fallback: orijinal metin (profil nesnesi yoksa)
+        return profil if isinstance(profil, str) else ""
+
+    satirlar = []
+    satirlar.append(f"Yaş: {profil.yas}, Cinsiyet: {profil.cinsiyet}")
+
+    # Böbrek — yalnızca ilacın KÜB'ünde renal bölüm varsa ekle
+    if profil.bobrek_yetmezligi:
+        if _check_flag_relevance("renal", chunklar):
+            satirlar.append(
+                f"Böbrek fonksiyonu: GFR={profil.gfr} mL/dak/1.73m² ({profil.bobrek_evresi})"
+            )
+        else:
+            # GFR bilgisini ver ama "yetmezlik" vurgusunu azalt
+            satirlar.append(f"Böbrek fonksiyonu: GFR={profil.gfr} mL/dak/1.73m² (Bu ilaç için KÜB'de özel renal kısıt belirtilmemiştir)")
+    elif profil.gfr is not None:
+        satirlar.append(f"Böbrek fonksiyonu: GFR={profil.gfr} mL/dak/1.73m² (normal sınırlar)")
+
+    # Karaciğer — yalnızca ilacın KÜB'ünde hepatik bölüm varsa ekle
+    if profil.karaciger_skoru:
+        if profil.karaciger_yetmezligi:
+            if _check_flag_relevance("hepatic", chunklar):
+                satirlar.append(f"Karaciğer fonksiyonu: Child-Pugh {profil.karaciger_skoru}")
+            else:
+                satirlar.append(f"Karaciğer fonksiyonu: Child-Pugh {profil.karaciger_skoru} (Bu ilaç için KÜB'de özel hepatik kısıt belirtilmemiştir)")
+        else:
+            satirlar.append(f"Karaciğer fonksiyonu: Child-Pugh {profil.karaciger_skoru}")
+
+    if profil.gebelik:
+        satirlar.append("Durum: GEBELİK")
+    if profil.emzirme:
+        satirlar.append("Durum: EMZİRİYOR")
+
+    if profil.mevcut_ilaclar:
+        satirlar.append(f"Mevcut ilaçlar: {', '.join(profil.mevcut_ilaclar)}")
+
+    if profil.alerjiler:
+        satirlar.append(f"Alerjiler: {', '.join(profil.alerjiler)}")
+
+    if profil.endikasyonlar:
+        satirlar.append(f"Endikasyonlar: {', '.join(profil.endikasyonlar)}")
+
+    if profil.kilo is not None:
+        satirlar.append(f"Kilo: {profil.kilo} kg")
+
+    # Anormal lab değerleri
+    anormal = profil.anormal_lab_degerleri
+    if anormal:
+        lab_str = ", ".join(
+            f"{l['param']}={l['deger']} {l['birim']} ({l['durum']})" for l in anormal
+        )
+        satirlar.append(f"Anormal lab değerleri: {lab_str}")
+
+    # Geriyatrik uyarı — yalnızca ilacın KÜB'ünde geriyatrik bölüm varsa ekle
+    if profil.geriyatrik and profil.yas >= 65:
+        if _check_flag_relevance("geriatric", chunklar):
+            satirlar.append(f"Not: Geriyatrik hasta ({profil.yas} yaş) — geriyatrik doz titrasyon değerlendirmesi gerekebilir")
+
+    if profil.notlar:
+        satirlar.append(f"Ek notlar: {profil.notlar}")
+
+    return "\n".join(satirlar)
+
+
+def validate_response(yanit: str, chunklar: list, soru: str = "") -> str:
+    """
+    Faz 12 — LLM yanıtı KÜB bağlamıyla doğrular.
+
+    1. "güvenlidir" ve benzeri mutlak ifadeleri sistem uyarısıyla değiştirir.
+    2. Kontrendikasyon iddiasını 4.3 chunk içeriğiyle çapraz kontrol eder.
+    3. Yanıtta geçen ilaç adlarını bağlamdaki ilaçlarla karşılaştırır.
+    """
+    def _validate_kontraendikasyon(yanit: str, chunklar: list, soru: str) -> str:
+        _kontra_pattern = re.compile(
+            r"kontrendikedir|kontrendikasyon|kullanılmamalıdır",
+            re.IGNORECASE,
+        )
+        if not _kontra_pattern.search(yanit):
+            return yanit
+
+        # 4.3 chunk'ı bul
+        chunk_43_list = [
+            c for c in chunklar
+            if (getattr(c, "madde_no", "") if hasattr(c, "madde_no") else c.get("madde_no", "")) == "4.3"
+        ]
+
+        if not chunk_43_list:
+            logger.warning(
+                "[VALIDATE] Yanıtta kontrendikasyon iddiası var ancak Madde 4.3 chunk'u bulunamadı."
+            )
+            yanit = re.sub(r"kontrendikedir", "dikkatli kullanılmalıdır", yanit, flags=re.IGNORECASE)
+            yanit = re.sub(r"kullanılmamalıdır", "dikkatli kullanılmalıdır", yanit, flags=re.IGNORECASE)
+            return yanit
+
+        # 4.3 içeriğini birleştir
+        icerik_43 = " ".join(
+            (getattr(c, "icerik", "") if hasattr(c, "icerik") else c.get("icerik", "")).lower()
+            for c in chunk_43_list
+        )
+
+        # Soru metninden klinik anahtar terimleri çıkar (hastalık/durum adları)
+        _KLINIK_DURUMLAR = [
+            "hiperpotasemi", "hiperkalemi", "potasyum",
+            "hipopotasemi", "hipokalemi",
+            "böbrek yetmezliği", "renal yetmezlik", "renal",
+            "karaciğer yetmezliği", "hepatik",
+            "gebelik", "hamile", "laktasyon", "emzir",
+            "hipertansiyon", "kalp yetmezliği",
+            "diyabet", "hipoglisemi", "hiperglisemi",
+            "alerji", "hipersensitivite",
+            "üriner", "enfeksiyon",
+            "trombositopeni", "lökopeni",
+        ]
+        soru_lower = soru.lower()
+        eslesmeyen_durumlar = []
+        for durum in _KLINIK_DURUMLAR:
+            if durum in soru_lower and durum not in icerik_43:
+                eslesmeyen_durumlar.append(durum)
+
+        if eslesmeyen_durumlar:
+            logger.warning(
+                "[VALIDATE] Kontrendikasyon iddiası var ancak 4.3 metninde '{}' geçmiyor — "
+                "dikkatli kullan ifadesine dönüştürülüyor.",
+                ", ".join(eslesmeyen_durumlar),
+            )
+            yanit = re.sub(r"kontrendikedir", "dikkatli kullanılmalıdır", yanit, flags=re.IGNORECASE)
+            yanit = re.sub(r"kullanılmamalıdır", "dikkatli kullanılmalıdır", yanit, flags=re.IGNORECASE)
+
+        return yanit
+
+    # 1. "Güvenlidir" yasağı
+    yanit = _GUVENLI_PATTERN.sub(_GUVENLI_REPLACEMENT, yanit)
+
+    # 2. Kontrendikasyon guardrail (FIX-2 + FIX-3)
+    yanit = _validate_kontraendikasyon(yanit, chunklar, soru)
+
+    # 3. Bağlamdaki ilaç adları kümesi
+    baglamdaki_ilaclar = {c.ilac_adi.upper() for c in chunklar if hasattr(c, "ilac_adi")}
+
+    if not baglamdaki_ilaclar:
+        return yanit
+
+    # 2. Yanıtta geçen ama bağlamda olmayan ilaç benzeri token'ları tespit et ve logla
+    # Bağlamdaki ilaç adlarının kısa formlarını (ilk sözcük) bir küme olarak topla
+    taninan_kisalar = set()
+    for ilac in baglamdaki_ilaclar:
+        ilac_kisa = ilac.split()[0] if ilac.split() else ilac
+        if len(ilac_kisa) >= 4:
+            taninan_kisalar.add(ilac_kisa.upper())
+
+    # Yanıtta büyük harfle başlayan, 4+ karakter ilaç benzeri token'ları tara
+    kub_disi_tokenlar = []
+    for token in re.findall(r'\b[A-ZÇĞİÖŞÜ][A-Za-zçğışöüÇĞİÖŞÜ]{3,}\b', yanit):
+        if token.upper() not in taninan_kisalar:
+            kub_disi_tokenlar.append(token)
+
+    if kub_disi_tokenlar:
+        deduplicated = list(dict.fromkeys(kub_disi_tokenlar))  # sıra koruyarak tekilleştir
+        logger.warning(
+            "[VALIDATE] Yanıtta bağlamda doğrulanamayan {} token: {}",
+            len(deduplicated),
+            ", ".join(deduplicated),
+        )
+
+    return yanit
+
+
+def _build_user_prompt(
+    soru: str,
+    hasta_ozeti: str,
+    chunklar: list[RetrievedChunk],
+    graf_baglami: str = "",
+    kumlatif_metin: str = "",
+    cyp_metin: str = "",
+    soru_turleri: list[str] | None = None,
+) -> str:
+    """Kullanıcı prompt'unu oluşturur."""
+
+    soru_turleri = soru_turleri or []
+    etkilesim_sorusu = "etkilesim" in soru_turleri or "cyp450_etkilesim" in soru_turleri
+
+    kub_bolumu = _format_chunks_for_prompt(chunklar)
+
+    graf_bolumu = f"\n## GRAF VERİTABANI BULGULARI (Neo4j)\n{graf_baglami}\n" if graf_baglami else ""
+
+    # Kümülatif analiz: KÜB metninde desteklenen konular için (kısıtlı)
+    kumlatif_bolumu = (
+        f"\n## OTOMATİK KÜMÜLATİF RİSK ANALİZİ\n{kumlatif_metin}\n"
+    ) if kumlatif_metin else ""
+
+    # CYP450 analizi: etkileşim sorusuysa öne çıkar, değilse standart ekle
+    if cyp_metin:
+        if etkilesim_sorusu:
+            cyp_bolumu = (
+                f"\n## CYP450 MEKANİZMA ANALİZİ (ÖNCELİKLİ)\n"
+                f"Bu etkileşim sorusu için CYP450 enzim mekanizması kritik öneme sahiptir.\n"
+                f"Aşağıdaki mekanizma bilgilerini yanıtın ODAK NOKTASI olarak kullan:\n"
+                f"{cyp_metin}\n"
+            )
+        else:
+            cyp_bolumu = (
+                f"\n## OTOMATİK CYP450 ENZİM ANALİZİ\n"
+                f"{cyp_metin}\n"
+            )
+    else:
+        cyp_bolumu = ""
+
+    # Etkileşim sorusuysa CYP bölümünü KÜB'ün hemen ardına taşı (öncelik sinyali)
+    if etkilesim_sorusu and cyp_bolumu:
+        bolum_sirasi = f"{kub_bolumu}\n{cyp_bolumu}{graf_bolumu}{kumlatif_bolumu}"
+    else:
+        bolum_sirasi = f"{kub_bolumu}\n{graf_bolumu}{kumlatif_bolumu}{cyp_bolumu}"
+
+    # CYP talimatı — etkileşim sorusunda daha güçlü
+    cyp_talimati = (
+        "- CYP450 MEKANİZMASI: CYP450 bölümünde mekanizma varsa (inhibisyon/indüksiyon/substrat) "
+        "→ bu mekanizmayı yanıtın ilk paragrafında açıkla. Mekanizma olmadan etkileşimi eksik anlat."
+        if etkilesim_sorusu and cyp_metin
+        else "- OTOMATİK CYP450 bulgularını yalnızca bu bölümde açıkça yazılan bilgilerle kullan."
+    )
+
+    prompt = f"""## HASTA PROFİLİ
+{hasta_ozeti}
+
+## İLGİLİ KÜB BİLGİLERİ
+{bolum_sirasi}
+## SORU
+{soru}
+
+## YANIT TALİMATLARI
+- KONU SINIRI: Yanıtını YALNIZCA soruyla doğrudan ilgili bilgilerle sınırla.
+  Soru doz ayarı ise → etkileşim anlatma. Soru emzirme ise → gebelik bilgisi verme.
+  Soru yan etki ise → doz bilgisi ekleme.
+
+- KARAR VE BAŞLANGIÇ: İlk cümle soruya net bir cevap olmalı:
+  * Kontrendikasyon varsa: "Hayır, kontrendikedir [İlaç | Madde 4.3]."
+  * Kullanılabilirse: "Evet, dikkatli kullanılabilir." veya "Doz ayarı gerekir."
+  * Tüm bağlam bölümlerinde soruyla ilgili bilgi yoksa:
+    "[BİLGİ YOK: Bu konu incelenen KÜB belgelerinde yer almamaktadır.]"
+  * ASLA "klinisyen karar versin" ile başlama — önce net bilgi ver, sonra öneri ekle.
+
+- KAYNAK ÖNCELİĞİ: KÜB bilgisi > CYP450 mekanizması > Graf. Çakışmada KÜB önceliklidir.
+- Madde 4.4 (Uyarılar) ve 4.8 (Yan etkiler) soruyla ilgiliyse — mutlaka değerlendir.
+- Hasta profilini göz önünde bulundur: yaş, böbrek/karaciğer fonksiyonu, mevcut ilaçlar.
+- OTOMATİK KÜMÜLATİF RİSK bulgularını yalnızca KÜB'de desteklenen konular için kullan.
+{cyp_talimati}
+- KAYNAK KURALI: Her iddia için kaynak belirt → [İlaç Adı | Madde X.X] veya [Graf] veya [CYP450].
+  Bağlamda AÇIKÇA bulunmayan hiçbir bilgiyi yazma.
+- YANIT DETAYI: Yanıtın en az 3 cümle içermeli; klinik karar için gereken tüm bilgileri
+  (mekanizma, doz etkisi, izlem önerisi, uyarılar) kapsamalıdır. Eksik bölümler varsa [BİLGİ YOK] ile belirt.
+- FORMAT: Yanıtı düz paragraf olarak ver. Başlık (#, ##, ###) veya markdown kullanma."""
+
+    return prompt
+
+
+_ALT_MADDE_KEYWORDS: dict[str, list[str]] = {
+    "bobrek_karaciger": ["böbrek yetmezliği", "karaciğer yetmezliği", "kreatinin", "klerens", "klirens", "renal", "CLcr", "eGFR"],
+    "pediyatrik":       ["çocuk", "pediyatrik", "bebek", "adölesan", "yaş arası", "kg/gün", "mg/kg"],
+    "geriyatrik":       ["yaşlı", "geriyatrik", "65 yaş", "ileri yaş"],
+}
+
+# Madde bazında chunk limiti — uzun bölümler kesilmeden gönderilir
+_MADDE_CHUNK_LIMITS: dict[str, int] = {
+    "4.3": 800,    # Kontrendikasyonlar — genellikle kısa liste
+    "4.2": 3000,   # Pozoloji — doz tabloları uzun olabilir
+    "4.4": 3000,   # Özel uyarılar — kritik, kesilmemeli
+    "4.5": 2500,   # Etkileşimler
+    "4.6": 4000,   # Gebelik/laktasyon — her iki bölüm birlikte gelir
+    "4.8": 3000,   # Yan etkiler
+}
+_DEFAULT_LIMIT = POLICY.chunk_window_chars   # ContentPolicy — diğer maddeler için
+_WINDOW_SIZE   = POLICY.chunk_window_chars   # keyword penceresi
+
+
+def _extract_chunk_window(icerik: str, alt_madde: str, madde_no: str = "") -> str:
+    """
+    Sub-chunk için akıllı pencere çıkarımı.
+
+    Madde bazında limit uygular: 4.6 gebelik/laktasyon tam gönderilir,
+    4.3 kontrendikasyon kısaltılır. Alt madde varsa keyword etrafından pencere alır.
+    """
+    # Madde bazında limit belirle
+    limit = _MADDE_CHUNK_LIMITS.get(madde_no, _DEFAULT_LIMIT)
+
+    if not alt_madde:
+        # Base chunk — madde limitine kadar gönder
+        return icerik[:limit] + ("\n[... devamı mevcut, özet gösterildi]" if len(icerik) > limit else "")
+
+    # Alt madde varsa — keyword ile ilgili pencereyi çıkar
+    keywords = _ALT_MADDE_KEYWORDS.get(alt_madde, [])
+    icerik_lower = icerik.lower()
+
+    best_pos = -1
+    for kw in keywords:
+        pos = icerik_lower.find(kw.lower())
+        if pos != -1:
+            best_pos = pos
+            break
+
+    if best_pos == -1:
+        return icerik[:limit] + ("\n[... devamı mevcut, özet gösterildi]" if len(icerik) > limit else "")
+
+    # keyword başlangıcından itibaren pencere al
+    start = max(0, best_pos - 200)
+    end = min(len(icerik), start + _WINDOW_SIZE)
+    pencere = icerik[start:end]
+
+    prefix = "...\n" if start > 0 else ""
+    suffix = "\n[... devamı mevcut]" if end < len(icerik) else ""
+    return prefix + pencere + suffix
+
+
+def _format_chunks_for_prompt(chunklar: list[RetrievedChunk]) -> str:
+    """
+    Chunk listesini prompt için etiketli formata çevirir (Faz 12).
+
+    Her chunk açık KAYNAK etiketi ile gönderilir:
+      --- KAYNAK: {ilaç_adı} | KÜB Madde {section_no}: {section_title} ---
+    Bu format LLM'in bağlamı ile yanıtı eşleştirmesini kolaylaştırır.
+    """
+    if not chunklar:
+        return "İlgili KÜB bilgisi bulunamadı."
+
+    parcalar = []
+    for chunk in chunklar:
+        madde_label = chunk.madde_no
+        if chunk.alt_madde:
+            madde_label += f"[{chunk.alt_madde}]"
+        header = f"--- KAYNAK: {chunk.ilac_adi} | KÜB Madde {madde_label}: {chunk.madde_baslik} ---"
+        icerik = chunk.icerik.strip()
+        icerik = _extract_chunk_window(icerik, chunk.alt_madde, chunk.madde_no)
+        parcalar.append(f"{header}\n{icerik}")
+
+    return "\n\n".join(parcalar)
+
+
+# ---------------------------------------------------------------------------
+# Ana RAG fonksiyonu
+# ---------------------------------------------------------------------------
+
+def run_rag(
+    soru: str,
+    profil: PatientProfile,
+    hedef_ilaclar: list[str] | None = None,
+    n_results: int = 5,
+    model: str = DEFAULT_MODEL,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
+) -> RAGResponse:
+    """
+    Tam RAG pipeline'ını çalıştırır.
+
+    Args:
+        soru:          Klinisyenin sorusu
+        profil:        Hasta profili
+        hedef_ilaclar: Sorgunun odaklandığı ilaçlar (None ise genel)
+        model:         Claude model ID
+        max_tokens:    Maksimum yanıt token sayısı
+
+    Returns:
+        RAGResponse — yanıt + kaynaklar + metadata
+    """
+    logger.info(f"RAG pipeline başladı: '{soru[:60]}...' " if len(soru) > 60 else f"RAG pipeline başladı: '{soru}'")
+
+    # 1. Query augmentation
+    augmented = augment_query(soru, profil, hedef_ilaclar, n_results=n_results)
+    logger.info(f"Soru türleri: {augmented.soru_turleri}")
+
+    # 2. ChromaDB retrieval
+    chunklar = _retrieve_chunks(augmented)
+    logger.info(f"{len(chunklar)} chunk alındı (min skor: {chunklar[-1].score:.3f} max: {chunklar[0].score:.3f})" if chunklar else "Chunk bulunamadı")
+
+    # 3. Neo4j CombiGraph bağlamı
+    graf_baglami = ""
+    try:
+        from src.graph.combi_retriever import build_graph_context
+        hasta_kosullar = []
+        if profil.bobrek_yetmezligi:
+            hasta_kosullar.append("böbrek yetmezliği")
+        if profil.karaciger_yetmezligi:
+            hasta_kosullar.append("karaciğer yetmezliği")
+        if profil.gebelik:
+            hasta_kosullar.append("gebelik")
+        gc = build_graph_context(
+            sorgu_ilaclar=hedef_ilaclar or [],
+            hasta_ilaclar=profil.mevcut_ilaclar,
+            hasta_kosullar=hasta_kosullar,
+        )
+        graf_baglami = gc.ozet_metin
+        logger.info(f"Graf bağlamı hazır: {len(gc.kontrendikasyonlar)} kontrendikasyon, {len(gc.etkilesimler)} etkileşim")
+    except Exception as e:
+        logger.exception(f"Neo4j graf bağlamı alınamadı ({type(e).__name__}): {e}")
+
+    # 3b. Kümülatif yan etki analizi (Phase 8 - Senaryo 2)
+    # Yalnızca (a) sorgunun hedef ilaçları ve (b) hastanın mevcut ilaçlarına ait
+    # chunk'lar değerlendirmeye alınır. Bağlamdan gelen alakalı-ama-ilgisiz chunk'lar
+    # kümülatif riske dahil edilmez — aksi hâlde retrieval gürültüsü yanlış uyarı üretir.
+    kumlatif_metin = ""
+    kum_sonuc = None
+    try:
+        from src.analysis.cumulative_risk import analiz_et as kumlatif_analiz
+
+        def _norm(s: str) -> str:
+            """Türkçe karakterleri ve sembol gürültüsünü normalize eder (karşılaştırma için)."""
+            return (s.upper()
+                    .replace('İ', 'I').replace('Ş', 'S').replace('Ğ', 'G')
+                    .replace('Ü', 'U').replace('Ö', 'O').replace('Ç', 'C')
+                    .replace('®', '').replace('™', '').replace('°', ''))
+
+        # Marka adı karşılaştırması: ilk kelime yeterli (® sonrası fark yaratmasın)
+        _hedef_kisalar = {_norm(i.split()[0]) for i in (hedef_ilaclar or [])}
+        _hasta_kisalar = {_norm(i.split()[0]) for i in profil.mevcut_ilaclar if i.strip()}
+        _ilgili_kisalar = _hedef_kisalar | _hasta_kisalar
+
+        if _ilgili_kisalar:
+            # Exact match: _norm(ilac_adi) == k ya da ilac_adi'nin ilk kelimesi eşleşiyor
+            # Substring yerine exact — "META" "METAFORMAL"'ı da eşleştirmesin
+            kum_chunklar = [
+                c for c in chunklar
+                if _norm(c.ilac_adi).split()[0] in _ilgili_kisalar
+            ]
+        else:
+            kum_chunklar = []
+
+        if len(kum_chunklar) >= 2:
+            kum_sonuc = kumlatif_analiz(kum_chunklar, profil.mevcut_ilaclar)
+            kumlatif_metin = kum_sonuc.ozet_metin
+            if kum_sonuc.riskler:
+                logger.info(f"Kümülatif risk: {len(kum_sonuc.riskler)} kategori tespit edildi")
+        else:
+            logger.debug("Kümülatif risk: yeterli hedef chunk yok, atlandı")
+    except Exception as e:
+        logger.warning(f"Kümülatif risk analizi atlandı: {e}")
+
+    # 3c. CYP450 ontoloji analizi (Phase 8 - Senaryo 3)
+    cyp_metin = ""
+    cyp_sonuc = None
+    try:
+        from src.analysis.cyp450_mapper import analiz_et as cyp_analiz
+        cyp_sonuc = cyp_analiz(
+            chunklar=chunklar,
+            hasta_ilaclar=profil.mevcut_ilaclar,
+            sorgu_ilaclar=hedef_ilaclar,
+        )
+        cyp_metin = cyp_sonuc.ozet_metin
+        if cyp_sonuc.etkilesimler:
+            logger.info(f"CYP450: {len(cyp_sonuc.etkilesimler)} etkileşim tespit edildi")
+    except Exception as e:
+        logger.warning(f"CYP450 analizi atlandı: {e}")
+
+    # 4. Prompt oluştur — FIX-1: hasta özetini chunk relevance'a göre filtrele
+    filtered_hasta_ozeti = _build_filtered_hasta_ozeti(profil, chunklar)
+    user_prompt = _build_user_prompt(
+        soru, filtered_hasta_ozeti, chunklar,
+        graf_baglami, kumlatif_metin, cyp_metin,
+        soru_turleri=augmented.soru_turleri,
+    )
+
+    # 4. LLM çağrısı (provider'a göre)
+    provider = os.environ.get("LLM_PROVIDER", "claude").lower()
+
+    if provider == "local":
+        yanit, kullanulan_model, giris_token, cikis_token = _call_local_llm(
+            user_prompt, max_tokens
+        )
+    else:
+        yanit, kullanulan_model, giris_token, cikis_token = _call_claude(
+            user_prompt, model, max_tokens
+        )
+
+    # 5. Faz 12 — Yanıt doğrulama ("güvenlidir" yasağı + bağlam kontrolü)
+    yanit = validate_response(yanit, chunklar, soru=soru)
+
+    # 6. Karantina kontrolü — hedef_ilaclar için OCR bekleyen ilaçları tespit et
+    quarantine_warnings: list[str] = []
+    if hedef_ilaclar:
+        q_list = _load_quarantine_list()
+        for ilac in hedef_ilaclar:
+            normalized = ilac.upper().replace(" ", "_")
+            if normalized in q_list:
+                quarantine_warnings.append(ilac)
+
+    return RAGResponse(
+        soru=soru,
+        yanit=yanit,
+        kaynaklar=chunklar,
+        hasta_ozeti=augmented.hasta_ozeti,
+        soru_turleri=augmented.soru_turleri,
+        model=kullanulan_model,
+        prompt_token_sayisi=giris_token,
+        yanit_token_sayisi=cikis_token,
+        kumlatif_riskler=kum_sonuc.riskler if kum_sonuc is not None else [],
+        cyp_etkilesimler=cyp_sonuc.etkilesimler if cyp_sonuc is not None else [],
+        cyp_source=cyp_sonuc.source if cyp_sonuc is not None else "unknown",
+        graf_baglami=graf_baglami,
+        kumlatif_metin=kumlatif_metin,
+        cyp_metin=cyp_metin,
+        quarantine_warnings=quarantine_warnings,
+    )
+
+
+def _call_claude(
+    user_prompt: str,
+    model: str,
+    max_tokens: int,
+) -> tuple[str, str, int, int]:
+    """Anthropic Claude API'yi çağırır. (yanit, model, giris_token, cikis_token)"""
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise ValueError("ANTHROPIC_API_KEY ortam değişkeni tanımlı değil.")
+
+    client = anthropic.Anthropic(api_key=api_key)
+    logger.info(f"Claude API çağrısı yapılıyor ({model})...")
+
+    message = client.messages.create(
+        model=model,
+        max_tokens=max_tokens,
+        system=SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": user_prompt}],
+    )
+
+    yanit = message.content[0].text
+    logger.info(f"Yanit alindi ({message.usage.output_tokens} token)")
+    return yanit, model, message.usage.input_tokens, message.usage.output_tokens
+
+
+def _call_local_llm(
+    user_prompt: str,
+    max_tokens: int,
+) -> tuple[str, str, int, int]:
+    """LM Studio (OpenAI-uyumlu) yerel sunucuyu çağırır. (yanit, model, giris_token, cikis_token)"""
+    base_url = os.environ.get("LM_STUDIO_URL", "http://localhost:1234/v1")
+    model_name = os.environ.get("LOCAL_MODEL_NAME", "local-model")
+
+    client = openai.OpenAI(base_url=base_url, api_key="lm-studio")
+    logger.info(f"Yerel LLM çağrısı yapılıyor ({base_url} | {model_name})...")
+
+    # System role'ü user message'a birleştir — bazı modeller (Gemma, Llama vb.)
+    # system role'ü desteklemiyor; bu şekilde tüm modeller çalışır.
+    combined_prompt = f"{LOCAL_SYSTEM_PROMPT}\n\n{user_prompt}"
+
+    response = client.chat.completions.create(
+        model=model_name,
+        max_tokens=max_tokens,
+        messages=[
+            {"role": "user", "content": combined_prompt},
+        ],
+        temperature=0.1,
+        extra_body={"think": False},  # Gemma4/Qwen3 thinking mode'u kapat — içerik boş gelmesin
+    )
+
+    # Thinking mode'lu modeller (Gemma4, Qwen3) content="", reasoning="..." döner.
+    # Ollama v1 API'de thinking içeriği "reasoning" alanında geliyor.
+    raw = response.choices[0].message
+    content = getattr(raw, "content", None) or ""
+    reasoning = getattr(raw, "reasoning", None) or ""
+    # content doluysa kullan; boşsa reasoning'i kullan (thinking mode fallback)
+    yanit = content if content.strip() else reasoning
+    giris_token = response.usage.prompt_tokens if response.usage else 0
+    cikis_token = response.usage.completion_tokens if response.usage else 0
+    logger.info(f"Yanit alindi ({cikis_token} token)")
+    return yanit, model_name, giris_token, cikis_token

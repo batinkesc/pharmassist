@@ -1,0 +1,8 @@
+{
+  "scores": {
+    "faithfulness": 0.4,
+    "context_recall": 0.7417
+  },
+  "n_questions": 8,
+  "provider": "claude"
+}

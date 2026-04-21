@@ -1,0 +1,9 @@
+{
+  "scores": {
+    "faithfulness": 0.4902,
+    "context_recall": 0.3438
+  },
+  "n_questions": 24,
+  "provider": "claude",
+  "questions_file": "data/eval/ragas_v2_questions.json"
+}

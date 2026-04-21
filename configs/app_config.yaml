@@ -1,0 +1,63 @@
+# PharmAssist Uygulama Konfigürasyonu
+# Bu dosya ortam değişkenlerini tamamlar — hassas bilgiler .env dosyasında tutulur.
+
+app:
+  name: "PharmAssist"
+  version: "0.2.0"
+  description: "KÜB Tabanlı Klinik Karar Destek Sistemi"
+
+rag:
+  # Varsayılan retrieval chunk sayısı
+  default_n_results: 5
+  # Maksimum retrieval chunk sayısı (API'deki üst sınırla eşleşmeli)
+  max_n_results: 15
+  # Minimum cosine benzerlik skoru (bu eşiğin altındaki chunk'lar filtrelenir)
+  min_similarity_score: 0.30
+
+llm:
+  # Varsayılan model — .env'deki ayar override eder
+  default_model: "claude-haiku-4-5-20251001"
+  # Maksimum yanıt token sayısı
+  max_tokens: 1400
+  # Temperature (determinizm için 0)
+  temperature: 0
+
+chroma:
+  # ChromaDB koleksiyon adı
+  collection_name: "kub_chunks"
+  # Embedding batch boyutu
+  embedding_batch_size: 32
+
+neo4j:
+  # Graf sorgu zaman aşımı (saniye)
+  query_timeout: 5
+  # Bağlantı havuzu boyutu
+  max_connection_pool_size: 10
+
+api:
+  # FastAPI sunucu ayarları
+  host: "0.0.0.0"
+  port: 8080
+  # CORS izin verilen originler (üretimde daraltın)
+  cors_origins:
+    - "*"
+
+streamlit:
+  port: 8501
+
+logging:
+  level: "INFO"
+  # Log formatı
+  format: "{time:HH:mm:ss} | {level:<8} | {message}"
+  # Dosyaya da log yaz
+  file: "logs/pharmassist.log"
+  rotation: "10 MB"
+  retention: "7 days"
+
+patient:
+  # Geriyatrik eşik yaşı
+  geriyatrik_yas_esigi: 65
+  # Pediyatrik eşik yaşı
+  pediatrik_yas_esigi: 18
+  # Böbrek yetmezliği GFR eşiği
+  bobrek_yetmezligi_gfr_esigi: 60

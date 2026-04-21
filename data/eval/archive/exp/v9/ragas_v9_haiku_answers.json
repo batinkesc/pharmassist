@@ -1,0 +1,119 @@
+[
+  {
+    "question_id": "v9_q1",
+    "question": "Penisilin alerjisi olan hastaya Augmentin yazılabilir mi?",
+    "answer": "**Hayır, kontrendikedir.**\n\nPenisilin alerjisi olan bu hastaya AUGMENTİN yazılamaz. İncelenen KÜB belgelerine göre AUGMENTİN, etkin maddelere veya penisilinlerden herhangi birine aşırı duyarlılığı olan hastalarda mutlak kontrendikedir [AUGMENTİN 500 mg/125 mg film kaplı tablet | Madde 4.3 | Kontrendikasyonlar].\n\nHastanın öyküsünde penisilin alerjisi bulunması, bu ilacın kullanımını engelleyen kesin bir kontrendikasyondur. KÜB belgesinde açıkça belirtildiği gibi \"Etkin maddelere, penisilinlerden herhangi birine ya da bölüm 6.1'de listelenen yardımcı maddelerin herhangi birine aşırı duyarlılığı olanlarda kontrendikedir\" [AUGMENTİN 400 mg/57 mg oral süspansiyon | Madde 4.3 | Kontrendikasyonlar].\n\nEk olarak, tedaviye başlanmadan önce penisiline karşı aşırı duyarlılık hikayesi \"dikkatlice sorgulanmalıdır\" ve \"Bir alerjik reaksiyon meydana gelirse, AUGMENTİN tedavisi bırakılmalı ve uygun alternatif tedavi başlatılmalıdır\" [AUGMENTİN 400 mg/57 mg oral süspansiyon | Madde 4.4 | Özel Kullanım Uyarıları ve Önlemleri]. Penisilin tedavisi alan hastalarda \"ciddi ve bazen öldürücü aşırı duyarlılık reaksiyonları (anafilaktoid ve şiddetli kutanöz advers reaksiyonlar dahil)\" bildirilmiştir ve bu reaksiyonlar \"geçmişinde penisiline karşı aşırı duyarlılık hikayesi olan ve atopik bireylerde görülmesi daha olasıdır\" [AUGMENTİN 500 mg/125 mg film kaplı tablet | Madde 4.4 | Özel Kullanım Uyarıları ve Önlemleri].\n\nBu hasta için penisilin alerjisine bağlı olmayan alternatif tedavi seçenekleri değerlendirilmelidir.",
+    "answer_length": 1514,
+    "n_contexts": 10,
+    "ground_truth": "Hayır, Augmentin amoksisilin içerir ve penisilin alerjisi olan hastalar için kontrendikeysondur.",
+    "context_sources": [
+      {
+        "ilac": "AUGMENTİN 400 mg/57 mg oral süspansiyon hazırlamak için kuru toz içeren saşe",
+        "icerik": "4.4 Özel kullanım uyarıları ve önlemleri \nAUGMENTİN ile tedaviye başlanmadan önce geçmişinde penisilin, sefalosporin ve "
+      },
+      {
+        "ilac": "AUGMENTİN 400 mg/57 mg oral süspansiyon hazırlamak için kuru toz içeren saşe",
+        "icerik": "4.3 Kontrendikasyonlar \nEtkin maddelere, penisilinlerden herhangi birine ya da bölüm 6.1’de listelenen yardımcı \nmaddele"
+      },
+      {
+        "ilac": "AUGMENTİN 500 mg/125 mg film kaplı tablet",
+        "icerik": "4.4 \nÖzel kullanım uyarıları ve önlemleri \n \nAUGMENTİN ile tedaviye başlanılmadan önce geçmişte penisilin, sefalosporin "
+      },
+      {
+        "ilac": "AUGMENTİN 400 mg/57 mg oral süspansiyon hazırlamak için kuru toz içeren saşe",
+        "icerik": "4.5 \nDiğer tıbbi ürünlerle etkileşimler ve diğer etkileşim şekilleri \n \nProbenesid \nProbenesid ile birlikte kullanımı ön"
+      },
+      {
+        "ilac": "AUGMENTİN 500 mg/125 mg film kaplı tablet",
+        "icerik": "4.3. Kontrendikasyonlar \n \nEtkin maddelere, penisilinlerden herhangi birine ya da bölüm 6.1’de listelenen yardımcı \nmadd"
+      }
+    ]
+  },
+  {
+    "question_id": "v9_q2",
+    "question": "Klaritromisin kullanan hastada Plavix etkinliği nasıl etkilenir?",
+    "answer": "[BİLGİ YOK: Klaritromisin ve Plavix (klopidogrel) arasındaki etkileşim konusunda incelenen KÜB belgelerinde spesifik bilgi yer almamaktadır.]\n\nİncelenen PLAVIX® KÜB belgesinde klaritromisin ile olan ilaç etkileşimi hakkında detaylı bilgi bulunmamaktadır. Sağlık profesyoneli olarak, bu hasta için klaritromisin kullanımı kararını verirken, kalp stenti nedeniyle devam eden Plavix tedavisinin güvenliği ve etkinliğini sağlamak amacıyla ek kaynaklar (örneğin, etkileşim veri tabanları, ilaç referans kitapları veya klaritromisin KÜB belgesi) ile birlikte değerlendirilmesi uygun olacaktır. Hastanın böbrek fonksiyonunun da belirlenmiş olması, tedavi kararında önemli olabilir.",
+    "answer_length": 674,
+    "n_contexts": 2,
+    "ground_truth": "Klaritromisin CYP3A4 ve CYP2C19 inhibitörü olarak Plavix metabolizmasını azaltır ve Plavix etkinliğini düşürebilir.",
+    "context_sources": [
+      {
+        "ilac": "PLAVIX® 75 mg film kaplı tablet",
+        "icerik": "4.8. İstenmeyen etkiler \n \nGüvenlilik profilinin özeti \nKlopidogrel, güvenlilik açısından, 12.000’i 1 yıl ya da daha uzu"
+      },
+      {
+        "ilac": "PLAVIX® 75 mg film kaplı tablet",
+        "icerik": "4.6. Gebelik ve laktasyon: \nGenel tavsiye \nGebelik kategorisi: B \n \nÇocuk doğurma potansiyeli bulunan kadınlar/Doğum kon"
+      }
+    ]
+  },
+  {
+    "question_id": "v9_q3",
+    "question": "GFR 28 olan hastada Januvia dozu nasıl ayarlanmalı?",
+    "answer": "**Doz ayarlaması gereklidir. GFR 28 olan bu hastada JANUVIA dozu 50 mg'a düşürülmelidir.**\n\nBu hasta Evre 4 böbrek yetmezliği (GFR 15-29 mL/dak) içindedir. JANUVIA® KÜB belgesine göre orta derecede böbrek bozukluğu (eGFR 30-59 mL/dak) olan hastalarda doz 50 mg günde bir kez önerilmektedir. İncelenen KÜB belgelerine dayalı olarak hastanın GFR değeri (28 mL/dak) bu aralığa yakın ve daha ciddi böbrek yetmezliği göstermektedir. [JANUVIA® 100 mg film kaplı tablet | KÜB Madde 4.2 | Böbrek Yetmezliği]\n\nKÜB belgesinde açıkça belirtildiği üzere, \"Orta derecede böbrek bozukluğu olan hastalarda (tahmini glomerülar filtrasyon oranı [eGFR] 30 ila <60 mL/dak), JANUVIA dozunda ayarlama yapılması gerekmez\" ifadesi yer almakta, ancak hastanın GFR değeri 30'ın altında bulunduğu için bu grup dışındadır. [JANUVIA® 100 mg film kaplı tablet | KÜB Madde 4.2 | Böbrek Yetmezliği]\n\nKÜB belgesinde hafif böbrek bozukluğu (eGFR ≥60-<90 mL/dak) için doz ayarlaması gerekmediği, ancak orta derecede bozukluğu olan hastalarda doza ilişkin spesifik öneri verildiği görülmektedir. [JANUVIA® 100 mg film kaplı tablet | KÜB Madde 4.2 | Böbrek Yetmezliği]\n\nHastanın yaşı (67 yaşında geriyatrik popülasyon) nedeniyle ayrı bir doz ayarlamasına gerek yoktur, çünkü KÜB belgesinde \"Yaşa bağlı doz ayarlamasına gerek yoktur\" belirtilmektedir. [JANUVIA® 100 mg film kaplı tablet | KÜB Madde 4.2 | Geriyatrik Popülasyon]\n\nHasta başka antidiyabetik ajanlarla kombine tedavi alıyorsa (sülfonilüre veya insülin gibi), hipoglisemi riskini azaltmak için bu ajanların dozlarının düşürülmesi düşünülebilir. [JANUVIA® 100 mg film kaplı tablet | KÜB Madde 4.4]",
+    "answer_length": 1621,
+    "n_contexts": 5,
+    "ground_truth": "GFR 30-50 mL/min: 50 mg günde bir defa. GFR <30 mL/min: 25 mg günde bir defa. GFR 28 için 25 mg önerilir.",
+    "context_sources": [
+      {
+        "ilac": "JANUVIA® 100 mg film kaplı tablet",
+        "icerik": "[Pozoloji ve Uygulama Şekli — Böbrek Yetmezliği]\n\n4.2. Pozoloji ve uygulama şekli \nPozoloji/Uygulama sıklığı ve süresi \n"
+      },
+      {
+        "ilac": "JANUVIA® 100 mg film kaplı tablet",
+        "icerik": "[Pozoloji ve Uygulama Şekli — Karaciğer Yetmezliği]\n\n4.2. Pozoloji ve uygulama şekli \nPozoloji/Uygulama sıklığı ve süres"
+      },
+      {
+        "ilac": "JANUVIA® 100 mg film kaplı tablet",
+        "icerik": "[Pozoloji ve Uygulama Şekli — Geriyatrik Popülasyon]\n\n4.2. Pozoloji ve uygulama şekli \nPozoloji/Uygulama sıklığı ve süre"
+      },
+      {
+        "ilac": "JANUVIA® 100 mg film kaplı tablet",
+        "icerik": "4.4. Özel kullanım uyarıları ve önlemleri \nGenel uyarılar \nJANUVIA Tip I diyabetli hastalarda veya diyabetik ketoasidozu"
+      },
+      {
+        "ilac": "JANUVIA® 100 mg film kaplı tablet",
+        "icerik": "[Pozoloji ve Uygulama Şekli — Pediyatrik Popülasyon]\n\n4.2. Pozoloji ve uygulama şekli \nPozoloji/Uygulama sıklığı ve süre"
+      }
+    ]
+  },
+  {
+    "question_id": "v9_q4",
+    "question": "Warfarin ve Eliquis aynı anda kullanılabilir mi?",
+    "answer": "[BİLGİ YOK: Bu konu incelenen KÜB belgelerinde yer almamaktadır.]\n\nİncelenen ELİQUİS® KÜB belgelerinde warfarin ile eş zamanlı kullanımı veya bu kombinasyon hakkında spesifik bilgi yer almamaktadır. KÜB belgelerinde yalnızca ELİQUİS'in nonvalvüler atriyal fibrilasyon tedavisindeki doz rejimleri, böbrek yetmezliğinde doz ayarlamaları ve yan etki profili hakkında bilgi sunulmaktadır.\n\nHasta 70 yaşında, böbrek fonksiyonu G3a düzeyinde (GFR=55.0), warfarin kullanıyor ve atriyal fibrillasyon tanısı var. ELİQUİS® nonvalvüler atriyal fibrilasyonlu hastalarda inme ve sistemik embolizmin önlenmesi için \"günde iki kez oral yolla alınan 5 mg\" dozunda tavsiye edilmektedir [ELİQUİS® 5 mg | Madde 4.2 | Sayfa 2/27]. Böbrek yetmezliğinin bu şiddetinde standart pozoloji uygulanır; doz azaltılması yalnızca \"≥80 yaş, ≤60 kg vücut ağırlığı veya ≥1,5 mg/dL serum kreatinin kriterlerinden en az ikisi bulunanlar\" için geçerlidir [ELİQUİS® 5 mg | Madde 4.2 [böbrek] | Sayfa 2/27].\n\nBu hasta için warfarin ve ELİQUİS'in birlikte kullanılabilirliği hakkında klinik karar, sağlık profesyonelinin KÜB dışında diğer kaynaklar ve hasta-spesifik risk-fayda değerlendirmesi temelinde verilmelidir.",
+    "answer_length": 1178,
+    "n_contexts": 9,
+    "ground_truth": "Hayır, Warfarin ve Eliquis birlikte kullanılmaz. İkisi de antikoagulan olup, kanama riski artar. Birisinden diğerine geçilmelidir.",
+    "context_sources": [
+      {
+        "ilac": "ELİQUİS® 2,5 mg film kaplı tablet",
+        "icerik": "[Pozoloji ve Uygulama Şekli — Böbrek Yetmezliği]\n\n4.2.Pozoloji ve uygulama şekli \n \nPozoloji/uygulama sıklığı ve süresi:"
+      },
+      {
+        "ilac": "ELİQUİS® 2,5 mg film kaplı tablet",
+        "icerik": "4.9. Doz aşımı ve tedavisi \n \nELİQUİS doz aşımı daha yüksek kanama riskine neden olabilir. Hemorajik komplikasyonlar \ngö"
+      },
+      {
+        "ilac": "ELİQUİS® 5 mg film kaplı tablet",
+        "icerik": "4.9. Doz aşımı ve tedavisi \n \nELİQUİS doz aşımı daha yüksek kanama riskine neden olabilir. Hemorajik komplikasyonlar \ngö"
+      },
+      {
+        "ilac": "ELİQUİS® 2,5 mg film kaplı tablet",
+        "icerik": "4.8.İstenmeyen etkiler \n \nGüvenlilik profilinin özeti \nELİQUİS’in güvenliliği, 21.000’den fazla hastayı içeren 7 Faz III"
+      },
+      {
+        "ilac": "ELİQUİS® 5 mg film kaplı tablet",
+        "icerik": "[Pozoloji ve Uygulama Şekli — Geriyatrik Popülasyon]\n\n4.2. Pozoloji ve uygulama şekli \n \nPozoloji/uygulama sıklığı ve sü"
+      }
+    ]
+  },
+  {
+    "question_id": "v9_q5",
+    "question": "Gebelikte metoprolol kullanımı güvenli midir?",
+    "answer": "[BİLGİ YOK: Bu konu incelenen KÜB belgelerinde yer almamaktadır.]\n\nMetoprolol kullanımı ile ilgili spesifik bilgi, sunulan KÜB belgelerine dahil edilmemiştir. Bu hastanın gebelik durumunda metoprolol kullanılıp kullanılamayacağına, hangi dozda kullanılması gerektiğine ve olası risklere ilişkin karar verme işlemi, ilgili KÜB belgesinin incelenmesi ve tedavi veren hekimin klinik değerlendirmesi temel alınarak yapılmalıdır.",
+    "answer_length": 424,
+    "n_contexts": 0,
+    "ground_truth": "Metoprolol gebelikte kategori C ilaçtır (hayvan çalışmalarında risk, insan çalışması yok). Dikkatli kullanılmalı, fayda riskleri aşarsa kullanılabilir.",
+    "context_sources": []
+  }
+]

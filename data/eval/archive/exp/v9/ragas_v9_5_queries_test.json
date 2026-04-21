@@ -1,0 +1,92 @@
+[
+  {
+    "id": "v9_q1",
+    "soru": "Penisilin alerjisi olan hastaya Augmentin yazılabilir mi?",
+    "ground_truth": "Hayır, Augmentin amoksisilin içerir ve penisilin alerjisi olan hastalar için kontrendikeysondur.",
+    "hasta": {
+      "yas": 45,
+      "cinsiyet": "erkek",
+      "gfr": null,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": [],
+      "alerjiler": ["penisilin"],
+      "endikasyonlar": [],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {}
+    },
+    "hedef_ilaclar": ["Augmentin"]
+  },
+  {
+    "id": "v9_q2",
+    "soru": "Klaritromisin kullanan hastada Plavix etkinliği nasıl etkilenir?",
+    "ground_truth": "Klaritromisin CYP3A4 ve CYP2C19 inhibitörü olarak Plavix metabolizmasını azaltır ve Plavix etkinliğini düşürebilir.",
+    "hasta": {
+      "yas": 62,
+      "cinsiyet": "kadın",
+      "gfr": null,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": ["Plavix 75 mg"],
+      "alerjiler": [],
+      "endikasyonlar": ["kalp stenti"],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {}
+    },
+    "hedef_ilaclar": ["Klaritromisin", "Plavix"]
+  },
+  {
+    "id": "v9_q3",
+    "soru": "GFR 28 olan hastada Januvia dozu nasıl ayarlanmalı?",
+    "ground_truth": "GFR 30-50 mL/min: 50 mg günde bir defa. GFR <30 mL/min: 25 mg günde bir defa. GFR 28 için 25 mg önerilir.",
+    "hasta": {
+      "yas": 67,
+      "cinsiyet": "erkek",
+      "gfr": 28.0,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": [],
+      "alerjiler": [],
+      "endikasyonlar": ["tip-2-diyabet"],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {"kreatinin": 2.8}
+    },
+    "hedef_ilaclar": ["Januvia"]
+  },
+  {
+    "id": "v9_q4",
+    "soru": "Warfarin ve Eliquis aynı anda kullanılabilir mi?",
+    "ground_truth": "Hayır, Warfarin ve Eliquis birlikte kullanılmaz. İkisi de antikoagulan olup, kanama riski artar. Birisinden diğerine geçilmelidir.",
+    "hasta": {
+      "yas": 70,
+      "cinsiyet": "erkek",
+      "gfr": 55.0,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": ["Warfarin 5 mg"],
+      "alerjiler": [],
+      "endikasyonlar": ["atrial fibrillation"],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {"inr": 2.5}
+    },
+    "hedef_ilaclar": ["Warfarin", "Eliquis"]
+  },
+  {
+    "id": "v9_q5",
+    "soru": "Gebelikte metoprolol kullanımı güvenli midir?",
+    "ground_truth": "Metoprolol gebelikte kategori C ilaçtır (hayvan çalışmalarında risk, insan çalışması yok). Dikkatli kullanılmalı, fayda riskleri aşarsa kullanılabilir.",
+    "hasta": {
+      "yas": 29,
+      "cinsiyet": "kadın",
+      "gfr": 90.0,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": [],
+      "alerjiler": [],
+      "endikasyonlar": ["hipertansiyon"],
+      "gebelik": true,
+      "emzirme": false,
+      "lab_degerleri": {}
+    },
+    "hedef_ilaclar": ["Metoprolol"]
+  }
+]
