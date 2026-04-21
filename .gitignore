@@ -26,7 +26,13 @@ data/backups/
 # Veritabanları (lokal storage)
 chroma_db/
 chromadb/
+data/chroma/
+data/chromadb/
 *.chroma/
+
+# Root log txt dosyaları
+logs_api.txt
+logs_ui.txt
 
 # Claude Code (kişisel ayarlar)
 .claude/
@@ -40,6 +46,9 @@ ragas_run*.log
 .vscode/
 .idea/
 *.swp
+
+# Sunumlar (eski pipeline'a göre, güncellenmedi)
+SUNUMLAR_VE_DIAGRAMLAR/
 
 # OS
 .DS_Store
