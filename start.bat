@@ -41,14 +41,26 @@ if not errorlevel 1 (
     goto :neo4j_done
 )
 
-:: Docker kontrolü
+:: Docker kontrolü — kapalıysa otomatik başlat
 docker info >nul 2>&1
 if errorlevel 1 (
-    echo [HATA] Docker Desktop calısmiyor! Baslatin ve tekrar deneyin.
-    pause & exit /b 1
+    echo [INFO] Docker Desktop baslatiliyor...
+    start "" "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+    echo [INFO] Docker hazir olana kadar bekleniyor (max 60sn)...
+    set /a DDWAIT=0
+    :docker_bekle
+    set /a DDWAIT+=1
+    if !DDWAIT! gtr 12 (
+        echo [HATA] Docker 60sn icinde baslamadi. Docker Desktop'i kontrol edin.
+        pause & exit /b 1
+    )
+    timeout /t 5 /nobreak >nul
+    docker info >nul 2>&1
+    if errorlevel 1 goto :docker_bekle
+    echo [OK] Docker hazir
 )
 
-:: Neo4j container başlat (varsa çalıştır, yoksa oluştur)
+:: Neo4j container başlat
 echo [INFO] Neo4j baslatiliyor (docker-compose)...
 docker-compose up -d neo4j >nul 2>&1
 
