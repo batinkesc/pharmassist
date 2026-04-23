@@ -41,19 +41,11 @@ if not errorlevel 1 (
     goto :neo4j_done
 )
 
-:: Windows servisi dene (Neo4j Desktop)
+:: Neo4j Desktop servisi olarak başlat
 echo [INFO] Neo4j servisi baslatiliyor...
 net start neo4j >nul 2>&1
-
-:: Docker dene (docker-compose)
 if errorlevel 1 (
-    echo [INFO] Servis bulunamadi, Docker ile deneniyor...
-    docker info >nul 2>&1
-    if not errorlevel 1 (
-        docker-compose up -d neo4j >nul 2>&1
-    ) else (
-        echo [UYARI] Docker da calısmiyor. Neo4j Desktop'i manuel baslatin!
-    )
+    echo [UYARI] 'net start neo4j' basarisiz. Neo4j Desktop'i manuel acin!
 )
 
 :: Hazır olana dek bekle (max 60 sn)
