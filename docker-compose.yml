@@ -49,7 +49,6 @@ services:
       - "7687:7687"   # Bolt protokolü
     environment:
       NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-password}
-      NEO4J_PLUGINS: '["apoc"]'
     volumes:
       - neo4j_data:/data
       - neo4j_logs:/logs

@@ -33,54 +33,13 @@ echo.
 
 :: ── 3. NEO4J ─────────────────────────────────────────
 echo [3/4] Neo4j (bolt:7687) kontrol ediliyor...
-
-:: Zaten ayakta mı?
 powershell -Command "try{$t=New-Object Net.Sockets.TcpClient;$t.Connect('localhost',7687);$t.Close();exit 0}catch{exit 1}" >nul 2>&1
 if not errorlevel 1 (
-    echo [OK] Neo4j zaten calisiyor
-    goto :neo4j_done
+    echo [OK] Neo4j calisiyor
+) else (
+    echo [UYARI] Neo4j bulunamadi ^(7687^). Lutfen Neo4j Desktop veya Docker ile manuel baslatin.
+    echo          Graf sorguları cevapsiz kalir, diger servisler calismaya devam eder.
 )
-
-:: Docker kontrolü — kapalıysa otomatik başlat
-docker info >nul 2>&1
-if errorlevel 1 (
-    echo [INFO] Docker Desktop baslatiliyor...
-    start "" "C:\Program Files\Docker\Docker\Docker Desktop.exe"
-    echo [INFO] Docker hazir olana kadar bekleniyor (max 60sn)...
-    set /a DDWAIT=0
-    :docker_bekle
-    set /a DDWAIT+=1
-    if !DDWAIT! gtr 12 (
-        echo [HATA] Docker 60sn icinde baslamadi. Docker Desktop'i kontrol edin.
-        pause & exit /b 1
-    )
-    timeout /t 5 /nobreak >nul
-    docker info >nul 2>&1
-    if errorlevel 1 goto :docker_bekle
-    echo [OK] Docker hazir
-)
-
-:: Neo4j container başlat
-echo [INFO] Neo4j baslatiliyor (docker-compose)...
-docker-compose up -d neo4j >nul 2>&1
-
-:: Hazır olana dek bekle (max 60 sn)
-echo [INFO] Neo4j baslamasi bekleniyor...
-set /a DENEME=0
-:neo4j_bekle
-set /a DENEME+=1
-if !DENEME! gtr 12 (
-    echo [UYARI] Neo4j 60sn icinde yanit vermedi, devam ediliyor...
-    goto :neo4j_done
-)
-powershell -Command "try{$t=New-Object Net.Sockets.TcpClient;$t.Connect('localhost',7687);$t.Close();exit 0}catch{exit 1}" >nul 2>&1
-if errorlevel 1 (
-    timeout /t 5 /nobreak >nul
-    goto :neo4j_bekle
-)
-echo [OK] Neo4j hazir
-
-:neo4j_done
 echo.
 
 :: ── 4. SERVİSLER ─────────────────────────────────────

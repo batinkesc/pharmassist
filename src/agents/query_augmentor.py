@@ -38,10 +38,12 @@ INTERACTION_KEYWORDS = re.compile(
     re.IGNORECASE,
 )
 CONTRAINDICATION_KEYWORDS = re.compile(
-    r"kontrendike|kullan[ıi]labilir\s+mi|verilir\s+mi|uygun\s+mu|yasak|sakıncalı"
-    r"|yaz[ıi]labilir\s+mi|kullan[ıi]lır\s+mı|verilebilir\s+mi|verilmeli\s+mi"
-    r"|kullanmal[ıi]\s+mı|reçete\s+edilebilir|uygun\s+mu|kontrendike\s+mi"
-    r"|alerjisi.*verilebilir|alerji.*kullan",
+    r"kontrendike|kullan[ıi]labilir\s+mi|verilir\s+mi|uygun\s+mu|yasak|sak[ıi]ncal[ıi]"
+    r"|yaz[ıi]labilir\s+mi|kullan[ıi]l[ıi]r\s+m[ıi]|verilebilir\s+mi|verilmeli\s+mi"
+    r"|kullanmal[ıi]\s+m[ıi]|reçete\s+edilebilir|kontrendike\s+mi"
+    r"|ba[sş]lan[ıi]labilir\s+mi|ba[sş]lanabilir\s+mi|ba[sş]lan[ıi]r\s+m[ıi]"
+    r"|ba[sş]lamal[ıi]\s+m[ıi]|ba[sş]lamak\s+uygun|ba[sş]lamas[ıi]\s+uygun"
+    r"|endike\s+mi|endike\s+de[gğ]il|kullan[ıi]m[ıi]\s+uygun|alerjisi.*verilebilir|alerji.*kullan",
     re.IGNORECASE,
 )
 DOSE_KEYWORDS = re.compile(

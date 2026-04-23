@@ -1,13 +1,12 @@
 """
-PharmAssist — Streamlit Arayüzü
-KÜB tabanlı Klinik Karar Destek Sistemi
+PharmAssist — Arayüz v2.0
+Split panel: Sol = Hasta Profili (otomatik çıkarım) | Sağ = Klinik Sohbet
 """
 
 import sys
 import os
 sys.path.insert(0, os.path.dirname(__file__))
 
-import re
 import json
 from datetime import datetime
 
@@ -17,75 +16,280 @@ from loguru import logger
 
 load_dotenv()
 
-from src.agents.patient_profile import PatientProfile, LAB_ESIKLERI, _lab_durumu
+from src.agents.patient_profile import PatientProfile, _lab_durumu
 from src.agents.rag_engine import run_rag
+from src.agents.profile_extractor import extract_context, ExtractedContext
 from src.ingestion.lab_parser import parse_lab_file
 
-# ---------------------------------------------------------------------------
-# Sayfa ayarları
-# ---------------------------------------------------------------------------
+# ─── Sayfa Ayarları ─────────────────────────────────────────────────────────
 
 st.set_page_config(
     page_title="PharmAssist",
     page_icon="💊",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
+
+# ─── CSS Teması ─────────────────────────────────────────────────────────────
 
 st.markdown("""
 <style>
-.main-header { font-size: 1.8rem; font-weight: 700; color: #1a5276; }
-.sub-header  { font-size: 0.95rem; color: #5d6d7e; margin-bottom: 1rem; }
+/* ── Arka plan ── */
+[data-testid="stAppViewContainer"] { background: #f0f4f8; }
+[data-testid="stMain"] { padding-top: 0; }
+[data-testid="block-container"] { padding: 1rem 2rem 1rem 2rem; max-width: 100%; }
+section[data-testid="stSidebar"] { display: none; }
 
-.risk-kritik {
-    background: #fde8e8;
-    border-left: 4px solid #c0392b;
-    padding: 0.6rem 1rem;
-    border-radius: 4px;
-    margin-bottom: 0.4rem;
-    font-size: 0.9rem;
-    color: #7b1a1a !important;
+/* ── Başlık çizgisi ── */
+.pa-header {
+    display: flex;
+    align-items: center;
+    padding: 0.6rem 0 0.8rem 0;
+    border-bottom: 2px solid #1e3a5f;
+    margin-bottom: 1.2rem;
+    gap: 12px;
 }
-.risk-dikkat {
-    background: #fef9e7;
-    border-left: 4px solid #f39c12;
-    padding: 0.6rem 1rem;
-    border-radius: 4px;
-    margin-bottom: 0.4rem;
-    font-size: 0.9rem;
-    color: #7d5a00 !important;
+.pa-logo { font-size: 1.6rem; }
+.pa-title { font-size: 1.35rem; font-weight: 700; color: #1e3a5f; margin: 0; }
+.pa-sub   { font-size: 0.78rem; color: #64748b; margin: 0; }
+
+/* ── Profil Kartları ── */
+.pcard {
+    background: white;
+    border-radius: 10px;
+    padding: 13px 15px;
+    margin-bottom: 9px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
-.risk-bilgi {
-    background: #eaf4fb;
-    border-left: 4px solid #2e86c1;
-    padding: 0.6rem 1rem;
-    border-radius: 4px;
-    margin-bottom: 0.4rem;
-    font-size: 0.9rem;
-    color: #1a4a6b !important;
+.pcard-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
+    margin-bottom: 9px;
 }
-.risk-ok {
-    background: #eafaf1;
-    border-left: 4px solid #27ae60;
-    padding: 0.6rem 1rem;
-    border-radius: 4px;
-    margin-bottom: 0.4rem;
-    font-size: 0.9rem;
-    color: #1a5c35 !important;
+.pcard-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 0;
+    font-size: 0.87rem;
+    color: #0f172a;
+    border-bottom: 1px solid #f8fafc;
 }
+.pcard-row:last-child { border-bottom: none; }
+.pcard-lbl { color: #94a3b8; font-size: 0.82rem; }
+.pcard-val { font-weight: 500; }
+.pcard-empty { color: #cbd5e1; font-size: 0.84rem; font-style: italic; }
+
+/* ── Karşılama ekranı ── */
+.welcome-box {
+    text-align: center;
+    padding: 32px 20px;
+    color: #94a3b8;
+}
+.welcome-icon { font-size: 2.2rem; margin-bottom: 10px; }
+.welcome-title { font-size: 0.95rem; font-weight: 500; color: #64748b; margin-bottom: 6px; }
+.welcome-example { font-size: 0.82rem; color: #cbd5e1; line-height: 1.6; margin-top: 8px;
+                   background: #f8fafc; border-radius: 8px; padding: 10px 14px; text-align: left; }
+
+/* ── İlaç Etiketleri ── */
+.dtag {
+    display: inline-block;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: 0.8rem;
+    color: #334155;
+    margin: 2px 2px 2px 0;
+}
+.dtag.hedef {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+    font-weight: 600;
+}
+.dtag.alerji {
+    background: #fff7ed;
+    border-color: #fed7aa;
+    color: #c2410c;
+}
+
+/* ── Risk Badge ── */
+.rbadge {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    border-radius: 7px;
+    padding: 7px 11px;
+    font-size: 0.83rem;
+    margin-bottom: 5px;
+    line-height: 1.4;
+}
+.rb-kritik { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
+.rb-dikkat { background: #fffbeb; border: 1px solid #fde68a; color: #b45309; }
+.rb-ok     { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
+.rb-icon   { flex-shrink: 0; margin-top: 1px; }
+
+/* ── Yanıt Meta ── */
+.resp-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f1f5f9;
+}
+.meta-chip {
+    font-size: 0.77rem;
+    color: #475569;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 2px 10px;
+}
+.meta-chip strong { color: #1e3a5f; }
+
+/* ── Kaynak Listesi ── */
+.src-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    padding: 8px 0;
+    border-bottom: 1px solid #f8fafc;
+    font-size: 0.84rem;
+}
+.src-item:last-child { border-bottom: none; }
+.src-no {
+    min-width: 22px; height: 22px;
+    background: #1e3a5f; color: white;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; font-weight: 700; flex-shrink: 0;
+}
+.src-drug { font-weight: 600; color: #1e3a5f; }
+.src-skor { font-size: 0.74rem; color: #94a3b8; margin-top: 1px; }
+
+/* ── Text area girişi ── */
+.stTextArea textarea {
+    color: #0f172a !important;
+    background: #ffffff !important;
+    caret-color: #1e3a5f !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 10px !important;
+    font-size: 0.92rem !important;
+    padding: 10px 14px !important;
+}
+.stTextArea textarea:focus {
+    border-color: #1e3a5f !important;
+    box-shadow: 0 0 0 2px rgba(30,58,95,0.12) !important;
+    outline: none !important;
+}
+.stTextArea textarea::placeholder { color: #94a3b8 !important; }
+
+/* ── Chat mesaj içerikleri ── */
+[data-testid="stChatMessage"] {
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px !important;
+    margin-bottom: 10px;
+}
+[data-testid="stChatMessage"] p,
+[data-testid="stChatMessage"] span,
+[data-testid="stChatMessage"] li,
+[data-testid="stChatMessage"] h1,
+[data-testid="stChatMessage"] h2,
+[data-testid="stChatMessage"] h3,
+[data-testid="stChatMessage"] h4,
+[data-testid="stChatMessage"] em,
+[data-testid="stChatMessage"] strong {
+    color: #0f172a !important;
+}
+[data-testid="stChatMessage"] .stMarkdown { color: #0f172a !important; }
+
+/* ── Buton ── */
+.stButton > button {
+    border-radius: 8px;
+    font-size: 0.83rem;
+}
+
+/* ── Popover trigger butonu (📎 Lab) ── */
+[data-testid="stPopover"] button,
+[data-testid="stPopover"] button:link,
+[data-testid="stPopover"] button:visited,
+[data-testid="stPopover"] button:hover,
+[data-testid="stPopover"] button:active,
+[data-testid="stPopover"] button:focus {
+    background-color: #f1f5f9 !important;
+    color: #1e3a5f !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+}
+[data-testid="stPopover"] button:hover {
+    background-color: #e2e8f0 !important;
+    border-color: #94a3b8 !important;
+}
+[data-testid="stPopover"] button p,
+[data-testid="stPopover"] button span {
+    color: #1e3a5f !important;
+}
+
+/* ── Popover kutusu (açılır panel) ── */
+[data-testid="stPopoverBody"],
+[data-testid="stPopoverBody"] > div {
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.10) !important;
+}
+
+/* Popover içindeki tüm metin */
+[data-testid="stPopoverBody"] p,
+[data-testid="stPopoverBody"] span,
+[data-testid="stPopoverBody"] label,
+[data-testid="stPopoverBody"] small,
+[data-testid="stPopoverBody"] div {
+    color: #0f172a !important;
+}
+
+/* Popover içindeki file uploader alanı */
+[data-testid="stPopoverBody"] [data-testid="stFileUploaderDropzone"] {
+    background: #f8fafc !important;
+    border: 1.5px dashed #cbd5e1 !important;
+    border-radius: 8px !important;
+}
+[data-testid="stPopoverBody"] [data-testid="stFileUploaderDropzone"] * {
+    color: #64748b !important;
+}
+
+/* Popover içindeki butonlar */
+[data-testid="stPopoverBody"] .stButton > button {
+    background: #f1f5f9 !important;
+    color: #1e3a5f !important;
+    border: 1px solid #cbd5e1 !important;
+}
+[data-testid="stPopoverBody"] .stButton > button:hover {
+    background: #e2e8f0 !important;
+}
+
+/* ── Genel metin rengi düzeltmeleri ── */
+.stMarkdown p { color: #0f172a; }
 </style>
 """, unsafe_allow_html=True)
 
 
-# ---------------------------------------------------------------------------
-# Yardımcı: Kalıcı sorgu geçmişi (JSONL)
-# ---------------------------------------------------------------------------
+# ─── Sabitler ────────────────────────────────────────────────────────────────
 
 _LOG_PATH = os.path.join(os.path.dirname(__file__), "data", "logs", "query_history.jsonl")
 
 
-def _gecmis_kaydet(soru: str, yanit: str, hedef_ilaclar: list, soru_turleri: list, chunk_sayisi: int, model: str) -> None:
-    """Sorguyu JSONL log dosyasına ekler. Hassas hasta verisi (lab değerleri) yazılmaz."""
+# ─── Yardımcı Fonksiyonlar ───────────────────────────────────────────────────
+
+def _gecmis_kaydet(soru, yanit, hedef_ilaclar, soru_turleri, chunk_sayisi, model):
     kayit = {
         "tarih": datetime.now().isoformat(timespec="seconds"),
         "soru": soru,
@@ -103,33 +307,6 @@ def _gecmis_kaydet(soru: str, yanit: str, hedef_ilaclar: list, soru_turleri: lis
         logger.warning(f"Geçmiş log yazılamadı: {e}")
 
 
-def _gecmis_yukle(son_n: int = 20) -> list[dict]:
-    """JSONL dosyasından son N kaydı yükler."""
-    if not os.path.exists(_LOG_PATH):
-        return []
-    try:
-        with open(_LOG_PATH, encoding="utf-8") as f:
-            satirlar = f.readlines()
-        kayitlar = []
-        for satir in reversed(satirlar):
-            satir = satir.strip()
-            if satir:
-                try:
-                    kayitlar.append(json.loads(satir))
-                except json.JSONDecodeError:
-                    continue
-                if len(kayitlar) >= son_n:
-                    break
-        return kayitlar
-    except Exception as e:
-        logger.warning(f"Geçmiş log okunamadı: {e}")
-        return []
-
-
-# ---------------------------------------------------------------------------
-# Yardımcı: ChromaDB'den ilaç listesi
-# ---------------------------------------------------------------------------
-
 @st.cache_data(ttl=300)
 def _get_ilac_listesi() -> list[str]:
     try:
@@ -137,624 +314,450 @@ def _get_ilac_listesi() -> list[str]:
         stats = collection_stats()
         return sorted(stats.get("ilac_dagilimi", {}).keys())
     except Exception as e:
-        logger.warning(f"İlaç listesi ChromaDB'den alınamadı: {e}")
+        logger.warning(f"İlaç listesi alınamadı: {e}")
         return []
 
 
-# ---------------------------------------------------------------------------
-# Yardımcı: İlaç adı kısaltma (UI-3)
-# ---------------------------------------------------------------------------
-
-_DOZ_RE = re.compile(r"\d[\d.,]*\s*(?:mg|mcg|µg|ml|g\b|iu|ui|mmol|meq|miu|%)", re.IGNORECASE)
-
-
-_FORM_KISALT = {
-    "film kapli tablet": "FKT", "film kaplı tablet": "FKT",
-    "tablet": "TAB", "kapsül": "KPS", "kapsul": "KPS",
-    "oral süspansiyon": "SÜS", "oral suspansiyon": "SÜS", "süspansiyon": "SÜS",
-    "şurup": "ŞRB", "surup": "ŞRB",
-    "enjeksiyonluk": "ENJ", "infuzyon": "INF", "cozelti": "ÇOZ", "çözelti": "ÇOZ",
-    "krem": "KRM", "merhem": "MRH", "damla": "DML", "sprey": "SPR",
-    "mikropellet": "MKP", "depo": "DEP", "retard": "RET",
-}
-
-def _kisa_ad_uret(tam_ad: str) -> str:
-    """'AUGMENTIN 400 MG/57 MG film kaplı tablet' → 'AUGMENTIN 400MG/57MG FKT'"""
-    parcalar = tam_ad.split()
-    marka = parcalar[0] if parcalar else tam_ad
-    eslesmeler = _DOZ_RE.findall(tam_ad)
-    doz = "/".join(e.strip().replace(" ", "").upper() for e in eslesmeler[:2]) if eslesmeler else ""
-
-    # Form bilgisini çıkar (çakışmaları önler)
-    tam_lower = tam_ad.lower()
-    form = ""
-    for anahtar, kisalt in _FORM_KISALT.items():
-        if anahtar in tam_lower:
-            form = kisalt
-            break
-
-    if doz and form:
-        return f"{marka} {doz} {form}"
-    elif doz:
-        return f"{marka} {doz}"
-    # Doz yoksa ilk 3 kelimeyi al
-    return " ".join(parcalar[:3])
-
-
-@st.cache_data(ttl=300)
-def _get_ilac_harita() -> dict[str, str]:
-    """Kısa ad → tam ad eşlemesi. Çakışan kısa adlara sayaç eklenir."""
-    harita: dict[str, str] = {}
-    for tam in _get_ilac_listesi():
-        kisa = _kisa_ad_uret(tam)
-        if kisa in harita:
-            sayac = 2
-            while f"{kisa} ({sayac})" in harita:
-                sayac += 1
-            kisa = f"{kisa} ({sayac})"
-        harita[kisa] = tam
-    return harita
-
-
-# ---------------------------------------------------------------------------
-# Yardımcı: Risk özeti kartları
-# ---------------------------------------------------------------------------
-
-def _risk_ozeti_goster(profil: PatientProfile, hedef_ilaclar: list[str]) -> None:
-    """Hasta profili ve lab değerlerine göre renkli risk kartları gösterir."""
-    kritik: list[str] = []
-    dikkat: list[str] = []
-    bilgi:  list[str] = []
-
-    # Hasta profili bazlı riskler
-    if profil.gebelik:
-        kritik.append("Hasta GEBE — tüm ilaçlar için gebelik kategorisi kontrol edilmeli")
-    if profil.emzirme:
-        dikkat.append("Hasta EMZİRİYOR — laktasyon geçişi değerlendirilmeli")
-    if profil.bobrek_yetmezligi:
-        evre = profil.bobrek_evresi
-        msg = f"Böbrek yetmezliği ({evre}, GFR={profil.gfr}) — doz ayarı gerekebilir"
-        if profil.gfr is not None and profil.gfr < 30:
-            kritik.append(msg)
+def _eslestir_ilaclar(hedef_ilaclar: list[str], ilac_listesi: list[str]) -> list[str]:
+    """Serbest metinle çıkarılan ilaç adlarını ChromaDB kayıtlarıyla eşleştirir."""
+    if not hedef_ilaclar or not ilac_listesi:
+        return hedef_ilaclar or []
+    eslesmis = []
+    for h in hedef_ilaclar:
+        h_upper = h.upper().strip()
+        tam = [i for i in ilac_listesi if h_upper in i.upper() or i.upper().startswith(h_upper)]
+        if tam:
+            eslesmis.extend(tam[:2])
         else:
-            dikkat.append(msg)
-    if profil.karaciger_yetmezligi:
-        dikkat.append(f"Karaciğer yetmezliği (Child-Pugh {profil.karaciger_skoru}) — hepatik metabolizma etkilenebilir")
-    if profil.geriyatrik:
-        bilgi.append(f"Geriyatrik hasta ({profil.yas} yaş) — doz ve tolerabilite dikkatli değerlendirilmeli")
-    if profil.pediyatrik:
-        dikkat.append(f"Pediatrik hasta ({profil.yas} yaş) — pediatrik doz uygulaması kontrol edilmeli")
+            eslesmis.append(h)
+    return list(dict.fromkeys(eslesmis))  # tekrarları sil, sırayı koru
 
-    # Lab değeri bazlı riskler
-    for anormal in profil.anormal_lab_degerleri:
-        param  = anormal["param"]
-        deger  = anormal["deger"]
-        durum  = anormal["durum"]
-        birim  = anormal["birim"]
-        ok = "↑↑" if durum == "kritik_yüksek" else ("↓↓" if durum == "kritik_düşük" else ("↑" if durum == "yüksek" else "↓"))
 
-        mesaj_map = {
-            "ALT":       f"ALT: {deger} {birim} {ok} — Karaciğer enzim yüksekliği, hepatotoksisite riski",
-            "AST":       f"AST: {deger} {birim} {ok} — Karaciğer enzim yüksekliği",
-            "Bilirubin": f"Bilirubin: {deger} {birim} {ok} — Hepatik fonksiyon bozukluğu",
-            "GGT":       f"GGT: {deger} {birim} {ok} — Karaciğer/safra yolu hasarı",
-            "Kreatinin": f"Kreatinin: {deger} {birim} {ok} — Böbrek fonksiyon bozukluğu",
-            "K":         f"K⁺: {deger} {birim} {ok} — {'Hiperkalemi' if durum == 'kritik_yüksek' else 'Hipokalemi'} riski",
-            "Na":        f"Na⁺: {deger} {birim} {ok} — {'Hipernatremi' if durum == 'kritik_yüksek' else 'Hiponatremi'} riski",
-            "INR":       f"INR: {deger} {ok} — Antikoagülasyon yüksek, kanama riski artmış",
-            "HbA1c":     f"HbA1c: {deger}% {ok} — Glisemik kontrol bozuk",
-            "Hemoglobin":f"Hemoglobin: {deger} {birim} {ok} — Anemi, ilaç toleransı azalabilir",
-            "Trombosit": f"Trombosit: {deger} {birim} {ok} — Trombositopeni, kanama riski",
-        }
-        mesaj = mesaj_map.get(param, f"{param}: {deger} {birim} {ok}")
+# ─── Session State ────────────────────────────────────────────────────────────
 
-        if "kritik" in durum:
-            kritik.append(mesaj)
-        else:
-            dikkat.append(mesaj)
+if "mesajlar" not in st.session_state:
+    st.session_state.mesajlar = []
 
-    # Alerjiler
-    if profil.alerjiler:
-        bilgi.append(f"Bilinen alerji: {', '.join(profil.alerjiler)} — çapraz reaktivite kontrol edilmeli")
+if "ctx" not in st.session_state:
+    st.session_state.ctx = ExtractedContext()
 
-    # Mevcut ilaç etkileşim uyarısı
-    if profil.mevcut_ilaclar and hedef_ilaclar:
-        bilgi.append(
-            f"Mevcut {len(profil.mevcut_ilaclar)} ilaç ile etkileşim analiz edildi: "
-            f"{', '.join(profil.mevcut_ilaclar[:3])}{'...' if len(profil.mevcut_ilaclar) > 3 else ''}"
+if "preview_ctx" not in st.session_state:
+    st.session_state.preview_ctx = ExtractedContext()
+
+if "pending_lab" not in st.session_state:
+    st.session_state.pending_lab = {}       # parse edilmiş ama onaylanmamış lab
+
+if "lab_dosya_adi" not in st.session_state:
+    st.session_state.lab_dosya_adi = ""
+
+# İlaç listesini session'a al — sadece bir kere yüklenir, spinner görünmez
+if "ilac_listesi" not in st.session_state:
+    st.session_state.ilac_listesi = _get_ilac_listesi()
+
+
+# ─── Real-time profil önizleme ────────────────────────────────────────────────
+
+def _on_soru_degisti():
+    """textarea değişince profil panelini anında günceller (LLM çağrısı yok)."""
+    text = st.session_state.get("soru_textarea", "")
+    if text.strip():
+        st.session_state.preview_ctx = extract_context(
+            text, st.session_state.ilac_listesi
         )
+    else:
+        st.session_state.preview_ctx = ExtractedContext()
 
-    if not (kritik or dikkat or bilgi):
-        st.markdown('<div class="risk-ok">✅ Hasta profilinde öne çıkan risk faktörü tespit edilmedi</div>',
+
+# ─── Profil Paneli ────────────────────────────────────────────────────────────
+
+def _profil_paneli(ctx: ExtractedContext):
+    """Sol panel — hasta profili kartları."""
+
+    # Başlık
+    st.markdown('<p style="font-weight:700;color:#1e3a5f;font-size:0.92rem;margin-bottom:12px;">HASTA PROFİLİ</p>',
+                unsafe_allow_html=True)
+
+    if not ctx.dolu_mu:
+        st.markdown("""
+        <div class="pcard" style="text-align:center;padding:22px 14px;">
+            <div style="font-size:1.8rem;margin-bottom:8px;">💬</div>
+            <div class="pcard-empty" style="font-style:normal;color:#94a3b8;font-size:0.86rem;line-height:1.5;">
+                Sohbette hastanızı<br>tanıttığınızda profil<br>otomatik dolar.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        return
+
+    # ── Demografik ──
+    demo_rows = ""
+    if ctx.yas:
+        demo_rows += f'<div class="pcard-row"><span class="pcard-lbl">Yaş</span><span class="pcard-val">{ctx.yas}</span></div>'
+    if ctx.cinsiyet:
+        demo_rows += f'<div class="pcard-row"><span class="pcard-lbl">Cinsiyet</span><span class="pcard-val">{ctx.cinsiyet.capitalize()}</span></div>'
+    if ctx.kilo:
+        demo_rows += f'<div class="pcard-row"><span class="pcard-lbl">Kilo</span><span class="pcard-val">{ctx.kilo} kg</span></div>'
+    if demo_rows:
+        st.markdown(f'<div class="pcard"><div class="pcard-title">👤 Demografik</div>{demo_rows}</div>',
+                    unsafe_allow_html=True)
+
+    # ── Klinik Durum ──
+    klin_rows = ""
+    if ctx.gfr is not None:
+        if ctx.gfr < 30:
+            evre, renk = "Şiddetli", "#dc2626"
+        elif ctx.gfr < 60:
+            evre, renk = "Orta", "#d97706"
+        else:
+            evre, renk = "Hafif", "#15803d"
+        klin_rows += (f'<div class="pcard-row"><span class="pcard-lbl">eGFR</span>'
+                      f'<span class="pcard-val">{ctx.gfr} &nbsp;<span style="color:{renk};font-size:0.78rem">{evre}</span></span></div>')
+    if ctx.bobrek_yetmezligi and ctx.gfr is None:
+        klin_rows += '<div class="pcard-row"><span class="pcard-lbl">Böbrek</span><span class="pcard-val" style="color:#d97706">⚠ Yetmezlik</span></div>'
+    if ctx.karaciger_yetmezligi:
+        kc = f"Child-Pugh {ctx.karaciger_skoru}" if ctx.karaciger_skoru else "Yetmezlik"
+        klin_rows += f'<div class="pcard-row"><span class="pcard-lbl">Karaciğer</span><span class="pcard-val" style="color:#d97706">⚠ {kc}</span></div>'
+    if ctx.gebelik:
+        klin_rows += '<div class="pcard-row"><span class="pcard-lbl">Özel Durum</span><span class="pcard-val">🤰 Gebe</span></div>'
+    if ctx.emzirme:
+        klin_rows += '<div class="pcard-row"><span class="pcard-lbl">Özel Durum</span><span class="pcard-val">Emziriyor</span></div>'
+    for param, val in ctx.lab_degerleri.items():
+        klin_rows += f'<div class="pcard-row"><span class="pcard-lbl">{param}</span><span class="pcard-val">{val}</span></div>'
+    if ctx.endikasyonlar:
+        for e in ctx.endikasyonlar[:3]:
+            klin_rows += f'<div class="pcard-row"><span class="pcard-lbl">Tanı</span><span class="pcard-val">{e}</span></div>'
+    if klin_rows:
+        st.markdown(f'<div class="pcard"><div class="pcard-title">🩺 Klinik Durum</div>{klin_rows}</div>',
+                    unsafe_allow_html=True)
+
+    # ── Mevcut İlaçlar ──
+    if ctx.mevcut_ilaclar:
+        tags = "".join(f'<span class="dtag">{i}</span>' for i in ctx.mevcut_ilaclar)
+        st.markdown(f'<div class="pcard"><div class="pcard-title">💊 Mevcut İlaçlar</div><div style="margin-top:4px">{tags}</div></div>',
+                    unsafe_allow_html=True)
+
+    # ── Sorgulanan İlaç ──
+    if ctx.hedef_ilaclar:
+        tags = "".join(f'<span class="dtag hedef">{i}</span>' for i in ctx.hedef_ilaclar)
+        st.markdown(f'<div class="pcard"><div class="pcard-title">🎯 Sorgulanan İlaç</div><div style="margin-top:4px">{tags}</div></div>',
+                    unsafe_allow_html=True)
+
+    # ── Alerjiler ──
+    if ctx.alerjiler:
+        tags = "".join(f'<span class="dtag alerji">{a}</span>' for a in ctx.alerjiler)
+        st.markdown(f'<div class="pcard"><div class="pcard-title">⚠️ Alerjiler</div><div style="margin-top:4px">{tags}</div></div>',
+                    unsafe_allow_html=True)
+
+    # ── Temizle ──
+    st.markdown("<div style='margin-top:6px'>", unsafe_allow_html=True)
+    if st.button("🗑️ Profili & Sohbeti Temizle", use_container_width=True, type="secondary"):
+        st.session_state.ctx = ExtractedContext()
+        st.session_state.mesajlar = []
+        st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ─── Risk Badge'leri ──────────────────────────────────────────────────────────
+
+def _risk_badges(response, ctx: ExtractedContext):
+    kritik, dikkat = [], []
+
+    if ctx.gebelik:
+        kritik.append("Hasta GEBE — gebelik kategorisi kontrol edilmeli")
+    if ctx.emzirme:
+        dikkat.append("Hasta EMZİRİYOR — laktasyon geçişi değerlendirilmeli")
+    if ctx.bobrek_yetmezligi or (ctx.gfr is not None and ctx.gfr < 60):
+        gfr_str = f" (eGFR {ctx.gfr})" if ctx.gfr else ""
+        if ctx.gfr is not None and ctx.gfr < 30:
+            kritik.append(f"Şiddetli böbrek yetmezliği{gfr_str} — doz ayarı zorunlu")
+        else:
+            dikkat.append(f"Böbrek fonksiyon bozukluğu{gfr_str} — doz ayarı gerekebilir")
+    if ctx.karaciger_yetmezligi:
+        skor = f" Child-Pugh {ctx.karaciger_skoru}" if ctx.karaciger_skoru else ""
+        dikkat.append(f"Karaciğer yetmezliği{skor} — hepatik metabolizma etkilenebilir")
+
+    for param, deger in ctx.lab_degerleri.items():
+        try:
+            durum = _lab_durumu(param, deger)
+            if "kritik" in durum:
+                kritik.append(f"{param}: {deger} — kritik değer")
+            elif durum in ("yüksek", "düşük"):
+                dikkat.append(f"{param}: {deger} — anormal")
+        except Exception:
+            pass
+
+    if hasattr(response, "kumlatif_riskler") and response.kumlatif_riskler:
+        for r in response.kumlatif_riskler:
+            msg = f"{r.kategori_label}: {r.aciklama[:90]}"
+            if r.siddet == "kritik":
+                kritik.append(msg)
+            else:
+                dikkat.append(msg)
+
+    if hasattr(response, "cyp_etkilesimler") and response.cyp_etkilesimler:
+        for e in response.cyp_etkilesimler:
+            msg = f"[{e.enzim}] {e.sonuc[:90]}"
+            if e.siddet == "kritik":
+                kritik.append(msg)
+            else:
+                dikkat.append(msg)
+
+    if not kritik and not dikkat:
+        st.markdown('<div class="rbadge rb-ok"><span class="rb-icon">✅</span><span>Profilde öne çıkan risk faktörü tespit edilmedi</span></div>',
                     unsafe_allow_html=True)
         return
 
     for k in kritik:
-        st.markdown(f'<div class="risk-kritik">🔴 <strong>KRİTİK:</strong> {k}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="rbadge rb-kritik"><span class="rb-icon">🔴</span><span><strong>KRİTİK:</strong> {k}</span></div>',
+                    unsafe_allow_html=True)
     for d in dikkat:
-        st.markdown(f'<div class="risk-dikkat">🟡 <strong>DİKKAT:</strong> {d}</div>', unsafe_allow_html=True)
-    for b in bilgi:
-        st.markdown(f'<div class="risk-bilgi">🔵 <strong>BİLGİ:</strong> {b}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="rbadge rb-dikkat"><span class="rb-icon">🟡</span><span><strong>DİKKAT:</strong> {d}</span></div>',
+                    unsafe_allow_html=True)
 
 
-# ---------------------------------------------------------------------------
-# Session state
-# ---------------------------------------------------------------------------
+# ─── Yanıt Görüntüleme ───────────────────────────────────────────────────────
 
-if "gecmis" not in st.session_state:
-    st.session_state.gecmis = []
+def _yanit_goster(response, ctx: ExtractedContext):
+    """Yapılandırılmış yanıt kartı."""
 
-if "kalici_gecmis" not in st.session_state:
-    st.session_state.kalici_gecmis = _gecmis_yukle(20)
+    # Meta şerit
+    tur = " / ".join(response.soru_turleri) if response.soru_turleri else "genel"
+    hedef = ", ".join(ctx.hedef_ilaclar[:3]) if ctx.hedef_ilaclar else "tüm KÜB"
+    provider = os.environ.get("LLM_PROVIDER", "claude").upper()
 
-# UI-1: Lab belgesi parse sonuçları bekleyen onay
-if "pending_lab" not in st.session_state:
-    st.session_state.pending_lab = {}
+    st.markdown(f"""
+    <div class="resp-meta">
+        <span class="meta-chip"><strong>Tür:</strong> {tur}</span>
+        <span class="meta-chip"><strong>İlaç:</strong> {hedef}</span>
+        <span class="meta-chip"><strong>Kaynak:</strong> {len(response.kaynaklar)} chunk</span>
+        <span class="meta-chip"><strong>Model:</strong> {provider}</span>
+    </div>
+    """, unsafe_allow_html=True)
 
-# UI-1: param → session_state key eşlemesi (Kabul Et işleminde kullanılır)
-_LAB_KEY_MAP: dict[str, str] = {
-    "ALT":        "lab_alt",
-    "AST":        "lab_ast",
-    "INR":        "lab_inr",
-    "K":          "lab_k",
-    "Na":         "lab_na",
-    "Kreatinin":  "lab_kreatinin",
-    "HbA1c":      "lab_hba1c",
-    "Bilirubin":  "lab_bilirubin",
-    "Hemoglobin": "lab_hgb",
-    "Trombosit":  "lab_trombo",
-    "GFR":        "gfr_input",
-}
+    # Risk badge'leri
+    _risk_badges(response, ctx)
 
-# İlaç listesini önceden yükle (sidebar'da kullanılacak)
-ilac_listesi = _get_ilac_listesi()
-ilac_harita = _get_ilac_harita()   # {kisa_ad: tam_ad}
-kisa_adlar = sorted(ilac_harita.keys())
+    # Klinik yanıt
+    st.markdown(response.yanit)
 
-# ---------------------------------------------------------------------------
-# Sidebar — Hasta Profili (UI-4: Expander grupları)
-# ---------------------------------------------------------------------------
+    # CYP450 kaynak notu
+    cyp_src = getattr(response, "cyp_source", "unknown")
+    if cyp_src == "llm_extraction":
+        st.info("ℹ️ CYP450 profili KÜB metninden otomatik çıkarıldı — manuel doğrulama önerilir.", icon="ℹ️")
+    elif cyp_src == "unavailable":
+        st.warning("CYP450 profili bu ilaç için mevcut değil.", icon="⚠️")
 
-with st.sidebar:
-    st.markdown("### 💊 PharmAssist")
+    # Kaynaklar
+    if response.kaynaklar:
+        with st.expander(f"📚 {len(response.kaynaklar)} KÜB kaynağı"):
+            kaynaklar_html = ""
+            for i, k in enumerate(response.kaynaklar, 1):
+                alt = f"[{k.alt_madde}]" if k.alt_madde else ""
+                kaynaklar_html += f"""
+                <div class="src-item">
+                    <div class="src-no">{i}</div>
+                    <div>
+                        <div><span class="src-drug">{k.ilac_adi}</span>
+                        — Madde {k.madde_no}{alt} <em>{k.madde_baslik}</em> (s.{k.sayfa})</div>
+                        <div class="src-skor">Skor: {k.score:.3f}</div>
+                    </div>
+                </div>"""
+            st.markdown(kaynaklar_html, unsafe_allow_html=True)
 
-    # --- Expander 1: Hasta Profili ---
-    with st.expander("👤 Hasta Profili", expanded=True):
-        yas = st.number_input("Yaş", min_value=0, max_value=120, value=45, step=1)
-        cinsiyet = st.selectbox("Cinsiyet", ["belirtilmemiş", "erkek", "kadın"])
-        kilo = st.number_input(
-            "Kilo (kg)", min_value=0.0, max_value=300.0,
-            value=0.0, step=0.5, key="kilo_input",
-            help="0 = bilinmiyor",
-        )
-        kilo_val = kilo if kilo > 0 else None
-        gfr = st.number_input(
-            "eGFR (mL/dk/1.73m²)", min_value=0.0, max_value=200.0,
-            value=0.0, step=1.0, key="gfr_input",
-            help="0 = bilinmiyor / normal",
-        )
-        gfr_val = gfr if gfr > 0 else None
 
-        st.markdown("**Özel Durumlar**")
-        gebelik   = st.checkbox("Gebe")
-        emzirme   = st.checkbox("Emziriyor")
-        pediatrik = st.checkbox("Pediatrik hasta (<18 yaş)")
-        geriatrik = st.checkbox("Geriatrik hasta (≥65 yaş)")
-        bobrek    = st.checkbox("Böbrek yetmezliği")
-        karaciger = st.checkbox("Karaciğer yetmezliği")
+# ─── Ana Layout ─────────────────────────────────────────────────────────────
 
-        st.markdown("**Alerjiler**")
-        alerjiler_raw = st.text_input("Virgülle ayırın", placeholder="penisilin, sülfamid",
-                                       key="alerji_input")
-        alerjiler = [a.strip() for a in alerjiler_raw.split(",") if a.strip()]
+st.markdown("""
+<div class="pa-header">
+    <span class="pa-logo">💊</span>
+    <div>
+        <p class="pa-title">PharmAssist</p>
+        <p class="pa-sub">KÜB Tabanlı Klinik Karar Destek Sistemi</p>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-        st.markdown("**Endikasyonlar / Tanılar**")
-        endikasyon_raw = st.text_input("Virgülle ayırın", placeholder="hipertansiyon, diyabet",
-                                        key="endikasyon_input")
-        endikasyonlar = [e.strip() for e in endikasyon_raw.split(",") if e.strip()]
+col_profil, col_chat = st.columns([2, 3], gap="large")
 
-    # --- Expander 2: Laboratuvar (UI-1: Lab belgesi yükleme) ---
-    with st.expander("🧪 Laboratuvar", expanded=False):
+# ── Sol: Profil Paneli (committed + preview birleşimi) ──
+with col_profil:
+    display_ctx = st.session_state.ctx.merge(st.session_state.preview_ctx)
+    _profil_paneli(display_ctx)
 
-        # -- UI-1: Dosya yükleme --
-        lab_dosyasi = st.file_uploader(
-            "Lab raporu yükle (PDF / PNG / JPG)",
-            type=["pdf", "png", "jpg", "jpeg"],
-            key="lab_uploader",
-            help="Dijital PDF önerilir. Görüntü formatı için pytesseract kurulu olmalıdır.",
-        )
+# ── Sağ: Sohbet ──
+with col_chat:
 
-        # Yeni dosya yüklendiyse parse et (aynı dosyayı tekrar parse etme)
-        if lab_dosyasi is not None:
-            if st.session_state.get("_lab_upload_ad") != lab_dosyasi.name:
-                with st.spinner("Lab raporu analiz ediliyor..."):
-                    try:
-                        _parsed = parse_lab_file(lab_dosyasi.read(), lab_dosyasi.name)
-                        st.session_state.pending_lab = _parsed
-                        st.session_state["_lab_upload_ad"] = lab_dosyasi.name
-                        if not _parsed:
-                            st.warning("Tanınan lab parametresi bulunamadı. Değerleri manuel girin.")
-                    except Exception as _exc:
-                        st.error(f"Parse hatası: {_exc}")
-                        st.session_state.pending_lab = {}
+    # Sohbet geçmişi
+    if not st.session_state.mesajlar:
+        st.markdown("""
+        <div style="text-align:center;padding:28px 10px 16px 10px;color:#94a3b8;">
+            <div style="font-size:1.8rem;margin-bottom:8px;">👨‍⚕️</div>
+            <div style="font-size:0.9rem;font-weight:500;color:#64748b;">PharmAssist'e hoş geldiniz</div>
+            <div style="font-size:0.82rem;margin-top:4px;line-height:1.5;">
+                Aşağıya hastanızı ve sorunuzu yazın.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        # Tespit edilen değerler varsa önizleme + onay ekranı
-        _pending = st.session_state.get("pending_lab", {})
-        if _pending:
-            st.success(f"**{len(_pending)} değer tespit edildi** — kontrol edip onaylayın:")
-            _pcols = st.columns(2)
-            for _i, (_p, _v) in enumerate(_pending.items()):
-                _pcols[_i % 2].caption(f"{_p}: **{_v}**")
-
-            _kab_col, _sil_col = st.columns(2)
-            with _kab_col:
-                if st.button("✅ Kabul Et ve Doldur", key="lab_kabul", use_container_width=True):
-                    for _param, _skey in _LAB_KEY_MAP.items():
-                        if _param in _pending:
-                            st.session_state[_skey] = float(_pending[_param])
-                    st.session_state.pending_lab = {}
-                    st.session_state.pop("_lab_upload_ad", None)
-                    st.rerun()
-            with _sil_col:
-                if st.button("❌ İptal", key="lab_iptal", use_container_width=True):
-                    st.session_state.pending_lab = {}
-                    st.session_state.pop("_lab_upload_ad", None)
-                    st.rerun()
-
-        st.caption("0 = bilinmiyor / girilmedi")
-
-        lab_col1, lab_col2 = st.columns(2)
-        with lab_col1:
-            lab_alt       = st.number_input("ALT (U/L)",           min_value=0.0, value=0.0, step=1.0,              key="lab_alt")
-            lab_ast       = st.number_input("AST (U/L)",           min_value=0.0, value=0.0, step=1.0,              key="lab_ast")
-            lab_inr       = st.number_input("INR",                 min_value=0.0, value=0.0, step=0.1, format="%.1f", key="lab_inr")
-            lab_k         = st.number_input("K⁺ (mEq/L)",          min_value=0.0, value=0.0, step=0.1, format="%.1f", key="lab_k")
-            lab_na        = st.number_input("Na⁺ (mEq/L)",         min_value=0.0, value=0.0, step=1.0,              key="lab_na")
-        with lab_col2:
-            lab_kreatinin = st.number_input("Kreatinin (mg/dL)",   min_value=0.0, value=0.0, step=0.1, format="%.1f", key="lab_kreatinin")
-            lab_hba1c     = st.number_input("HbA1c (%)",           min_value=0.0, value=0.0, step=0.1, format="%.1f", key="lab_hba1c")
-            lab_bilirubin = st.number_input("Bilirubin (mg/dL)",   min_value=0.0, value=0.0, step=0.1, format="%.1f", key="lab_bilirubin")
-            lab_hgb       = st.number_input("Hemoglobin (g/dL)",   min_value=0.0, value=0.0, step=0.1, format="%.1f", key="lab_hgb")
-            lab_trombo    = st.number_input("Trombosit (x10³/µL)", min_value=0.0, value=0.0, step=1.0,              key="lab_trombo")
-
-        # Sıfır olmayan değerleri topla
-        lab_degerleri: dict[str, float] = {}
-        _lab_raw = {
-            "ALT": lab_alt, "AST": lab_ast, "INR": lab_inr,
-            "K": lab_k, "Na": lab_na, "Kreatinin": lab_kreatinin,
-            "HbA1c": lab_hba1c, "Bilirubin": lab_bilirubin,
-            "Hemoglobin": lab_hgb, "Trombosit": lab_trombo,
-        }
-        for _k, _v in _lab_raw.items():
-            if _v > 0:
-                lab_degerleri[_k] = _v
-
-        # Anormal değer uyarısı
-        if lab_degerleri:
-            _uyarilar = []
-            for _param, _deger in lab_degerleri.items():
-                _durum = _lab_durumu(_param, _deger)
-                if _durum == "kritik_yüksek":
-                    _uyarilar.append(f"🔴 {_param}: {_deger} ↑↑")
-                elif _durum == "kritik_düşük":
-                    _uyarilar.append(f"🔴 {_param}: {_deger} ↓↓")
-                elif _durum in ("yüksek", "düşük"):
-                    _uyarilar.append(f"🟡 {_param}: {_deger}")
-            if _uyarilar:
-                st.warning("**Anormal Lab:**\n" + "\n".join(_uyarilar))
-
-    # --- Expander 3: Mevcut İlaçlar ---
-    with st.expander("💊 Mevcut İlaçlar", expanded=False):
-        if kisa_adlar:
-            st.caption("Sistemde bulunan ilaçları seçin")
-
-            # Arama alanı
-            mevcut_ara = st.text_input(
-                "Mevcut İlaç Ara",
-                placeholder="Örn: Metformin, Lisinopril...",
-                label_visibility="collapsed",
-                key="mevcut_ilac_ara",
-            )
-
-            # Filtreleme
-            mevcut_filtrelenmis = (
-                [k for k, v in ilac_harita.items()
-                 if mevcut_ara.upper() in k.upper() or mevcut_ara.upper() in v.upper()]
-                if mevcut_ara
-                else kisa_adlar
-            )
-
-            # Multiselect ile seçim
-            mevcut_kisa_secim = st.multiselect(
-                "Seç",
-                options=mevcut_filtrelenmis,
-                placeholder="Kullandığı ilaçları seçin",
-                key="mevcut_ilaclar_multiselect",
-                label_visibility="collapsed",
-            )
-
-            # Kısa adları tam ada çevir
-            mevcut_ilaclar = [ilac_harita[k] for k in mevcut_kisa_secim]
+    for msg in st.session_state.mesajlar:
+        if msg["role"] == "user":
+            with st.chat_message("user"):
+                st.markdown(msg["content"])
         else:
-            # Fallback: manual giriş (ChromaDB başarısız olduğunda)
-            st.warning("İlaç listesi yüklenemedi. Manuel giriş yapın:")
-            ilaclar_raw = st.text_area(
-                "Her satıra bir ilaç yazın",
-                height=80,
-                placeholder="Warfarin 5 mg\nAspirin 100 mg",
-                key="mevcut_ilaclar_manual",
+            with st.chat_message("assistant"):
+                if "response" in msg:
+                    _yanit_goster(msg["response"], msg.get("ctx_snapshot", ExtractedContext()))
+                else:
+                    st.markdown(msg["content"])
+
+    # ── Giriş Alanı ──
+    st.markdown("<div style='margin-top:16px;'>", unsafe_allow_html=True)
+    soru_input = st.text_area(
+        "Sorgunuz",
+        height=90,
+        placeholder='Örn: "68 yaşında erkek, GFR 35, warfarin kullanıyor. Klaritromisin yazabilir miyim?"',
+        key="soru_textarea",
+        label_visibility="collapsed",
+        on_change=_on_soru_degisti,
+    )
+
+    # Buton satırı: [📎 Lab] boşluk [Sorgula →]
+    btn_lab, btn_bosluk, btn_gonder = st.columns([1, 2, 1])
+
+    with btn_lab:
+        with st.popover("📎 Lab", use_container_width=True):
+            st.markdown("**Lab Raporu Yükle**")
+            st.caption("PDF, PNG veya JPG — otomatik analiz edilir")
+            lab_dosya = st.file_uploader(
+                "Dosya seç",
+                type=["pdf", "png", "jpg", "jpeg"],
+                key="lab_uploader",
+                label_visibility="collapsed",
             )
-            mevcut_ilaclar = [i.strip() for i in ilaclar_raw.splitlines() if i.strip()]
+            if lab_dosya and lab_dosya.name != st.session_state.lab_dosya_adi:
+                with st.spinner("Analiz ediliyor..."):
+                    try:
+                        parsed = parse_lab_file(lab_dosya.read(), lab_dosya.name)
+                        st.session_state.pending_lab = parsed
+                        st.session_state.lab_dosya_adi = lab_dosya.name
+                    except Exception as e:
+                        st.error(f"Parse hatası: {e}")
 
-    st.markdown("---")
-    n_results = st.slider("Retrieval chunk sayısı", min_value=3, max_value=15, value=8)
-    provider_label = os.environ.get("LLM_PROVIDER", "claude").upper()
-    st.caption(f"LLM: {provider_label}")
+            # Onay ekranı
+            if st.session_state.pending_lab:
+                st.success(f"**{len(st.session_state.pending_lab)} değer bulundu:**")
+                for param, val in st.session_state.pending_lab.items():
+                    st.markdown(f"- **{param}:** {val}")
+                kab, iptal = st.columns(2)
+                with kab:
+                    if st.button("✅ Ekle", key="lab_kab", use_container_width=True):
+                        st.session_state.ctx.lab_degerleri.update(
+                            {k: float(v) for k, v in st.session_state.pending_lab.items()}
+                        )
+                        st.session_state.pending_lab = {}
+                        st.session_state.lab_dosya_adi = ""
+                        st.rerun()
+                with iptal:
+                    if st.button("✖ İptal", key="lab_iptal", use_container_width=True):
+                        st.session_state.pending_lab = {}
+                        st.session_state.lab_dosya_adi = ""
+                        st.rerun()
+            elif st.session_state.ctx.lab_degerleri:
+                st.markdown("**Mevcut lab değerleri:**")
+                for p, v in st.session_state.ctx.lab_degerleri.items():
+                    st.markdown(f"- {p}: {v}")
+                if st.button("🗑️ Temizle", key="lab_temizle", use_container_width=True):
+                    st.session_state.ctx.lab_degerleri = {}
+                    st.rerun()
 
+    with btn_gonder:
+        gonder = st.button("Sorgula →", type="primary", use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# ---------------------------------------------------------------------------
-# Ana panel — başlık
-# ---------------------------------------------------------------------------
+# ─── Sorgu İşleme ────────────────────────────────────────────────────────────
 
-st.markdown('<p class="main-header">💊 PharmAssist</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-header">KÜB Tabanlı Klinik Karar Destek Sistemi</p>',
-            unsafe_allow_html=True)
+if gonder and soru_input and soru_input.strip():
+    import copy
+    soru_text = soru_input.strip()
 
-# ---------------------------------------------------------------------------
-# Hedef ilaç seçimi
-# ---------------------------------------------------------------------------
+    # 1. Kullanıcı mesajını geçmişe ekle
+    st.session_state.mesajlar.append({"role": "user", "content": soru_text})
 
-if kisa_adlar:
-    # 50+ ilaç için arama/filtreleme
-    ara_col, toplam_col = st.columns([3, 1])
-    with toplam_col:
-        st.caption(f"**{len(kisa_adlar)}** ilaç yüklü")
-    with ara_col:
-        ilac_ara = st.text_input(
-            "İlaç Ara",
-            placeholder="Örn: Norvasc, Metoprolol...",
-            label_visibility="collapsed",
-        )
+    # 2. Profil çıkar ve birleştir (ilaç listesi session'dan — spinner yok)
+    ilac_listesi = st.session_state.ilac_listesi
+    yeni_ctx = extract_context(soru_text, ilac_listesi)
+    st.session_state.ctx = st.session_state.ctx.merge(yeni_ctx)
+    ctx = st.session_state.ctx
 
-    # Hem kısa hem tam ada göre filtrele
-    filtrelenmis = (
-        [k for k, v in ilac_harita.items()
-         if ilac_ara.upper() in k.upper() or ilac_ara.upper() in v.upper()]
-        if ilac_ara
-        else kisa_adlar
-    )
-
-    hedef_kisa_secim = st.multiselect(
-        "Analiz Edilecek İlaç(lar)",
-        options=filtrelenmis,
-        placeholder="Seçin veya boş bırakın (tüm KÜB taranır)",
-        help="Belirli ilaç(lar) seçerseniz retrieval yalnızca o ilaçlara odaklanır.",
-    )
-    # Kısa adları tam ada çevir — RAG engine tam adı bekler
-    hedef_ilaclar_secim = [ilac_harita[k] for k in hedef_kisa_secim]
-else:
-    hedef_ilaclar_secim = []
-    st.info("ChromaDB bağlantısı kurulamadı veya koleksiyon boş.", icon="ℹ️")
-
-# ---------------------------------------------------------------------------
-# Soru girişi ve butonlar
-# ---------------------------------------------------------------------------
-
-soru = st.text_area(
-    "Klinik Soru",
-    height=90,
-    placeholder="Örn: Böbrek yetmezliği olan bu hastaya Augmentin yazılabilir mi?",
-)
-
-col1, col2, col3 = st.columns([1, 1, 4])
-with col1:
-    gonder = st.button("Sorgula", type="primary", use_container_width=True)
-with col2:
-    temizle = st.button("Temizle", use_container_width=True)
-
-if temizle:
-    st.session_state.gecmis = []
-    st.rerun()
-
-# ---------------------------------------------------------------------------
-# Sorgu çalıştır
-# ---------------------------------------------------------------------------
-
-if gonder and soru.strip():
-    # Hasta profili oluştur
-    gfr_hesap = gfr_val
-    if bobrek and not gfr_val:
+    # 3. PatientProfile oluştur
+    gfr_hesap = ctx.gfr
+    if ctx.bobrek_yetmezligi and not gfr_hesap:
         gfr_hesap = 45.0
-
-    karaciger_skoru = "B" if karaciger else None
+    karaciger_skoru = ctx.karaciger_skoru
+    if ctx.karaciger_yetmezligi and not karaciger_skoru:
+        karaciger_skoru = "B"
 
     profil = PatientProfile(
-        yas=yas,
-        cinsiyet=cinsiyet,
-        kilo=kilo_val,
+        yas=ctx.yas or 45,
+        cinsiyet=ctx.cinsiyet or "belirtilmemiş",
+        kilo=ctx.kilo,
         gfr=gfr_hesap,
         karaciger_skoru=karaciger_skoru,
-        gebelik=gebelik,
-        emzirme=emzirme,
-        mevcut_ilaclar=mevcut_ilaclar,
-        alerjiler=alerjiler,
-        endikasyonlar=endikasyonlar,
-        lab_degerleri=lab_degerleri,
-        pediyatrik_override=True if pediatrik else None,
-        geriyatrik_override=True if geriatrik else None,
+        gebelik=ctx.gebelik,
+        emzirme=ctx.emzirme,
+        mevcut_ilaclar=ctx.mevcut_ilaclar,
+        alerjiler=ctx.alerjiler,
+        endikasyonlar=ctx.endikasyonlar,
+        lab_degerleri=ctx.lab_degerleri,
+        pediyatrik_override=True if ctx.pediyatrik else None,
+        geriyatrik_override=True if ctx.geriyatrik else None,
     )
 
-    hedef_ilaclar = hedef_ilaclar_secim if hedef_ilaclar_secim else None
+    # 4. Hedef ilaçları ChromaDB ile doğrula
+    hedef_ilaclar = _eslestir_ilaclar(ctx.hedef_ilaclar, ilac_listesi) if ctx.hedef_ilaclar else None
+
+    # 5. RAG çalıştır
+    soru_for_rag = ctx.temizlenmis_soru or soru_text
 
     with st.spinner("KÜB kaynakları taranıyor..."):
         try:
             response = run_rag(
-                soru=soru.strip(),
+                soru=soru_for_rag,
                 profil=profil,
                 hedef_ilaclar=hedef_ilaclar,
-                n_results=n_results,
+                n_results=8,
             )
         except Exception as e:
             st.error(f"Hata: {e}")
+            st.session_state.mesajlar.pop()
             st.stop()
 
-    # Geçmişe ekle (session — en fazla 5 tut)
-    st.session_state.gecmis.insert(0, {
-        "soru": soru.strip(),
-        "yanit": response.yanit,
-        "kaynaklar": response.kaynaklar,
-        "soru_turleri": response.soru_turleri,
-        "model": response.model,
+    # 6. Yanıtı geçmişe ekle
+    st.session_state.mesajlar.append({
+        "role": "assistant",
+        "content": response.yanit,
+        "response": response,
+        "ctx_snapshot": copy.copy(ctx),
     })
-    st.session_state.gecmis = st.session_state.gecmis[:5]
 
-    # Kalıcı log'a kaydet
+    # 7. Log kaydet
     _gecmis_kaydet(
-        soru=soru.strip(),
+        soru=soru_for_rag,
         yanit=response.yanit,
         hedef_ilaclar=hedef_ilaclar or [],
         soru_turleri=response.soru_turleri,
         chunk_sayisi=len(response.kaynaklar),
         model=response.model,
     )
-    # Kalıcı geçmişi yenile
-    st.session_state.kalici_gecmis = _gecmis_yukle(20)
 
-    # ---------------------------------------------------------------------------
-    # Sonuç göster
-    # ---------------------------------------------------------------------------
-
-    st.markdown("---")
-
-    # Metadata satırı
-    meta_cols = st.columns(5)
-    _model_parts = response.model.split("-") if response.model else []
-    _model_label = _model_parts[1].upper() if len(_model_parts) > 1 else (response.model.upper() if response.model else "—")
-    meta_cols[0].metric("Model", _model_label)
-
-    soru_turu_tam = " / ".join(response.soru_turleri) if response.soru_turleri else "genel"
-    soru_turu_kisa = soru_turu_tam if len(soru_turu_tam) <= 18 else soru_turu_tam[:16] + "…"
-    meta_cols[1].metric("Soru Türü", soru_turu_kisa, help=soru_turu_tam)
-
-    meta_cols[2].metric("Hedef İlaç", len(hedef_ilaclar) if hedef_ilaclar else "tümü")
-    meta_cols[3].metric("Kaynak Chunk", len(response.kaynaklar))
-    meta_cols[4].metric("Yanıt Token", response.yanit_token_sayisi)
-
-    # Karantina uyarıları — OCR bekleyen ilaçlar
-    if hasattr(response, 'quarantine_warnings') and response.quarantine_warnings:
-        for drug in response.quarantine_warnings:
-            st.warning(f"⚠️ {drug} için KÜB belgesi OCR işlemi bekliyor. Bilgiler eksik olabilir.")
-
-    # Sıfır chunk uyarısı (UI-2)
-    if not response.kaynaklar:
-        import difflib
-        uyari = (
-            "Bu ilaç için KÜB belgesi bulunamadı. "
-            "İlaç seçimini kontrol edin veya seçim yapmadan sorgulayın."
-        )
-        if hedef_ilaclar and ilac_listesi:
-            ilac_upper_map = {i.upper(): i for i in ilac_listesi}
-            oneriler: list[str] = []
-            for ilac in hedef_ilaclar:
-                benzerler = difflib.get_close_matches(
-                    ilac.upper(), ilac_upper_map.keys(), n=3, cutoff=0.4
-                )
-                oneriler.extend(ilac_upper_map[b] for b in benzerler)
-            if oneriler:
-                benzer_liste = "\n".join(
-                    f"- {o}" for o in list(dict.fromkeys(oneriler))[:5]
-                )
-                uyari += f"\n\n**ChromaDB'de benzer adlar:**\n{benzer_liste}"
-        st.warning(uyari)
-
-    # Risk özeti paneli
-    st.markdown("#### Risk Özeti")
-    _risk_ozeti_goster(profil, hedef_ilaclar or [])
-
-    # Kümülatif risk bulguları
-    if response.kumlatif_riskler:
-        st.markdown("##### Kümülatif Yan Etki Analizi")
-        for r in response.kumlatif_riskler:
-            css = "risk-kritik" if r.siddet == "kritik" else "risk-dikkat"
-            sembol = "🔴 KRİTİK" if r.siddet == "kritik" else "🟡 DİKKAT"
-            st.markdown(
-                f'<div class="{css}">{sembol} — <strong>{r.kategori_label}</strong>: {r.aciklama}</div>',
-                unsafe_allow_html=True,
-            )
-
-    # CYP450 etkileşim bulguları
-    if response.cyp_etkilesimler:
-        st.markdown("##### CYP450 Enzim Etkileşimleri")
-        for e in response.cyp_etkilesimler:
-            css = "risk-kritik" if e.siddet == "kritik" else "risk-dikkat"
-            sembol = "🔴 KRİTİK" if e.siddet == "kritik" else "🟡 DİKKAT"
-            st.markdown(
-                f'<div class="{css}">{sembol} [{e.enzim}] — {e.sonuc}</div>',
-                unsafe_allow_html=True,
-            )
-
-    # CYP450 kaynak görünürlüğü
-    cyp_source = getattr(response, "cyp_source", "unknown")
-    if cyp_source == "unavailable":
-        st.warning("⚠️ Bu ilaç için CYP450 profili mevcut değil — otomatik çıkarım başarısız oldu.")
-    elif cyp_source == "llm_extraction":
-        st.info("ℹ️ CYP450 profili KÜB metninden otomatik çıkarıldı (manuel doğrulama önerilir).")
-
-    # Klinik yanıt
-    st.markdown("#### Klinik Yanıt")
-    with st.container(border=True):
-        st.markdown(response.yanit)
-
-    # Kaynaklar
-    if response.kaynaklar:
-        st.markdown("#### Kullanılan Kaynaklar")
-        with st.expander(f"{len(response.kaynaklar)} chunk göster", expanded=False):
-            for i, k in enumerate(response.kaynaklar, 1):
-                col_a, col_b = st.columns([3, 1])
-                with col_a:
-                    st.markdown(
-                        f"**{i}. {k.ilac_adi}** — Madde {k.madde_no}"
-                        f"{'[' + k.alt_madde + ']' if k.alt_madde else ''} "
-                        f"*{k.madde_baslik}* (s.{k.sayfa})"
-                    )
-                    with st.expander("İçerik"):
-                        st.text(k.icerik[:800] + ("…" if len(k.icerik) > 800 else ""))
-                with col_b:
-                    st.metric("Skor", f"{k.score:.3f}")
-
-    # Hasta profili özeti
-    if response.hasta_ozeti:
-        with st.expander("Hasta Profili Özeti"):
-            st.text(response.hasta_ozeti)
-
-elif gonder and not soru.strip():
-    st.warning("Lütfen bir soru girin.")
+    st.rerun()
 
 
-# ---------------------------------------------------------------------------
-# Sorgu geçmişi — kalıcı log
-# ---------------------------------------------------------------------------
+# ─── Footer ─────────────────────────────────────────────────────────────────
 
-kalici = st.session_state.get("kalici_gecmis", [])
-if kalici:
-    st.markdown("---")
-    with st.expander(f"Geçmiş Sorgular ({len(kalici)} kayıt)", expanded=False):
-        for kayit in kalici:
-            tarih = kayit.get("tarih", "")[:16].replace("T", " ")
-            tur = " / ".join(kayit.get("soru_turleri", [])) or "genel"
-            ilaclar = ", ".join(kayit.get("hedef_ilaclar", [])) or "tümü"
-            baslik = f"{tarih} — {kayit['soru'][:70]}{'…' if len(kayit['soru']) > 70 else ''}"
-            with st.expander(baslik):
-                st.caption(f"Tür: {tur} | İlaçlar: {ilaclar} | Chunk: {kayit.get('chunk_sayisi', '?')} | Model: {kayit.get('model', '?')}")
-                st.markdown(kayit.get("yanit_ozet", ""))
-
-
-# ---------------------------------------------------------------------------
-# Footer
-# ---------------------------------------------------------------------------
-
-st.markdown("---")
-st.caption(
-    "⚠️ Bu sistem yalnızca klinik karar desteği amaçlıdır. "
-    "Nihai karar her zaman sorumlu hekime aittir."
-)
+st.markdown("""
+<hr style="border:none;border-top:1px solid #e2e8f0;margin:1.5rem 0 0.5rem 0;">
+<p style="text-align:center;font-size:0.75rem;color:#94a3b8;margin:0;">
+    ⚠️ Bu sistem yalnızca klinik karar desteği amaçlıdır.
+    Nihai karar her zaman sorumlu hekime aittir.
+</p>
+""", unsafe_allow_html=True)
