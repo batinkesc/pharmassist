@@ -1,0 +1,15 @@
+@startuml UC4_CYP_Activity
+skinparam monochrome true
+skinparam shadowing false
+start
+:İlaçların CYP Profilini Getir;
+:Enzim Çakışmalarını Kontrol Et;
+if (İndükleyici mi İnhibitör mü?) then (İnhibitör)
+  :Toksisite Riski Uyarısı;
+else (İndükleyici)
+  :Etkinlik Azalması Uyarısı;
+endif
+:Klinik Öneri Oluştur;
+:CYP Uyum Raporu Üret;
+stop
+@enduml

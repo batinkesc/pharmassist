@@ -50,6 +50,9 @@ ragas_run*.log
 # Sunumlar (eski pipeline'a göre, güncellenmedi)
 SUNUMLAR_VE_DIAGRAMLAR/
 
+# Geçici scriptler
+scratch/
+
 # OS
 .DS_Store
 Thumbs.db

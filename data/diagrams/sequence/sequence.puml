@@ -1,0 +1,32 @@
+@startuml PharmAssist_Sequence
+skinparam monochrome true
+skinparam shadowing false
+actor Klinisyen as User
+participant "Streamlit UI" as UI
+participant "RAG Engine" as Engine
+database "ChromaDB" as Vector
+database "Neo4j" as Graph
+participant "Claude Haiku" as LLM
+
+User -> UI : Sorgu Gir (İlaçlar + Lab)
+UI -> Engine : run_rag(query, profile)
+
+activate Engine
+Engine -> Vector : Semantic Search (Bölüm 4.3, 4.5)
+Vector --> Engine : KÜB Chunks
+
+Engine -> Graph : Cypher Query (Interactions)
+Graph --> Engine : Relationship Data
+
+Engine -> Engine : Deterministic Risk Analysis
+Engine -> Engine : CYP450 Mapping
+
+Engine -> LLM : Generate Response (Context + Risks)
+LLM --> Engine : Clinical Answer
+
+Engine -> Engine : validate_response()
+Engine --> UI : Final Answer + Citations
+deactivate Engine
+
+UI -> User : Raporu Göster
+@enduml

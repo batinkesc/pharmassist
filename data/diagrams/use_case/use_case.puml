@@ -1,0 +1,44 @@
+@startuml PharmAssist_UseCase
+left to right direction
+skinparam monochrome true
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+actor "Klinisyen" as User
+
+package "PharmAssist" {
+  usecase "Hasta Profili Gir\n(yaş, GFR, ilaçlar, alerjiler)" as UC_Profile
+  usecase "İlaç Kombinasyonu Sor\n(ör: Augmentin + Warfarin)" as UC_Query
+  usecase "İlaç Etkileşimi Analiz Et" as UC_Interact
+  usecase "Kontrendikasyon Kontrol Et" as UC_Contra
+  usecase "Kümülatif Risk Hesapla" as UC_Risk
+  usecase "CYP450 Enzim Mapping Yap" as UC_CYP
+  usecase "Cevap + Kaynakları Göster" as UC_Response
+  usecase "Risk Uyarılarını Ekle" as UC_Alert
+}
+
+database "ChromaDB" as DB_Vector
+database "Neo4j" as DB_Graph
+cloud "Claude Haiku API" as AI_Engine
+
+User --> UC_Profile : giriş
+User --> UC_Query : soruyor
+UC_Profile ..> UC_Query : <<include>>
+
+UC_Query --> UC_Interact
+UC_Query --> UC_Contra
+UC_Query --> UC_Risk
+UC_Query --> UC_CYP
+
+UC_Interact --> DB_Graph : etkileşim sorgula
+UC_Contra --> DB_Graph : kontrendikasyon sorgula
+UC_Interact --> DB_Vector : KÜB ara
+
+UC_Interact --> AI_Engine
+UC_Contra --> AI_Engine
+UC_Risk --> AI_Engine
+UC_CYP --> AI_Engine
+
+UC_Response --> User
+UC_Response --> UC_Alert
+@enduml
