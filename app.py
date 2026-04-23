@@ -148,15 +148,36 @@ def _get_ilac_listesi() -> list[str]:
 _DOZ_RE = re.compile(r"\d[\d.,]*\s*(?:mg|mcg|µg|ml|g\b|iu|ui|mmol|meq|miu|%)", re.IGNORECASE)
 
 
+_FORM_KISALT = {
+    "film kapli tablet": "FKT", "film kaplı tablet": "FKT",
+    "tablet": "TAB", "kapsül": "KPS", "kapsul": "KPS",
+    "oral süspansiyon": "SÜS", "oral suspansiyon": "SÜS", "süspansiyon": "SÜS",
+    "şurup": "ŞRB", "surup": "ŞRB",
+    "enjeksiyonluk": "ENJ", "infuzyon": "INF", "cozelti": "ÇOZ", "çözelti": "ÇOZ",
+    "krem": "KRM", "merhem": "MRH", "damla": "DML", "sprey": "SPR",
+    "mikropellet": "MKP", "depo": "DEP", "retard": "RET",
+}
+
 def _kisa_ad_uret(tam_ad: str) -> str:
-    """'AUGMENTIN 400 MG/57 MG oral süspansiyon...' → 'AUGMENTIN 400MG/57MG'"""
+    """'AUGMENTIN 400 MG/57 MG film kaplı tablet' → 'AUGMENTIN 400MG/57MG FKT'"""
     parcalar = tam_ad.split()
     marka = parcalar[0] if parcalar else tam_ad
     eslesmeler = _DOZ_RE.findall(tam_ad)
-    if eslesmeler:
-        doz = "/".join(e.strip().replace(" ", "").upper() for e in eslesmeler[:2])
+    doz = "/".join(e.strip().replace(" ", "").upper() for e in eslesmeler[:2]) if eslesmeler else ""
+
+    # Form bilgisini çıkar (çakışmaları önler)
+    tam_lower = tam_ad.lower()
+    form = ""
+    for anahtar, kisalt in _FORM_KISALT.items():
+        if anahtar in tam_lower:
+            form = kisalt
+            break
+
+    if doz and form:
+        return f"{marka} {doz} {form}"
+    elif doz:
         return f"{marka} {doz}"
-    # Doz bilgisi yoksa ilk 3 kelimeyi al
+    # Doz yoksa ilk 3 kelimeyi al
     return " ".join(parcalar[:3])
 
 
