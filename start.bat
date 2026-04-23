@@ -41,12 +41,16 @@ if not errorlevel 1 (
     goto :neo4j_done
 )
 
-:: Neo4j Desktop servisi olarak başlat
-echo [INFO] Neo4j servisi baslatiliyor...
-net start neo4j >nul 2>&1
+:: Docker kontrolü
+docker info >nul 2>&1
 if errorlevel 1 (
-    echo [UYARI] 'net start neo4j' basarisiz. Neo4j Desktop'i manuel acin!
+    echo [HATA] Docker Desktop calısmiyor! Baslatin ve tekrar deneyin.
+    pause & exit /b 1
 )
+
+:: Neo4j container başlat (varsa çalıştır, yoksa oluştur)
+echo [INFO] Neo4j baslatiliyor (docker-compose)...
+docker-compose up -d neo4j >nul 2>&1
 
 :: Hazır olana dek bekle (max 60 sn)
 echo [INFO] Neo4j baslamasi bekleniyor...
