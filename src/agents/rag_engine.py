@@ -32,7 +32,7 @@ load_dotenv(override=True)
 from src.agents.patient_profile import PatientProfile
 from src.agents.query_augmentor import augment_query, AugmentedQuery
 from src.core.content_policy import POLICY
-from src.retrieval.chroma_store import search, batch_search, _load_quarantine_list
+from src.retrieval.chroma_store import search, batch_search, hybrid_batch_search, _load_quarantine_list
 from src.retrieval.reranker import rerank
 from src.data.normalization import normalize_drug_name
 
@@ -157,13 +157,14 @@ def _retrieve_chunks(augmented: AugmentedQuery) -> list[RetrievedChunk]:
         crit_priority = [m for m in priority if m in KRITIK_MADDELER]
         norm_priority = [m for m in priority if m not in KRITIK_MADDELER]
 
-        # 1. Geçiş: priority sections (kritik + normal ayrı çağrı)
+        # 1. Geçiş: priority sections — hybrid (BM25 + semantik, RRF)
+        # Kritik maddeler (4.3/4.4/4.5/4.6) flags filtresi almaz
         for sections, use_flags in [
             (crit_priority, False),
             (norm_priority, True),
         ]:
             if sections:
-                raw = batch_search(
+                raw = hybrid_batch_search(
                     query=plan.sorgu,
                     priority_sections=sections,
                     secondary_sections=[],
@@ -175,15 +176,15 @@ def _retrieve_chunks(augmented: AugmentedQuery) -> list[RetrievedChunk]:
                 for r in raw:
                     _ekle(r)
 
-        # 2. Geçiş: secondary sections (k=10, eski: 5)
+        # 2. Geçiş: secondary sections — hybrid
         if secondary:
-            raw_sec = batch_search(
+            raw_sec = hybrid_batch_search(
                 query=plan.sorgu,
                 priority_sections=secondary,
                 secondary_sections=[],
                 filter_ilac=[plan.ilac_adi] if plan.ilac_adi else None,
                 filter_patient_flags=plan.patient_flags if plan.patient_flags else None,
-                k_priority=10,  # eski: 5 — secondary recall artırıldı
+                k_priority=10,
                 k_secondary=0,
             )
             for r in raw_sec:
