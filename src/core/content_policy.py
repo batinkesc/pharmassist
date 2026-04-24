@@ -63,7 +63,7 @@ class ContentPolicy:
     # ------------------------------------------------------------------
     # Evaluation (ragas_eval.py) — runtime ile aynı tutulur, drift engeli
     # ------------------------------------------------------------------
-    eval_max_contexts: int = 12              # eski: 9 — max_chunks_per_query ile paralel
+    eval_max_contexts: int = 9               # eski: 12 — LM Studio context limiti için
     eval_max_chunk_chars: int = 4000          # chunk_window_chars ile eşit
 
 

@@ -28,7 +28,7 @@ from ragas.run_config import RunConfig
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 
-load_dotenv()
+load_dotenv(override=True)
 
 
 

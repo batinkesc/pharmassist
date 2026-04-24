@@ -27,7 +27,7 @@ import anthropic
 import openai
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 from src.agents.patient_profile import PatientProfile
 from src.agents.query_augmentor import augment_query, AugmentedQuery
@@ -711,6 +711,10 @@ def run_rag(
         RAGResponse — yanıt + kaynaklar + metadata
     """
     logger.info(f"RAG pipeline başladı: '{soru[:60]}...' " if len(soru) > 60 else f"RAG pipeline başladı: '{soru}'")
+
+    # Hedef ilaç adlarını normalize et — ® ™ © gibi semboller ChromaDB filtresini kırıyor
+    if hedef_ilaclar:
+        hedef_ilaclar = [normalize_drug_name(i) for i in hedef_ilaclar]
 
     # 1. Query augmentation
     augmented = augment_query(soru, profil, hedef_ilaclar, n_results=n_results)

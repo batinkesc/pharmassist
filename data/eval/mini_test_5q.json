@@ -1,0 +1,131 @@
+[
+  {
+    "id": "v3_q03",
+    "kategori": "cyp450_etkilesim",
+    "soru": "SPORANOX kullanan hastada CORDARONE kan düzeyi nasıl etkilenir?",
+    "ground_truth": "İtrakonazol (SPORANOX) güçlü CYP3A4 inhibitörüdür. Amiodaron (CORDARONE) CYP3A4 substratıdır. Birlikte kullanımda amiodaronun plazma konsantrasyonu artar, QT uzaması ve kardiyak toksisite riski yükselir. Bu kombinasyondan kaçınılmalıdır. Alternatif antifungal (örn. amfoterisin B) tercih edilmeli; zorunluysa kardiyak izlem ve EKG takibi yapılmalıdır.",
+    "hasta": {
+      "yas": 64,
+      "cinsiyet": "kadın",
+      "gfr": null,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": [
+        "CORDARONE 150 mg IV"
+      ],
+      "alerjiler": [],
+      "endikasyonlar": [
+        "atriyal fibrilasyon",
+        "fungal enfeksiyon"
+      ],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {}
+    },
+    "hedef_ilaclar": [
+      "SPORANOX 10 mg / mL oral çözelti",
+      "CORDARONE 150 mg/3 mL IV enjeksiyonluk çözelti"
+    ]
+  },
+  {
+    "id": "v3_q05",
+    "kategori": "kontrendikasyon_karaciger",
+    "soru": "Child-Pugh C karaciğer yetmezliği olan hastada ONAXAN kullanılabilir mi?",
+    "ground_truth": "Rivaroksaban (ONAXAN) Child-Pugh B ve C karaciğer hastalığında kontrendikedir. Karaciğer yetmezliği koagülopati ile ilişkili olduğundan ve rivaroksaban hepatik metabolizma ile atılımına bağlı olduğundan, bu hastalarda kullanılmamalıdır. Alternatif antikoagülan olarak düşük molekül ağırlıklı heparin (DMAH) değerlendirilebilir; karaciğer fonksiyonu ve kanama riski takip edilmelidir.",
+    "hasta": {
+      "yas": 55,
+      "cinsiyet": "erkek",
+      "gfr": null,
+      "karaciger_skoru": "C",
+      "mevcut_ilaclar": [],
+      "alerjiler": [],
+      "endikasyonlar": [
+        "derin ven trombozu"
+      ],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {
+        "alt": 180,
+        "bilirubin": 3.2
+      }
+    },
+    "hedef_ilaclar": [
+      "ONAXAN® 20 mg film kaplı tablet"
+    ]
+  },
+  {
+    "id": "v3_q16",
+    "kategori": "doz_bobrek",
+    "soru": "GFR 40 olan hastada COLCHICUM DISPERT dozu nasıl ayarlanmalı?",
+    "ground_truth": "Kolşisin (COLCHICUM DISPERT) böbrek yetmezliğinde dikkatli kullanılmalıdır. Orta dereceli böbrek yetmezliğinde (GFR 30-60) doz azaltılmalı ve tedavi süresi kısaltılmalıdır. Nöromiyopati ve miyelosüpresyon riski artar. GFR 30-60 aralığında kolşisin 0,5 mg/gün sınırı aşılmamalı; nöromiyopati ve kan sayımı açısından dikkatli izlem gereklidir.",
+    "hasta": {
+      "yas": 62,
+      "cinsiyet": "erkek",
+      "gfr": 40.0,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": [],
+      "alerjiler": [],
+      "endikasyonlar": [
+        "gut atağı"
+      ],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {
+        "kreatinin": 1.7
+      }
+    },
+    "hedef_ilaclar": [
+      "COLCHICUM DISPERT® 0,5 mg Film Kaplı Tablet"
+    ]
+  },
+  {
+    "id": "v3_q17",
+    "kategori": "cyp450_etkilesim",
+    "soru": "CYMBALTA kullanan hastada ALTİZEM SR eklenirse ne olur?",
+    "ground_truth": "Duloksetin (CYMBALTA) CYP1A2 ve CYP2D6 substratıdır. Diltiazem (ALTİZEM SR) orta düzey CYP3A4 inhibitörüdür. Duloksetin metabolizması üzerinde belirgin etkisi sınırlıdır ancak birlikte kullanımda duloksetin plazma düzeyi izlenmeli ve yan etkiler takip edilmelidir.",
+    "hasta": {
+      "yas": 54,
+      "cinsiyet": "kadın",
+      "gfr": null,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": [
+        "CYMBALTA 60 mg"
+      ],
+      "alerjiler": [],
+      "endikasyonlar": [
+        "depresyon",
+        "hipertansiyon"
+      ],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {}
+    },
+    "hedef_ilaclar": [
+      "CYMBALTA® 60 mg kapsül",
+      "ALTİZEM SR 120 mg Mikropellet Kapsül"
+    ]
+  },
+  {
+    "id": "v3_q29",
+    "kategori": "kontrendikasyon",
+    "soru": "Feokromasitoma hastasına NORODOL başlanabilir mi?",
+    "ground_truth": "Haloperidol (NORODOL) feokromasitomada kontrendikedir. Dopamin reseptör blokajı nedeniyle hipertansif kriz tetiklenebilir. KÜB belgesinde feokromasitoma kontrendikasyon olarak yer almaktadır. NORODOL başlanmamalı; feokromositoma yönetiminde dikkatli klinik yaklaşım ve hasta izlemi gereklidir. Alternatif antipsikotik ihtiyacı için psikiyatri konsültasyonu önerilir.",
+    "hasta": {
+      "yas": 40,
+      "cinsiyet": "kadın",
+      "gfr": null,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": [],
+      "alerjiler": [],
+      "endikasyonlar": [
+        "psikoz",
+        "feokromasitoma"
+      ],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {}
+    },
+    "hedef_ilaclar": [
+      "NORODOL® 5 mg tablet"
+    ]
+  }
+]
