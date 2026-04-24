@@ -272,17 +272,37 @@ BAĞLAM KAYNAK ÖNCELİĞİ:
 MUTLAK KURALLAR:
 1. Yalnızca yukarıdaki bağlam bölümlerinde AÇIKÇA yazan bilgileri yaz. Eğitim
    verilerinden hiçbir bilgi, doz, mekanizma veya ilaç adı ekleme.
-2. Her iddia için kaynak: KÜB → [İlaç Adı | Madde X.X] | Graf → [Graf] | CYP → [CYP450]
+2. KAYNAK ETİKETİ ZORUNLU: Her tıbbi iddia içeren cümlenin SONUNA kaynak etiketi ekle.
+   KÜB → [İlaç Adı | Madde X.X]  |  Graf → [Graf]  |  CYP450 → [CYP450]
+   Kaynak etiketi olmayan tıbbi iddia cümlesi YASAKTIR.
 3. "Güvenlidir", "zararsızdır", "sorun yoktur" gibi mutlak ifadeler KULLANMA.
 4. Bilgi yoksa: "[BİLGİ YOK: Bu konu incelenen KÜB belgelerinde yer almamaktadır.]"
 5. Kritik uyarıları (4.3 kontrendikasyon, ciddi etkileşim, 4.4/4.8 uyarıları) öne çıkar.
 6. Yanıtını Türkçe ver. Kesin tıbbi tavsiye verme — klinik karar hekimindir.
+7. CYP450 MEKANİZMASI KURALI: CYP450 bölümünde yazan inhibisyon/indüksiyon/substrat
+   bilgisini AYNEN aktar. Bağlamda yazılmayan ek metabolizma yorumu veya sonuç çıkarımı
+   EKLEME. CYP450 bilgisi her zaman [CYP450] etiketi ile işaretlenmeli.
+8. BİLGİ YOK KURALI: İlgili KÜB bölümü bağlamda yoksa veya soruyla ilgili spesifik bilgi
+   içermiyorsa, ilgili cümle yerine "[BİLGİ YOK: ...]" yaz. Yorum veya tahminde bulunma.
+
+YANIT FORMATI (ZORUNLU — YALNIZCA BU İKİ BÖLÜM):
+## SONUÇ
+[Net yanıt — ilk cümle soruya doğrudan cevap. Her cümle kaynak etiketiyle.]
+
+## UYARI
+[Klinik uyarı ve izlem önerileri. Son cümle: "Klinik karar hekimindir."]
+
+NOT: ## KAYNAKLAR bölümünü YAZMA — sistem otomatik ekliyor.
 
 YASAK DAVRANIŞLAR:
 - Sorulan ilaç dışında başka bir ilacın bilgilerini sunma.
 - Bağlamda geçmeyen kontrendikasyon, doz veya yan etki uydurmak.
 - Prompt metnini (## başlıkları, talimatları) yanıta kopyalamak.
-- Bağlamda olmayan kaynak göstermek."""
+- Bağlamda olmayan kaynak göstermek.
+- Kaynak etiketi olmadan tıbbi iddia cümlesi yazmak.
+- Bağlamda adı AÇIKÇA GEÇMEYEN bir ilacı alternatif olarak önermek.
+  (Örn. "metildopa tercih edilebilir" — sadece bağlamda metildopadan söz ediliyorsa yaz.)
+- ## KAYNAKLAR bölümü yazmak — bu bölüm sistem tarafından otomatik oluşturulur."""
 
 SYSTEM_PROMPT = _SYSTEM_PROMPT_BASE  # Claude API için (system role'e verilir)
 
@@ -420,7 +440,8 @@ def validate_response(yanit: str, chunklar: list, soru: str = "") -> str:
 
     1. "güvenlidir" ve benzeri mutlak ifadeleri sistem uyarısıyla değiştirir.
     2. Kontrendikasyon iddiasını 4.3 chunk içeriğiyle çapraz kontrol eder.
-    3. Yanıtta geçen ilaç adlarını bağlamdaki ilaçlarla karşılaştırır.
+    3. Gerçek post-processor: kaynak etiketi olmayan tıbbi iddia cümlelerini
+       [DOĞRULANAMADI] ile işaretler.
     """
     def _validate_kontraendikasyon(yanit: str, chunklar: list, soru: str) -> str:
         _kontra_pattern = re.compile(
@@ -480,39 +501,192 @@ def validate_response(yanit: str, chunklar: list, soru: str = "") -> str:
 
         return yanit
 
-    # 1. "Güvenlidir" yasağı
+    def _tag_unverifiable_sentences(yanit: str, chunklar: list) -> str:
+        """
+        Kaynak etiketi olmayan tıbbi iddia cümlelerini [DOĞRULANAMADI] ile işaretler.
+
+        Whitelist (etiketlenmez):
+          - [BİLGİ YOK], [SİSTEM DÜZELTMESİ], ## başlıklar, kısa cümleler (<35 char)
+          - Zaten kaynak etiketi olan cümleler
+          - ## KAYNAKLAR ve ## UYARI bölümleri (meta-bölümler)
+        """
+        # Geçerli kaynak etiketi kalıbı
+        _SOURCE_TAG_RE = re.compile(
+            r'\[[^\]]+\|\s*Madde\s+[\d.]+[^\]]*\]'   # [İlaç | Madde X.X]
+            r'|\[Graf\]'
+            r'|\[CYP450\]'
+            r'|\[BİLGİ\s*YOK[^\]]*\]'
+            r'|\[SİSTEM\s*DÜZELTMESİ[^\]]*\]'
+            r'|\[DOĞRULANAMADI\]',
+            re.IGNORECASE,
+        )
+
+        # Tıbbi iddia anahtar sözcükleri (bu kelimeler varsa cümle kaynak gerektirir)
+        _CLAIM_KEYWORDS = [
+            "kontrendik", "kullanılmamalı", "kullanılabilir", "doz", " mg", " mcg", " ml",
+            "yan etki", "etkileşim", "metaboliz", "inhibis", "indüksi", "substrat",
+            "böbrek", "karaciğer", "renal", "hepatik",
+            "gebelik", "emzirme", "laktasyon",
+            "pediatrik", "geriyatrik",
+            "konsantrasyon", "plazma", "biyoyararlanım", "yarı ömür",
+            "toksik", "teratojenik", "embriyo",
+            "klirens", "gfr", "kreatinin",
+            "dikkatli kullanıl", "izlem öneril", "uyarı",
+        ]
+
+        # Bağlamdaki ilaç adlarından token seti (prefix eşleşmesi için)
+        drug_tokens: set[str] = set()
+        for c in chunklar:
+            ilac_adi = getattr(c, "ilac_adi", "") if hasattr(c, "ilac_adi") else c.get("ilac_adi", "")
+            if ilac_adi:
+                first = ilac_adi.upper().split()[0]
+                if len(first) >= 4:
+                    drug_tokens.add(first)
+
+        # Korunacak bölümler (bu başlıktan sonraki satırlar etiketlenmez)
+        _PROTECTED_SECTIONS = {"## KAYNAKLAR", "## UYARI"}
+        # Etiketlenmeyecek satır başlangıçları
+        _SKIP_LINE_STARTS = ("[BİLGİ YOK", "[SİSTEM", "[DOĞRULANAMADI", "##", "- ", "* ")
+
+        lines = yanit.split("\n")
+        result_lines: list[str] = []
+        in_protected = False
+
+        for line in lines:
+            stripped = line.strip()
+
+            # Bölüm başlığı takibi
+            if stripped.startswith("##"):
+                in_protected = stripped in _PROTECTED_SECTIONS
+                result_lines.append(line)
+                continue
+
+            # Korunan bölüm — dokunma
+            if in_protected:
+                result_lines.append(line)
+                continue
+
+            # Boş satır
+            if not stripped:
+                result_lines.append(line)
+                continue
+
+            # Satırı cümlelere böl (nokta/ünlem/soru işareti + boşlukta)
+            # (?!\[) — kaynak etiketi "[İlaç | Madde X.X]" öncesinde bölme
+            segments = re.split(r'(?<=[.!?])\s+(?!\[)', line)
+            processed: list[str] = []
+
+            for seg in segments:
+                s = seg.strip()
+                if not s:
+                    processed.append(seg)
+                    continue
+
+                # Whitelist: özel başlangıçlar veya kısa cümle
+                if any(s.startswith(p) for p in _SKIP_LINE_STARTS) or len(s) < 35:
+                    processed.append(seg)
+                    continue
+
+                # Zaten kaynak etiketi var — dokunma
+                if _SOURCE_TAG_RE.search(seg):
+                    processed.append(seg)
+                    continue
+
+                # Tıbbi iddia tespiti
+                s_lower = s.lower()
+                has_drug = any(tok in s.upper() for tok in drug_tokens)
+                has_claim = any(kw in s_lower for kw in _CLAIM_KEYWORDS)
+
+                if has_drug or has_claim:
+                    logger.debug("[VALIDATE] Kaynak etiketi yok, etiketleniyor: %s", s[:60])
+                    processed.append(seg.rstrip() + " [DOĞRULANAMADI]")
+                else:
+                    processed.append(seg)
+
+            result_lines.append(" ".join(processed))
+
+        tagged_count = yanit.count("[DOĞRULANAMADI]")
+        after = "\n".join(result_lines)
+        new_count = after.count("[DOĞRULANAMADI]")
+        added = new_count - tagged_count
+        if added > 0:
+            logger.warning("[VALIDATE] {} cümle [DOĞRULANAMADI] ile işaretlendi.", added)
+
+        return after
+
+    # ── 1. "Güvenlidir" yasağı ───────────────────────────────────────────────
     yanit = _GUVENLI_PATTERN.sub(_GUVENLI_REPLACEMENT, yanit)
 
-    # 2. Kontrendikasyon guardrail (FIX-2 + FIX-3)
+    # ── 2. Kontrendikasyon guardrail (FIX-2 + FIX-3) ────────────────────────
     yanit = _validate_kontraendikasyon(yanit, chunklar, soru)
 
-    # 3. Bağlamdaki ilaç adları kümesi
-    baglamdaki_ilaclar = {c.ilac_adi.upper() for c in chunklar if hasattr(c, "ilac_adi")}
+    # ── 3. Kaynak etiketi olmayan tıbbi iddia cümlelerini işaretle ───────────
+    yanit = _tag_unverifiable_sentences(yanit, chunklar)
 
-    if not baglamdaki_ilaclar:
+    return yanit
+
+
+_MADDE_ACIKLAMALARI: dict[str, str] = {
+    "4.1": "Endikasyonlar",
+    "4.2": "Pozoloji / Doz",
+    "4.3": "Kontrendikasyonlar",
+    "4.4": "Özel uyarılar",
+    "4.5": "İlaç etkileşimleri",
+    "4.6": "Gebelik / Emzirme",
+    "4.7": "Araç kullanımı",
+    "4.8": "İstenmeyen etkiler",
+    "4.9": "Doz aşımı",
+}
+
+
+def _inject_auto_kaynaklar(yanit: str, chunklar: list) -> str:
+    """
+    LLM'in KAYNAKLAR bölümünü chunk metadata'sıyla değiştirir (Aksiyon 3).
+
+    - LLM'in yazdığı ## KAYNAKLAR varsa → içeriğini sil, metadata ile doldur
+    - Yoksa → ## UYARI'dan önce ekle
+    - Böylece LLM parafraz/halüsinasyon ile yanlış alıntı yapamaz
+    """
+    seen: set[tuple] = set()
+    lines: list[str] = []
+
+    for c in chunklar:
+        ilac = getattr(c, "ilac_adi", "") if hasattr(c, "ilac_adi") else c.get("ilac_adi", "")
+        madde = getattr(c, "madde_no", "") if hasattr(c, "madde_no") else c.get("madde_no", "")
+        if not ilac or not madde:
+            continue
+        key = (ilac.upper(), madde)
+        if key in seen:
+            continue
+        seen.add(key)
+        aciklama = _MADDE_ACIKLAMALARI.get(madde, f"Madde {madde}")
+        lines.append(f"- {ilac} — Madde {madde}: {aciklama}")
+
+    if not lines:
         return yanit
 
-    # 2. Yanıtta geçen ama bağlamda olmayan ilaç benzeri token'ları tespit et ve logla
-    # Bağlamdaki ilaç adlarının kısa formlarını (ilk sözcük) bir küme olarak topla
-    taninan_kisalar = set()
-    for ilac in baglamdaki_ilaclar:
-        ilac_kisa = ilac.split()[0] if ilac.split() else ilac
-        if len(ilac_kisa) >= 4:
-            taninan_kisalar.add(ilac_kisa.upper())
+    kaynaklar_content = "\n".join(lines)
+    kaynaklar_bolumu = f"## KAYNAKLAR\n{kaynaklar_content}"
 
-    # Yanıtta büyük harfle başlayan, 4+ karakter ilaç benzeri token'ları tara
-    kub_disi_tokenlar = []
-    for token in re.findall(r'\b[A-ZÇĞİÖŞÜ][A-Za-zçğışöüÇĞİÖŞÜ]{3,}\b', yanit):
-        if token.upper() not in taninan_kisalar:
-            kub_disi_tokenlar.append(token)
-
-    if kub_disi_tokenlar:
-        deduplicated = list(dict.fromkeys(kub_disi_tokenlar))  # sıra koruyarak tekilleştir
-        logger.warning(
-            "[VALIDATE] Yanıtta bağlamda doğrulanamayan {} token: {}",
-            len(deduplicated),
-            ", ".join(deduplicated),
-        )
+    # LLM ## KAYNAKLAR yazdıysa → bloğun tamamını metadata ile değiştir
+    if "## KAYNAKLAR" in yanit:
+        # KAYNAKLAR başlığından sonraki bölümü bul
+        idx = yanit.index("## KAYNAKLAR")
+        # Sonraki ## başlığını bul
+        rest = yanit[idx + len("## KAYNAKLAR"):]
+        next_section = re.search(r'\n##\s', rest)
+        if next_section:
+            after = rest[next_section.start():]
+            yanit = yanit[:idx] + kaynaklar_bolumu + "\n" + after.lstrip("\n")
+        else:
+            yanit = yanit[:idx] + kaynaklar_bolumu
+    elif "## UYARI" in yanit:
+        # KAYNAKLAR yoksa → ## UYARI'dan önce ekle
+        idx = yanit.index("## UYARI")
+        yanit = yanit[:idx] + kaynaklar_bolumu + "\n\n" + yanit[idx:]
+    else:
+        # İkisi de yoksa → sona ekle
+        yanit = yanit.rstrip() + f"\n\n{kaynaklar_bolumu}"
 
     return yanit
 
@@ -525,6 +699,7 @@ def _build_user_prompt(
     kumlatif_metin: str = "",
     cyp_metin: str = "",
     soru_turleri: list[str] | None = None,
+    coverage_uyari: str = "",
 ) -> str:
     """Kullanıcı prompt'unu oluşturur."""
 
@@ -576,7 +751,7 @@ def _build_user_prompt(
 
 ## İLGİLİ KÜB BİLGİLERİ
 {bolum_sirasi}
-## SORU
+## SORU{coverage_uyari}
 {soru}
 
 ## YANIT TALİMATLARI
@@ -584,23 +759,35 @@ def _build_user_prompt(
   Soru doz ayarı ise → etkileşim anlatma. Soru emzirme ise → gebelik bilgisi verme.
   Soru yan etki ise → doz bilgisi ekleme.
 
-- KARAR VE BAŞLANGIÇ: İlk cümle soruya net bir cevap olmalı:
+- KARAR VE BAŞLANGIÇ: ## SONUÇ bölümündeki ilk cümle soruya net bir cevap olmalı:
   * Kontrendikasyon varsa: "Hayır, kontrendikedir [İlaç | Madde 4.3]."
-  * Kullanılabilirse: "Evet, dikkatli kullanılabilir." veya "Doz ayarı gerekir."
+  * Kullanılabilirse: "Evet, dikkatli kullanılabilir [İlaç | Madde X.X]." veya "Doz ayarı gerekir."
   * Tüm bağlam bölümlerinde soruyla ilgili bilgi yoksa:
     "[BİLGİ YOK: Bu konu incelenen KÜB belgelerinde yer almamaktadır.]"
   * ASLA "klinisyen karar versin" ile başlama — önce net bilgi ver, sonra öneri ekle.
+
+- KAYNAK KURALI (KRİTİK): Her tıbbi iddia cümlesinin SONUNA kaynak etiketi ekle.
+  KÜB → [İlaç Adı | Madde X.X] | Graf → [Graf] | CYP450 → [CYP450]
+  Bağlamda AÇIKÇA bulunmayan hiçbir bilgiyi yazma.
 
 - KAYNAK ÖNCELİĞİ: KÜB bilgisi > CYP450 mekanizması > Graf. Çakışmada KÜB önceliklidir.
 - Madde 4.4 (Uyarılar) ve 4.8 (Yan etkiler) soruyla ilgiliyse — mutlaka değerlendir.
 - Hasta profilini göz önünde bulundur: yaş, böbrek/karaciğer fonksiyonu, mevcut ilaçlar.
 - OTOMATİK KÜMÜLATİF RİSK bulgularını yalnızca KÜB'de desteklenen konular için kullan.
 {cyp_talimati}
-- KAYNAK KURALI: Her iddia için kaynak belirt → [İlaç Adı | Madde X.X] veya [Graf] veya [CYP450].
-  Bağlamda AÇIKÇA bulunmayan hiçbir bilgiyi yazma.
-- YANIT DETAYI: Yanıtın en az 3 cümle içermeli; klinik karar için gereken tüm bilgileri
-  (mekanizma, doz etkisi, izlem önerisi, uyarılar) kapsamalıdır. Eksik bölümler varsa [BİLGİ YOK] ile belirt.
-- FORMAT: Yanıtı düz paragraf olarak ver. Başlık (#, ##, ###) veya markdown kullanma."""
+- YANIT DETAYI: ## SONUÇ en az 3 cümle içermeli; klinik karar için gereken tüm bilgileri
+  (mekanizma, doz etkisi, izlem önerisi, uyarılar) kapsamalıdır. Eksik bölümler [BİLGİ YOK] ile belirt.
+- ALTERNATİF İLAÇ: Bağlamda adı geçmeyen ilaçları alternatif olarak ÖNERME.
+
+- ZORUNLU FORMAT (sadece bu iki bölüm, sırayla):
+
+## SONUÇ
+[Soruya net yanıt, her cümle kaynak etiketiyle. Minimum 3 cümle.]
+
+## UYARI
+[Klinik uyarı ve izlem önerileri. Son cümle: "Klinik karar hekimindir."]
+
+(## KAYNAKLAR yazmayın — sistem otomatik ekliyor)"""
 
     return prompt
 
@@ -803,15 +990,46 @@ def run_rag(
     except Exception as e:
         logger.warning(f"CYP450 analizi atlandı: {e}")
 
-    # 4. Prompt oluştur — FIX-1: hasta özetini chunk relevance'a göre filtrele
+    # 4. Bölüm kapsama kontrolü — eksik KÜB bölümleri için LLM uyarısı (Aksiyon 5)
+    _SORU_TURU_GEREKLI_BOLUM: dict[str, str] = {
+        "kontrendikasyon":   "4.3",
+        "doz":               "4.2",
+        "doz_bobrek":        "4.2",
+        "doz_karaciger":     "4.2",
+        "doz_geriyatrik":    "4.2",
+        "doz_pediyatrik":    "4.2",
+        "yan_etki":          "4.8",
+        "gebelik_laktasyon": "4.6",
+        "etkilesim":         "4.5",
+        "cyp450_etkilesim":  "4.5",
+    }
+    gelen_bolumler = {c.madde_no for c in chunklar}
+    eksik_bolumler = sorted({
+        _SORU_TURU_GEREKLI_BOLUM[st]
+        for st in augmented.soru_turleri
+        if st in _SORU_TURU_GEREKLI_BOLUM
+        and _SORU_TURU_GEREKLI_BOLUM[st] not in gelen_bolumler
+    })
+    coverage_uyari = ""
+    if eksik_bolumler:
+        eksik_str = ", ".join(f"Madde {b}" for b in eksik_bolumler)
+        coverage_uyari = (
+            f"\n⚠️ BAĞLAM UYARISI: Bu soru için gereken {eksik_str} bölümü KÜB'den "
+            f"alınamadı. Bu bölüm(ler) için kesinlikle [BİLGİ YOK: ...] kullan, "
+            f"tahminde bulunma.\n"
+        )
+        logger.warning(f"[COVERAGE] Eksik KÜB bölümleri: {eksik_bolumler} (soru türleri: {augmented.soru_turleri})")
+
+    # 4b. Prompt oluştur — FIX-1: hasta özetini chunk relevance'a göre filtrele
     filtered_hasta_ozeti = _build_filtered_hasta_ozeti(profil, chunklar)
     user_prompt = _build_user_prompt(
         soru, filtered_hasta_ozeti, chunklar,
         graf_baglami, kumlatif_metin, cyp_metin,
         soru_turleri=augmented.soru_turleri,
+        coverage_uyari=coverage_uyari,
     )
 
-    # 4. LLM çağrısı (provider'a göre)
+    # 4c. LLM çağrısı (provider'a göre)
     provider = os.environ.get("LLM_PROVIDER", "claude").lower()
 
     if provider == "local":
@@ -825,6 +1043,9 @@ def run_rag(
 
     # 5. Faz 12 — Yanıt doğrulama ("güvenlidir" yasağı + bağlam kontrolü)
     yanit = validate_response(yanit, chunklar, soru=soru)
+
+    # 5b. Auto-KAYNAKLAR enjeksiyonu — LLM yazmıyor, chunk metadata'sından üretilir (Aksiyon 3)
+    yanit = _inject_auto_kaynaklar(yanit, chunklar)
 
     # 6. Karantina kontrolü — hedef_ilaclar için OCR bekleyen ilaçları tespit et
     quarantine_warnings: list[str] = []
