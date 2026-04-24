@@ -49,9 +49,9 @@ class ContentPolicy:
     # RAG / retrieval aşaması (rag_engine.py)
     # ------------------------------------------------------------------
     chunk_window_chars: int = 4000            # eski: 2500 — 4.6 laktasyon (idx 2693) gibi uzun bölümler kesilmesin
-    max_chunks_per_query: int = 12
-    rerank_pool_size: int = 20
-    min_score_threshold: float = 0.55
+    max_chunks_per_query: int = 15            # eski: 12 — LLM'e daha geniş bağlam
+    rerank_pool_size: int = 30               # eski: 20 — reranker'a daha fazla aday
+    min_score_threshold: float = 0.50        # eski: 0.55 — recall için gevşetildi
 
     # ------------------------------------------------------------------
     # Graf bağlamı (combi_retriever.py) — LM Studio overflow fix
@@ -63,7 +63,7 @@ class ContentPolicy:
     # ------------------------------------------------------------------
     # Evaluation (ragas_eval.py) — runtime ile aynı tutulur, drift engeli
     # ------------------------------------------------------------------
-    eval_max_contexts: int = 9
+    eval_max_contexts: int = 12              # eski: 9 — max_chunks_per_query ile paralel
     eval_max_chunk_chars: int = 4000          # chunk_window_chars ile eşit
 
 

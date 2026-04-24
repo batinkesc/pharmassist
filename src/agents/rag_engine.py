@@ -34,6 +34,7 @@ from src.agents.query_augmentor import augment_query, AugmentedQuery
 from src.core.content_policy import POLICY
 from src.retrieval.chroma_store import search, batch_search, _load_quarantine_list
 from src.retrieval.reranker import rerank
+from src.data.normalization import normalize_drug_name
 
 
 # ---------------------------------------------------------------------------
@@ -144,8 +145,8 @@ def _retrieve_chunks(augmented: AugmentedQuery) -> list[RetrievedChunk]:
 
         tum_chunklar.append(chunk)
 
-    # Doz sorguları daha fazla chunk gerektirir (pozoloji tabloları parçalı gelebilir)
-    k_prio = 15 if "doz" in augmented.soru_turleri else 10
+    # Doz sorguları biraz daha fazla chunk gerektirebilir ama baseline 15'e çıkarıldı
+    k_prio = 20 if "doz" in augmented.soru_turleri else 15
 
     for plan in augmented.arama_planlari:
         # Bölüm listesini ikiye böl: önce 2 = priority, geri kalanı = secondary
@@ -174,7 +175,7 @@ def _retrieve_chunks(augmented: AugmentedQuery) -> list[RetrievedChunk]:
                 for r in raw:
                     _ekle(r)
 
-        # 2. Geçiş: secondary sections (k=5, was 4)
+        # 2. Geçiş: secondary sections (k=10, eski: 5)
         if secondary:
             raw_sec = batch_search(
                 query=plan.sorgu,
@@ -182,16 +183,28 @@ def _retrieve_chunks(augmented: AugmentedQuery) -> list[RetrievedChunk]:
                 secondary_sections=[],
                 filter_ilac=[plan.ilac_adi] if plan.ilac_adi else None,
                 filter_patient_flags=plan.patient_flags if plan.patient_flags else None,
-                k_priority=5,  # v6→v7: Increased for better recall
+                k_priority=10,  # eski: 5 — secondary recall artırıldı
                 k_secondary=0,
             )
             for r in raw_sec:
                 _ekle(r)
 
+    # İlaç adı boosting: hedef ilaçla exact match eden chunk'lar +0.05 skor alır
+    # Bu, reranker'a giden aday havuzunu iyileştirir (sıralama reranker'a bırakılır)
+    hedef_ilaclar = {
+        normalize_drug_name(p.ilac_adi)
+        for p in augmented.arama_planlari
+        if p.ilac_adi
+    }
+    if hedef_ilaclar:
+        for c in tum_chunklar:
+            if normalize_drug_name(c.ilac_adi) in hedef_ilaclar:
+                c.score = min(1.0, c.score + 0.05)
+
     # Skor'a göre azalan sırala
     tum_chunklar.sort(key=lambda x: x.score, reverse=True)
 
-    # Reranking: cross-encoder ile top-20'yi yeniden sırala
+    # Reranking: cross-encoder ile top-30'u yeniden sırala
     RERANK_CANDIDATE_POOL = POLICY.rerank_pool_size
     if len(tum_chunklar) > 1:
         candidates = [
@@ -209,7 +222,6 @@ def _retrieve_chunks(augmented: AugmentedQuery) -> list[RetrievedChunk]:
             for c in tum_chunklar[:RERANK_CANDIDATE_POOL]
         ]
         reranked = rerank(augmented.ozgun_soru, candidates, top_k=MAX_CHUNKS_PER_QUERY)
-        # rerank skoru varsa önceliklendir, yoksa icerik skoru koru
         result = [_to_retrieved_chunk(r) for r in reranked]
         return result
 
