@@ -299,7 +299,6 @@ def extract_interactions(ilac_adi: str, chunk: dict) -> None:
 def extract_warnings(ilac_adi: str, chunk: dict) -> None:
     """4.4 bölümünden Warning node'ları oluşturur."""
     icerik = chunk.get("icerik", "")
-    # 4.4'ün ilk 300 karakterini uyarı özeti olarak sakla
     ozet = icerik[:300].strip()
     if not ozet:
         return
@@ -315,6 +314,261 @@ def extract_warnings(ilac_adi: str, chunk: dict) -> None:
         """,
         {"chunk_id": chunk["chunk_id"], "ozet": ozet, "ilac_adi": ilac_adi},
     )
+
+
+# ---------------------------------------------------------------------------
+# D — GFR / Böbrek Dozu Eşiği (4.2 bölümü)
+# ---------------------------------------------------------------------------
+
+_GFR_RE = re.compile(
+    # eGFR, GFR, kreatinin klerensi, CrCl gibi kısaltmalar
+    r"(?:e?GFR|glomer[üu]ler\s+filtrasyon(?:\s+h[ıi]z[ıi])?|kreatinin\s+klerensi"
+    r"|[Tt]ahmini\s+glomer[üu]lar\s+filtrasyon|eGFR|CrCl|Ccr)"
+    r"[\s\[\]():]*"          # boşluk, parantez, köşeli parantez
+    r"(?P<op>[<>≤≥]|<=|>=)?"              # operatör (boşluksuz da gelebilir)
+    r"\s*"
+    r"(?P<val>\d+(?:[,.]\d+)?)"
+    r"(?:\s*(?:ila|to|-|–)\s*(?:<?(?P<val2>\d+)))?",  # aralık: 45 ila <60
+    re.IGNORECASE,
+)
+
+# Doz ayarı tipi bağlam kelimeleri
+_KONTR_WORDS   = ["kontrendike", "kullanılmamalı", "verilmemeli", "kullanımından kaçınılmalı"]
+_AZALT_WORDS   = ["azaltıl", "düşürül", "yarıya", "doz ayar", "doz düzenle"]
+_IZLEM_WORDS   = ["yakın izlem", "izlenmelidir", "dikkatli kullan", "dikkat"]
+
+
+def _gfr_adjustment_type(pencere: str) -> str:
+    """GFR threshold çevresindeki metinden doz ayarı tipini çıkarır."""
+    p = pencere.lower()
+    if any(w in p for w in _KONTR_WORDS):
+        return "contraindicated"
+    if any(w in p for w in _AZALT_WORDS):
+        return "dose_reduction"
+    if any(w in p for w in _IZLEM_WORDS):
+        return "monitoring"
+    return "unspecified"
+
+
+def extract_dose_adjustments(ilac_adi: str, chunk: dict) -> None:
+    """
+    4.2 bölümünden GFR/kreatinin klerensi eşiklerini çıkarır.
+    Neo4j'e REQUIRES_DOSE_ADJUSTMENT kenarı olarak yazar.
+
+    Örnek çıkarımlar:
+      GFR < 30 → contraindicated
+      GFR 30-60 → dose_reduction
+      Kreatinin klerensi < 50 → monitoring
+    """
+    icerik = chunk.get("icerik", "")
+    if not icerik:
+        return
+
+    bulunanlar: list[dict] = []
+    for m in _GFR_RE.finditer(icerik):
+        op   = (m.group("op") or "").strip() or "<"
+        val  = float(m.group("val").replace(",", "."))
+        val2 = float(m.group("val2")) if m.group("val2") else None
+
+        # Threshold etrafındaki ±200 karakterlik pencere
+        start = max(0, m.start() - 200)
+        end   = min(len(icerik), m.end() + 200)
+        pencere = icerik[start:end]
+
+        adj_type = _gfr_adjustment_type(pencere)
+
+        kayit = {
+            "op"      : op,
+            "esik"    : val,
+            "esik_ust": val2,
+            "tip"     : adj_type,
+            "ozet"    : pencere[:200].strip(),
+        }
+        # Aynı eşiği tekrar ekleme
+        if not any(abs(b["esik"] - val) < 1 for b in bulunanlar):
+            bulunanlar.append(kayit)
+
+    for kayit in bulunanlar:
+        run_query(
+            """
+            MATCH (d:Drug {name: $ilac_adi})
+            MERGE (d)-[r:REQUIRES_DOSE_ADJUSTMENT {
+                gfr_esik: $esik, operator: $op
+            }]->(d)
+            ON CREATE SET r.esik_ust      = $esik_ust,
+                          r.tip           = $tip,
+                          r.ozet          = $ozet,
+                          r.kaynak_madde  = '4.2'
+            ON MATCH  SET r.tip           = $tip,
+                          r.ozet          = $ozet
+            """,
+            {
+                "ilac_adi": ilac_adi,
+                "esik"    : kayit["esik"],
+                "op"      : kayit["op"],
+                "esik_ust": kayit["esik_ust"],
+                "tip"     : kayit["tip"],
+                "ozet"    : kayit["ozet"],
+            },
+        )
+
+    if bulunanlar:
+        logger.debug(f"  {ilac_adi} 4.2 → {len(bulunanlar)} GFR eşiği")
+
+
+# ---------------------------------------------------------------------------
+# E — CYP450 Metabolizma Kenarları (4.5 / 5.1 bölümü)
+# ---------------------------------------------------------------------------
+
+_CYP_ENZYME_RE = re.compile(
+    r"\b(CYP\s*[1-3][A-Z]\d+(?:\.\d+)?)\b",
+    re.IGNORECASE,
+)
+
+# Her rol için Türkçe bağlam kelimeleri
+_CYP_ROLES: list[tuple[str, list[str]]] = [
+    ("inhibitor", [
+        "inhibitör", "inhibe eder", "inhibisyon", "inhibe", "baskılar",
+        "tarafından inhibe", "enzim inhibitörü",
+    ]),
+    ("inducer", [
+        "indükleyici", "indüksiyon", "indükler", "indüktör",
+        "indüksiyonuna", "enzim indükler",
+    ]),
+    ("substrate", [
+        "substrat", "metabolize", "metabolizma", "yıkım",
+        "tarafından parçalan", "tarafından metabolize",
+        "metabolizasyonu", "esas olarak",
+    ]),
+]
+
+
+def _cyp_role(pencere: str) -> str | None:
+    """CYP enzyme çevresindeki metinden rolü belirler."""
+    p = pencere.lower()
+    for rol, kelimeler in _CYP_ROLES:
+        if any(k in p for k in kelimeler):
+            return rol
+    return None
+
+
+def extract_cyp_edges(ilac_adi: str, chunk: dict) -> None:
+    """
+    4.5 veya 5.1 bölümünden CYP450 enzim ilişkilerini çıkarır.
+
+    Oluşturduğu kenarlar:
+      (Drug)-[:CYP_SUBSTRATE  {enzyme}]->(CYPEnzyme)
+      (Drug)-[:CYP_INHIBITOR  {enzyme}]->(CYPEnzyme)
+      (Drug)-[:CYP_INDUCER    {enzyme}]->(CYPEnzyme)
+    """
+    icerik = chunk.get("icerik", "")
+    if not icerik or "CYP" not in icerik.upper():
+        return
+
+    yazilan: set[tuple[str, str]] = set()
+
+    for m in _CYP_ENZYME_RE.finditer(icerik):
+        enzim = m.group(1).upper().replace(" ", "")  # CYP3A4 normalize
+
+        # Enzim etrafındaki ±150 karakterlik pencere
+        start   = max(0, m.start() - 150)
+        end     = min(len(icerik), m.end() + 150)
+        pencere = icerik[start:end]
+
+        rol = _cyp_role(pencere)
+        if not rol:
+            continue
+
+        anahtar = (enzim, rol)
+        if anahtar in yazilan:
+            continue
+        yazilan.add(anahtar)
+
+        rel_type = f"CYP_{rol.upper()}"   # CYP_SUBSTRATE / CYP_INHIBITOR / CYP_INDUCER
+
+        run_query(
+            f"""
+            MATCH (d:Drug {{name: $ilac_adi}})
+            MERGE (e:CYPEnzyme {{name: $enzim}})
+            MERGE (d)-[r:{rel_type}]->(e)
+            ON CREATE SET r.kaynak_madde = $madde_no,
+                          r.confidence   = 0.8
+            """,
+            {
+                "ilac_adi": ilac_adi,
+                "enzim"   : enzim,
+                "madde_no": chunk.get("madde_no", "4.5"),
+            },
+        )
+
+    if yazilan:
+        logger.debug(f"  {ilac_adi} {chunk.get('madde_no','?')} → {len(yazilan)} CYP kenarı")
+
+
+# ---------------------------------------------------------------------------
+# F — Gebelik Kategorisi (4.6 bölümü)
+# ---------------------------------------------------------------------------
+
+_GEBELIK_RE = re.compile(
+    # FDA kategori harfi
+    r"(?:FDA\s+)?[Gg]ebelik\s+[Kk]ategorisi\s*[:/]?\s*([A-DX])\b"
+    r"|[Kk]ategori\s*([A-DX])\b"
+    r"|\b([A-DX])\s+[Kk]ategorisi\b",
+)
+
+# Türkçe KÜB'lerde sık kullanılan açıklayıcı ifadeler → normalize kategori
+_GEBELIK_IFADE: list[tuple[str, str]] = [
+    ("gebelikte kontrendike",        "X"),
+    ("gebelikte kullanılmamalı",     "X"),
+    ("gebelikte kullanılmaz",        "X"),
+    ("gebelikte güvenli",            "A"),
+    ("gebelikte kullanılabilir",     "B"),
+    ("gebelikte dikkatli",           "C"),
+    ("gebelikte yalnızca",           "C"),
+    ("fetal risk",                   "D"),
+    ("teratojenik",                  "D"),
+    ("teratojen",                    "D"),
+]
+
+
+def extract_pregnancy_category(ilac_adi: str, chunk: dict) -> None:
+    """
+    4.6 bölümünden gebelik kategorisini çıkarır.
+    Drug node'una gebelik_kategorisi property olarak yazar.
+
+    FDA kategorileri: A (güvenli) → B → C → D → X (kontrendike)
+    """
+    icerik = chunk.get("icerik", "")
+    if not icerik:
+        return
+
+    kategori: str | None = None
+
+    # 1. FDA kategori harfi ara
+    m = _GEBELIK_RE.search(icerik)
+    if m:
+        kategori = (m.group(1) or m.group(2) or m.group(3) or "").upper()
+
+    # 2. Türkçe ifade eşleştirme (FDA harfi bulunamazsa)
+    if not kategori:
+        icerik_lower = icerik.lower()
+        for ifade, kat in _GEBELIK_IFADE:
+            if ifade in icerik_lower:
+                kategori = kat
+                break
+
+    if not kategori:
+        return
+
+    run_query(
+        """
+        MATCH (d:Drug {name: $ilac_adi})
+        SET d.gebelik_kategorisi = $kategori,
+            d.gebelik_kaynak     = '4.6'
+        """,
+        {"ilac_adi": ilac_adi, "kategori": kategori},
+    )
+    logger.debug(f"  {ilac_adi} 4.6 → gebelik kategorisi: {kategori}")
 
 
 # ---------------------------------------------------------------------------

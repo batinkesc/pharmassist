@@ -54,6 +54,9 @@ from src.graph.kub_to_graph import (
     upsert_section_node,
     extract_contraindications,
     extract_warnings,
+    extract_dose_adjustments,
+    extract_cyp_edges,
+    extract_pregnancy_category,
 )
 from src.graph.neo4j_client import run_query
 
@@ -338,10 +341,17 @@ class IngestionPipeline:
             )
             for chunk in chunks:
                 upsert_section_node(identity.display_name, chunk)
-                if chunk.get("madde_no") == "4.3":
+                madde = chunk.get("madde_no", "")
+                if madde == "4.3":
                     extract_contraindications(identity.display_name, chunk)
-                if chunk.get("madde_no") == "4.4":
+                if madde == "4.4":
                     extract_warnings(identity.display_name, chunk)
+                if madde == "4.2":                          # D: GFR eşikleri
+                    extract_dose_adjustments(identity.display_name, chunk)
+                if madde in ("4.5", "5.1"):                 # E: CYP450
+                    extract_cyp_edges(identity.display_name, chunk)
+                if madde == "4.6":                          # F: Gebelik kategorisi
+                    extract_pregnancy_category(identity.display_name, chunk)
         except Exception as e:
             logger.error(f"Neo4j base yazma hatası ({identity.display_name}): {e}")
 
