@@ -6,7 +6,7 @@ import anthropic
 import openai
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 # Prompts
 CYP_EXTRACTION_SYSTEM_PROMPT = """Sen bir farmakoloji uzmanısın. Sana verilen ilaç prospektüsü (KÜB Madde 4.5) metninden, ilgili ilacın CYP450 enzim profilini çıkarman gerekiyor.

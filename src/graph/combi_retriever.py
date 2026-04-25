@@ -96,7 +96,9 @@ def _format_graph_context(
         for row in kontrendikasyonlar[:POLICY.max_contraindications_in_context]:
             ilac = row.get("ilac") or row.get("ilac_adi", "?")
             kosul = row.get("kosul", "?")
-            satirlar.append(f"  - {ilac} → {kosul} durumunda kontrendike")
+            neden = row.get("neden", "")
+            neden_str = f" | Gerekçe: {neden}" if neden else ""
+            satirlar.append(f"  - {ilac} → {kosul} durumunda kontrendike{neden_str}")
         if len(kontrendikasyonlar) > POLICY.max_contraindications_in_context:
             satirlar.append(
                 f"  ... ve {len(kontrendikasyonlar) - POLICY.max_contraindications_in_context} "
@@ -110,8 +112,12 @@ def _format_graph_context(
             ana = row.get("ana_ilac", "?")
             diger = row.get("etkilesen_ilac", "?")
             siddet = row.get("siddet", "")
+            mekanizma = row.get("mekanizma", "")
             siddet_str = f" [{siddet}]" if siddet and siddet != "unknown" else ""
-            satirlar.append(f"  - {ana} ↔ {diger}{siddet_str}")
+            mek_str = f" — {mekanizma}" if mekanizma else ""
+            tip = row.get("tip", "")
+            tip_str = " (metin eşleşmesi)" if tip == "metin" else ""
+            satirlar.append(f"  - {ana} ↔ {diger}{siddet_str}{mek_str}{tip_str}")
         if len(etkilesimler) > POLICY.max_interactions_in_context:
             satirlar.append(
                 f"  ... ve {len(etkilesimler) - POLICY.max_interactions_in_context} etkileşim daha"

@@ -10,6 +10,8 @@ Fonksiyonlar:
   drug_summary(ilac_adi)              → node özet bilgisi
 """
 
+import re
+
 from src.graph.neo4j_client import run_query
 from loguru import logger
 
@@ -110,10 +112,11 @@ def drug_interactions(ilac_adi: str) -> list[dict]:
         MATCH (d:Drug)
         WHERE d.name IN $adlar
         MATCH (d)-[r1:INTERACTS_WITH]->(real:Drug)
-        RETURN real.name    AS etkilesen_ilac,
-               r1.severity  AS siddet,
+        RETURN real.name       AS etkilesen_ilac,
+               r1.severity     AS siddet,
+               r1.mechanism    AS mekanizma,
                r1.kaynak_madde AS kaynak,
-               'dogrulandi' AS tip
+               'dogrulandi'    AS tip
         ORDER BY
           CASE r1.severity
             WHEN 'contraindicated' THEN 0
@@ -126,6 +129,9 @@ def drug_interactions(ilac_adi: str) -> list[dict]:
         """,
         {"adlar": gercek_adlar},
     )
+    # MENTIONS_INTERACTION: yalnızca real Drug eşleşmesi olmayan ilaçları ekle (gürültü azaltma).
+    # real_rows'da zaten bulunan ilaç adlarını dışarıda bırak.
+    real_names = {(r.get("etkilesen_ilac") or "").strip().lower() for r in real_rows}
     mention_rows = run_query(
         """
         MATCH (d:Drug)
@@ -133,18 +139,25 @@ def drug_interactions(ilac_adi: str) -> list[dict]:
         MATCH (d)-[r2:MENTIONS_INTERACTION]->(mention:DrugMention)
         RETURN mention.name    AS etkilesen_ilac,
                'unknown'       AS siddet,
+               null            AS mekanizma,
                r2.kaynak_madde AS kaynak,
                'metin'         AS tip
-        LIMIT 60
+        LIMIT 40
         """,
         {"adlar": gercek_adlar},
     )
-    # Birleştir, tekrarları çıkar, doğrulanmış önce
+    # Birleştir: doğrulanmış önce; DrugMention sadece real_rows'da yoksa eklenir
     seen: set[str] = set()
     merged: list[dict] = []
-    for row in real_rows + mention_rows:
+    for row in real_rows:
         key = (row.get("etkilesen_ilac") or "").strip()
         if key and key not in seen:
+            seen.add(key)
+            merged.append(row)
+    for row in mention_rows:
+        key = (row.get("etkilesen_ilac") or "").strip()
+        key_lower = key.lower()
+        if key and key not in seen and key_lower not in real_names:
             seen.add(key)
             merged.append(row)
     return merged[:100]
@@ -158,15 +171,52 @@ def drug_contraindications(ilac_adi: str) -> list[dict]:
         return []
 
     logger.debug(f"drug_contraindications: '{ilac_adi}' → {gercek_adlar}")
-    return run_query(
+    rows = run_query(
         """
         MATCH (d:Drug)-[r:CONTRAINDICATED_FOR]->(c:Condition)
         WHERE d.name IN $adlar
-        RETURN c.name AS kosul, r.kaynak_chunk AS kaynak
+        OPTIONAL MATCH (d)-[:HAS_SECTION]->(s:Section)
+        WHERE s.madde_no = '4.3'
+        WITH c, collect(DISTINCT s.icerik)[0] AS bolum_43,
+             collect(DISTINCT r.kaynak_chunk)[0] AS kaynak
+        RETURN c.name AS kosul, kaynak, bolum_43
         ORDER BY c.name
         """,
         {"adlar": gercek_adlar},
     )
+    # Her kontrendikasyon için 4.3 metninden ilgili cümleyi çıkar
+    for row in rows:
+        row["neden"] = _extract_reason_sentence(
+            row.get("bolum_43") or "", row.get("kosul") or ""
+        )
+        row.pop("bolum_43", None)  # büyük metin — extraction sonrası kaldır
+    return rows
+
+
+def _extract_reason_sentence(bolum_43: str, kosul: str) -> str:
+    """
+    4.3 bölümü metninde kosul terimini içeren cümleyi bulur ve döner.
+    Bulamazsa boş string döner.
+    """
+    if not bolum_43 or not kosul:
+        return ""
+    kosul_lower = kosul.lower().replace("\n", " ").strip()
+    # PDF tablo artefaktlarını temizle (| | | gibi)
+    temiz_metin = re.sub(r"(\|\s*){2,}", " ", bolum_43)
+    # Noktalar veya noktalı virgüller ile ayrılmış cümlelere böl
+    sentences = re.split(r"(?<=[.;!?])\s+", temiz_metin)
+    # Tablo satırı gibi görünen cümleleri filtrele (kelime sayısı < 4 veya | içeren)
+    anlamli = [s for s in sentences if len(s.split()) >= 4 and "|" not in s]
+    for sent in anlamli:
+        if kosul_lower in sent.lower():
+            cleaned = " ".join(sent.split())
+            return cleaned[:250]
+    # Bulunamazsa 4.3'ün ilk anlamlı cümlesini döner
+    for sent in anlamli:
+        cleaned = " ".join(sent.split())
+        if len(cleaned) > 30:
+            return cleaned[:200]
+    return ""
 
 
 def multi_drug_interactions(ilaclar: list[str]) -> list[dict]:

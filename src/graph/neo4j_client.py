@@ -8,7 +8,7 @@ from neo4j import GraphDatabase, Driver
 from dotenv import load_dotenv
 from loguru import logger
 
-load_dotenv()
+load_dotenv(override=True)
 
 
 @lru_cache(maxsize=1)

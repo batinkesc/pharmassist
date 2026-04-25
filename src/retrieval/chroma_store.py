@@ -336,6 +336,103 @@ def batch_search(query: str, priority_sections: list[str], secondary_sections: l
     return results
 
 
+def hybrid_batch_search(
+    query: str,
+    priority_sections: list[str],
+    secondary_sections: list[str],
+    filter_ilac: list[str] | None = None,
+    filter_patient_flags: list[str] | None = None,
+    k_priority: int = 15,
+    k_secondary: int = 10,
+    bm25_n: int = 50,
+) -> list[dict]:
+    """
+    BM25 + semantik hybrid arama, RRF ile birleştirir.
+
+    Semantik aramadan gelen chunk metadata'sı korunur.
+    BM25'te bulunan ama semantikte olmayan chunk'lar ChromaDB'den meta ile eklenir.
+
+    Args:
+        query:             Arama sorgusu
+        priority_sections: Öncelikli KÜB madde no listesi
+        secondary_sections: İkincil KÜB madde no listesi
+        filter_ilac:       İlaç filtresi
+        filter_patient_flags: Hasta flag filtresi
+        k_priority:        Semantik priority arama k değeri
+        k_secondary:       Semantik secondary arama k değeri
+        bm25_n:            BM25 aday havuzu büyüklüğü
+
+    Returns:
+        RRF sıralamasına göre chunk dict listesi
+    """
+    from src.retrieval.bm25_index import get_bm25_index, reciprocal_rank_fusion
+
+    all_sections = list(dict.fromkeys(priority_sections + secondary_sections))
+
+    # 1. Semantik arama (mevcut batch_search)
+    semantic_raw = batch_search(
+        query=query,
+        priority_sections=priority_sections,
+        secondary_sections=secondary_sections,
+        filter_ilac=filter_ilac,
+        filter_patient_flags=filter_patient_flags,
+        k_priority=k_priority,
+        k_secondary=k_secondary,
+    )
+
+    # 2. BM25 keyword arama (patient_flags filtresi uygulanmaz — recall önceliği)
+    bm25_idx = get_bm25_index()
+    bm25_raw = bm25_idx.search(
+        query=query,
+        n=bm25_n,
+        filter_madde=all_sections if all_sections else None,
+        filter_ilac=filter_ilac,
+    )
+
+    # 3. RRF füzyon
+    fused_ids = reciprocal_rank_fusion(semantic_raw, bm25_raw)
+
+    # 4. Semantic chunk_id → metadata map
+    semantic_map = {r["chunk_id"]: r for r in semantic_raw}
+
+    # 5. BM25-only chunk'ları ChromaDB'den getir
+    bm25_only_ids = [cid for cid in fused_ids if cid not in semantic_map]
+    bm25_extra: dict[str, dict] = {}
+    if bm25_only_ids:
+        client = get_chroma_client()
+        col = get_or_create_collection(client)
+        try:
+            fetched = col.get(
+                ids=bm25_only_ids,
+                include=["documents", "metadatas"],
+            )
+            for fid, doc, meta in zip(fetched["ids"], fetched["documents"], fetched["metadatas"]):
+                # Patient flag kontrolü — semantikte bypass edilen flag mantığı burada da uygulanmaz
+                # (yüksek recall için); reranker sonradan sıralar
+                bm25_extra[fid] = {
+                    "chunk_id": fid,
+                    **meta,
+                    "icerik": doc,
+                    "score": 0.0,    # BM25-only chunk: semantik skor yok
+                }
+        except Exception as e:
+            logger.debug(f"BM25-only chunk fetch hatası: {e}")
+
+    # 6. Füzyon sırasına göre sonuç listesi oluştur
+    results = []
+    seen: set[str] = set()
+    for cid in fused_ids:
+        if cid in seen:
+            continue
+        seen.add(cid)
+        if cid in semantic_map:
+            results.append(semantic_map[cid])
+        elif cid in bm25_extra:
+            results.append(bm25_extra[cid])
+
+    return results
+
+
 def collection_stats() -> dict:
     client = get_chroma_client(); collection = get_or_create_collection(client)
     all_meta = collection.get(include=["metadatas"])["metadatas"]

@@ -1,0 +1,215 @@
+[
+  {
+    "id": "v3_q03",
+    "kategori": "cyp450_etkilesim",
+    "soru": "SPORANOX kullanan hastada CORDARONE kan düzeyi nasıl etkilenir?",
+    "ground_truth": "İtrakonazol (SPORANOX) güçlü CYP3A4 inhibitörüdür. Amiodaron (CORDARONE) CYP3A4 substratıdır. Birlikte kullanımda amiodaronun plazma konsantrasyonu artar, QT uzaması ve kardiyak toksisite riski yükselir. Bu kombinasyondan kaçınılmalıdır. Alternatif antifungal (örn. amfoterisin B) tercih edilmeli; zorunluysa kardiyak izlem ve EKG takibi yapılmalıdır.",
+    "hasta": {
+      "yas": 64,
+      "cinsiyet": "kadın",
+      "gfr": null,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": ["CORDARONE 150 mg IV"],
+      "alerjiler": [],
+      "endikasyonlar": ["atriyal fibrilasyon", "fungal enfeksiyon"],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {}
+    },
+    "hedef_ilaclar": [
+      "SPORANOX 10 mg / mL oral çözelti",
+      "CORDARONE 150 mg/3 mL IV enjeksiyonluk çözelti"
+    ]
+  },
+  {
+    "id": "v3_q04",
+    "kategori": "gebelik",
+    "soru": "Gebelikte LAROXYL kullanımı güvenli midir?",
+    "ground_truth": "Amitriptilin (LAROXYL) gebelikte kullanımı önerilmez. Gebelik kategorisi C olup hayvansal çalışmalarda fetal risk gösterilmiştir. Özellikle üçüncü trimesterde neonatal yoksunluk sendromu riski vardır. Klinik zorunluluk yoksa kullanılmamalıdır. Gebelikte daha güvenli alternatifler (örn. SSRI) tercih edilmeli; zorunluysa dikkatli klinik değerlendirme ve neonatal izlem gereklidir.",
+    "hasta": {
+      "yas": 28,
+      "cinsiyet": "kadın",
+      "gfr": null,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": [],
+      "alerjiler": [],
+      "endikasyonlar": ["depresyon"],
+      "gebelik": true,
+      "emzirme": false,
+      "lab_degerleri": {}
+    },
+    "hedef_ilaclar": [
+      "LAROXYL 25 mg film kaplı tablet"
+    ]
+  },
+  {
+    "id": "v3_q06",
+    "kategori": "doz_pediyatrik",
+    "soru": "8 yaşındaki 25 kg ağırlığında epilepsi hastasında KEPPRA dozu nasıl belirlenmeli?",
+    "ground_truth": "Levetirasetam (KEPPRA) 4-11 yaş arası çocuklarda başlangıç dozu günde iki kez 10 mg/kg (vücut ağırlığına göre). 25 kg için başlangıç dozu günde iki kez 250 mg'dır. İdame doz titrasyon ile günde iki kez 30 mg/kg'a kadar artırılabilir.",
+    "hasta": {
+      "yas": 8,
+      "cinsiyet": "erkek",
+      "kilo": 25.0,
+      "gfr": null,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": [],
+      "alerjiler": [],
+      "endikasyonlar": ["epilepsi"],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {}
+    },
+    "hedef_ilaclar": [
+      "KEPPRA 250 mg film kaplı tablet"
+    ]
+  },
+  {
+    "id": "v3_q14",
+    "kategori": "kontrendikasyon",
+    "soru": "Aktif mide ülseri olan hastada BRUFEN kullanılabilir mi?",
+    "ground_truth": "İbuprofen (BRUFEN) aktif peptik ülser hastalığında kontrendikedir. KÜB belgesinde aktif gastrointestinal ülser veya kanama, BRUFEN için mutlak kontrendikasyon olarak belirtilmiştir. Aktif ülser döneminde NSAID kullanımından kaçınılmalı; ağrı kontrolü için alternatif olarak parasetamol tercih edilmeli, hasta dikkatle izlenmelidir.",
+    "hasta": {
+      "yas": 48,
+      "cinsiyet": "erkek",
+      "gfr": null,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": [],
+      "alerjiler": [],
+      "endikasyonlar": ["gut artriti", "aktif mide ülseri"],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {}
+    },
+    "hedef_ilaclar": [
+      "BRUFEN 400 mg film tablet"
+    ]
+  },
+  {
+    "id": "v3_q18",
+    "kategori": "kontrendikasyon",
+    "soru": "Gebelikte COZAAR kullanılabilir mi?",
+    "ground_truth": "Losartan (COZAAR) gebelikte kontrendikedir. Gebelik kategorisi D olup özellikle 2. ve 3. trimesterde fetüste böbrek hasarı, oligohidramniyos ve ölüm riskiyle ilişkilidir. KÜB belgesinde gebelik mutlak kontrendikasyon olarak belirtilmiştir. Losartan derhal kesilmeli; antihipertansif tedavi için alternatif olarak metildopa veya labetalol tercih edilmeli, fetal izlem yapılmalıdır.",
+    "hasta": {
+      "yas": 32,
+      "cinsiyet": "kadın",
+      "gfr": 80.0,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": ["COZAAR 50 mg"],
+      "alerjiler": [],
+      "endikasyonlar": ["hipertansiyon"],
+      "gebelik": true,
+      "emzirme": false,
+      "lab_degerleri": {}
+    },
+    "hedef_ilaclar": [
+      "COZAAR 50 mg film kaplı tablet"
+    ]
+  },
+  {
+    "id": "v3_q20",
+    "kategori": "doz_karaciger",
+    "soru": "Child-Pugh A karaciğer yetmezliği olan hastada LİPİTOR dozu nasıl ayarlanmalı?",
+    "ground_truth": "Atorvastatin (LİPİTOR) aktif karaciğer hastalığında kontrendikedir. Child-Pugh A hastalarda dikkatli kullanım önerilir; karaciğer fonksiyon testleri yakın takip edilmelidir. ALT ve AST normalin 3 katını aşarsa tedavi kesilmelidir. Child-Pugh A hastalarda atorvastatin 10-20 mg/gün ile başlanabilir; ALT/AST değerleri takip edilerek doz ayarlanmalıdır. Karaciğer yükü daha az alternatif olarak pravastatin değerlendirilebilir.",
+    "hasta": {
+      "yas": 58,
+      "cinsiyet": "erkek",
+      "gfr": null,
+      "karaciger_skoru": "A",
+      "mevcut_ilaclar": [],
+      "alerjiler": [],
+      "endikasyonlar": ["hiperlipidemi", "kronik hepatit"],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {"alt": 65, "ast": 58}
+    },
+    "hedef_ilaclar": [
+      "LİPİTOR 20 mg film kaplı tablet"
+    ]
+  },
+  {
+    "id": "v3_q22",
+    "kategori": "doz_bobrek",
+    "soru": "GFR 25 olan hastada JANUVIA'ya alternatif olarak AMARYL kullanılabilir mi?",
+    "ground_truth": "Glimepirid (AMARYL) böbrek yetmezliğinde hipoglisemi riski nedeniyle dikkatli kullanılmalıdır. Şiddetli böbrek yetmezliğinde (GFR <30) kullanımından kaçınılması önerilir çünkü aktif metabolitler birikebilir. GFR 25 için AMARYL kontrendike değil ama yüksek hipoglisemi riski taşır.",
+    "hasta": {
+      "yas": 70,
+      "cinsiyet": "erkek",
+      "gfr": 25.0,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": [],
+      "alerjiler": [],
+      "endikasyonlar": ["tip-2-diyabet"],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {"kreatinin": 2.9, "hba1c": 8.5}
+    },
+    "hedef_ilaclar": [
+      "AMARYL 2 mg tablet"
+    ]
+  },
+  {
+    "id": "v3_q30",
+    "kategori": "doz_bobrek",
+    "soru": "GFR 15 olan hastada METAFORMAL kullanılabilir mi?",
+    "ground_truth": "Metformin (METAFORMAL) GFR 30 mL/dak altında kontrendikedir. GFR 15 şiddetli böbrek yetmezliği olup laktik asidoz riski nedeniyle METAFORMAL bu hastada kesinlikle kullanılmamalıdır. METAFORMAL kesilmeli; diyabet kontrolü için insülin tercih edilmeli, böbrek fonksiyonu ve laktik asidoz belirtileri takip edilmelidir. Alternatif olarak insülin rejimi başlanmalı ve böbrek fonksiyonu izlenmelidir.",
+    "hasta": {
+      "yas": 65,
+      "cinsiyet": "erkek",
+      "gfr": 15.0,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": [],
+      "alerjiler": [],
+      "endikasyonlar": ["tip-2-diyabet"],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {"kreatinin": 4.2}
+    },
+    "hedef_ilaclar": [
+      "METAFORMAL 1000 mg film kaplı tablet"
+    ]
+  },
+  {
+    "id": "v3_q31",
+    "kategori": "yan_etki",
+    "soru": "Tip-2 diyabetli hastada JARDIANCE kullanımına bağlı gelişebilecek istenmeyen etkiler (madde 4.8) nelerdir?",
+    "ground_truth": "Empagliflozin (JARDIANCE) KÜB madde 4.8 uyarınca yaygın görülen istenmeyen etkiler arasında vajinal moniliyazis, vulvovajinit, balanit ve diğer genital enfeksiyonlar, üriner sistem enfeksiyonu, pruritus (genel) ve poliüri yer almaktadır. Ayrıca nadir fakat ciddi olarak nekrotizan fasiit (Fournier gangreni) bildirilmiştir. Hasta bu istenmeyen etkiler konusunda bilgilendirilmeli; genital hijyen önerisi verilmeli, gerekirse antifungal tedavi için dikkatli takip planlanmalıdır.",
+    "hasta": {
+      "yas": 55,
+      "cinsiyet": "kadın",
+      "gfr": 60.0,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": [],
+      "alerjiler": [],
+      "endikasyonlar": ["tip-2 diyabet"],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {}
+    },
+    "hedef_ilaclar": [
+      "JARDIANCE 10 mg film kaplı tablet"
+    ]
+  },
+  {
+    "id": "v3_q32",
+    "kategori": "cyp450_etkilesim",
+    "soru": "PLAVIX kullanan hastada mantar enfeksiyonu için CANDİDİN başlanırsa ne tür bir etkileşim beklenir?",
+    "ground_truth": "Flukonazol (CANDİDİN) orta-güçlü bir CYP2C19 inhibitörüdür. Klopidogrel (PLAVIX) bir ön ilaçtır ve aktif metabolite dönüşümü için CYP2C19 enzimine ihtiyaç duyar. Flukonazol ile birlikte kullanımda klopidogrelin aktif metabolite dönüşümü azalır, bu da antiplatelet etkinin azalmasına ve stent trombozu/kardiyovasküler olay riskinin artmasına neden olabilir. Mümkünse CYP2C19 etkisi olmayan antifungal alternatif seçilmeli; zorunluysa kardiyak olaylar ve trombotik risk açısından dikkatli takip yapılmalıdır.",
+    "hasta": {
+      "yas": 60,
+      "cinsiyet": "erkek",
+      "gfr": 70.0,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": ["PLAVIX 75 mg"],
+      "alerjiler": [],
+      "endikasyonlar": ["koroner stent", "oral kandidiyazis"],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {}
+    },
+    "hedef_ilaclar": [
+      "CANDİDİN 150 mg kapsül",
+      "PLAVIX 75 mg film kaplı tablet"
+    ]
+  }
+]

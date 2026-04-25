@@ -19,7 +19,7 @@ from loguru import logger
 from src.api.routes import router
 from src.config.settings import settings
 
-load_dotenv()
+load_dotenv(override=True)
 
 # Loguru stdout encoding
 logger.remove()

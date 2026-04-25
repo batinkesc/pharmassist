@@ -12,7 +12,7 @@ Kullanım:
     .venv/Scripts/python scripts/run_eval.py --questions data/eval/ragas_v2_questions.json
 """
 
-import sys, os, json, argparse
+import sys, os, json, argparse, re
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -28,6 +28,26 @@ from src.evaluation.ragas_eval import run_ragas_evaluation, print_ragas_report
 def load_test_questions(path: str) -> list[dict]:
     with open(path, encoding="utf-8") as f:
         return json.load(f)
+
+
+def _extract_sonuc_for_ragas(yanit: str) -> str:
+    """
+    RAGAS için yanıttan sadece ## SONUÇ bölümünü döner (Aksiyon 2).
+
+    ## KAYNAKLAR ve ## UYARI bölümlerini dışarıda bırakır:
+    - KAYNAKLAR: metadata alıntıları — doğrulama amacı yok, RAGAS'ı yanıltır
+    - UYARI: meta-ifadeler — klinik iddia sayılmaz
+    SONUÇ yoksa tüm yanıtı döner (güvenli fallback).
+    """
+    if "## SONUÇ" not in yanit:
+        return yanit
+    start = yanit.index("## SONUÇ")
+    rest = yanit[start:]
+    # Bir sonraki ## bölüm başlığında kes
+    next_sec = re.search(r'\n##\s', rest[8:])  # "## SONUÇ" başlığının ötesini ara
+    if next_sec:
+        return rest[:next_sec.start() + 8].strip()
+    return rest.strip()
 
 
 def run_rag_on_question(q: dict) -> dict:
@@ -63,12 +83,16 @@ def run_rag_on_question(q: dict) -> dict:
         contexts.append(response.cyp_metin)
     contexts += [k.icerik for k in response.kaynaklar]
 
+    # RAGAS için sadece ## SONUÇ bölümü — KAYNAKLAR alıntı hatası + UYARI gürültüsü engellenir
+    ragas_answer = _extract_sonuc_for_ragas(response.yanit)
+
     return {
-        "question":     q["soru"],
-        "answer":       response.yanit,
-        "contexts":     contexts,
-        "ground_truth": q["ground_truth"],
-        "soru_id":      q["id"],
+        "question":      q["soru"],
+        "answer":        ragas_answer,        # RAGAS: sadece SONUÇ
+        "full_answer":   response.yanit,      # Kayıt: tam yanıt
+        "contexts":      contexts,
+        "ground_truth":  q["ground_truth"],
+        "soru_id":       q["id"],
     }
 
 
@@ -152,7 +176,8 @@ if __name__ == "__main__":
         for pq, rec in zip(per_question, eval_records):
             per_q_extended.append({
                 **pq,
-                "answer":       rec.get("answer", ""),
+                "answer":       rec.get("full_answer", rec.get("answer", "")),  # tam yanıt kaydedilir
+                "ragas_answer": rec.get("answer", ""),                          # RAGAS'a giden SONUÇ bölümü
                 "ground_truth": rec.get("ground_truth", ""),
                 "contexts":     rec.get("contexts", []),
                 "soru_id":      rec.get("soru_id", ""),
