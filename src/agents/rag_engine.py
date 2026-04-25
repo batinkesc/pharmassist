@@ -263,6 +263,16 @@ AÇIKÇA bu hastalık/durum için yazıyorsa kullan.
 Madde 4.2'de doz azaltımı veya 4.4'te "dikkatli kullanılmalıdır" yazıyorsa:
 → "Dikkatli kullanılmalıdır, doz ayarı gerekebilir." veya "Yakın izlem önerilir." kullan.
 
+YANIT TAMAMLIĞI KURALI:
+Kontrendikasyon veya kısıtlama bildirirken YALNIZCA "kontrendikedir" demek YETERSİZDİR.
+Bağlamda bilgi varsa şunları mutlaka ekle:
+1. EŞİK/KOŞUL: Hangi GFR değerinde, hangi Child-Pugh sınıfında, hangi dozda kontrendike?
+   Örn: "GFR <30 mL/dak altında" veya "Child-Pugh B/C'de" gibi spesifik değer.
+2. TİP: MUTLAK mı (Madde 4.3 — hiçbir koşulda) yoksa GÖRECELI mi (Madde 4.4 — dikkatli kullan)?
+   Madde 4.2/4.4 bilgisi varsa doz ayarı, izlem sıklığı, uygulama koşullarını da ver.
+3. KLİNİK YOL: Bağlamda alternatif ilaç veya strateji açıkça geçiyorsa öner.
+   Bağlamda geçmiyorsa: "Alternatif tedavi için ek klinik değerlendirme gerekir." de — icat etme.
+
 BAĞLAM KAYNAK ÖNCELİĞİ:
 1. İLGİLİ KÜB BİLGİLERİ (en güvenilir — KÜB belgelerinden alınmıştır)
 2. GRAF VERİTABANI BULGULARI (Neo4j etkileşim grafı)
@@ -760,8 +770,11 @@ def _build_user_prompt(
   Soru yan etki ise → doz bilgisi ekleme.
 
 - KARAR VE BAŞLANGIÇ: ## SONUÇ bölümündeki ilk cümle soruya net bir cevap olmalı:
-  * Kontrendikasyon varsa: "Hayır, kontrendikedir [İlaç | Madde 4.3]."
+  * Kontrendikasyon varsa: "Hayır, [eşik/koşul belirt] durumunda kontrendikedir [İlaç | Madde 4.3]."
+    → Ardından: hangi GFR değeri, hangi karaciğer skoru, hangi dozda kontrendike — spesifik ver.
+    → Madde 4.2 veya 4.4 doz/izlem bilgisi bağlamda varsa ekle; yoksa "[BİLGİ YOK]" de.
   * Kullanılabilirse: "Evet, dikkatli kullanılabilir [İlaç | Madde X.X]." veya "Doz ayarı gerekir."
+    → Doz eşiği, izlem sıklığı, uygulama koşullarını bağlamdan ver.
   * Tüm bağlam bölümlerinde soruyla ilgili bilgi yoksa:
     "[BİLGİ YOK: Bu konu incelenen KÜB belgelerinde yer almamaktadır.]"
   * ASLA "klinisyen karar versin" ile başlama — önce net bilgi ver, sonra öneri ekle.
@@ -777,7 +790,9 @@ def _build_user_prompt(
 {cyp_talimati}
 - YANIT DETAYI: ## SONUÇ en az 3 cümle içermeli; klinik karar için gereken tüm bilgileri
   (mekanizma, doz etkisi, izlem önerisi, uyarılar) kapsamalıdır. Eksik bölümler [BİLGİ YOK] ile belirt.
-- ALTERNATİF İLAÇ: Bağlamda adı geçmeyen ilaçları alternatif olarak ÖNERME.
+- ALTERNATİF İLAÇ: Bağlamda adı geçmeyen SPESİFİK ilaç isimlerini alternatif olarak ÖNERME.
+  Ancak bağlamda genel ilaç sınıfı veya mekanizma geçiyorsa (örn. "böbrek yetmezliğinde
+  doz ayarı gerektiren ajanlar") → bunu genel bilgi olarak aktarabilirsin.
 
 - ZORUNLU FORMAT (sadece bu iki bölüm, sırayla):
 
