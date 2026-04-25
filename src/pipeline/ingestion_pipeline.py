@@ -35,12 +35,14 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
+from dotenv import load_dotenv
 from loguru import logger
 
-# Proje kökü sys.path'e
+# Proje kökü sys.path'e — dotenv ÖNCE yükle, sonra import et
 _ROOT = Path(__file__).resolve().parent.parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
+load_dotenv(_ROOT / ".env", override=True)
 
 from src.core.drug_record import DrugIdentity
 from src.core.name_resolver import get_resolver
