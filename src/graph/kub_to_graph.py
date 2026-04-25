@@ -197,7 +197,8 @@ def extract_contraindications(ilac_adi: str, chunk: dict) -> None:
     kosullar = CONDITION_RE.findall(icerik)
 
     for kosul in set(kosullar):
-        kosul = kosul.strip().lower()
+        # Whitespace normalize: satır içi newline ve çoklu boşlukları temizle
+        kosul = re.sub(r"\s+", " ", kosul).strip().lower()
         if len(kosul) < 4:
             continue
         run_query(
