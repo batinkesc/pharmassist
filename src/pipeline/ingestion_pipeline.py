@@ -120,12 +120,14 @@ class IngestionPipeline:
 
     def __init__(
         self,
-        llm_model: str = "qwen/qwen2.5-coder-14b-instruct",
+        llm_model: str | None = None,
         skip_extraction: bool = False,
     ):
+        from src.ingestion.kub_extractor import _DEFAULT_MODEL
+        effective_model = llm_model or _DEFAULT_MODEL
         self.parser       = KUBParser()
         self.quality_gate = QualityGate()
-        self.extractor    = KUBExtractor(model=llm_model) if not skip_extraction else None
+        self.extractor    = KUBExtractor(model=effective_model) if not skip_extraction else None
         self.inn_resolver = INNResolver()
 
     # ------------------------------------------------------------------
@@ -541,7 +543,7 @@ def main():
     grp.add_argument("--all",  action="store_true", help="Tüm raw_kub/ PDF'leri")
     parser.add_argument("--force",            action="store_true", help="Mevcut kaydı sil, yeniden ingest")
     parser.add_argument("--skip-extraction",  action="store_true", help="LLM extraction atla")
-    parser.add_argument("--model",            default="qwen/qwen2.5-coder-14b-instruct")
+    parser.add_argument("--model",            default=None, help="LLM model (default: LM_STUDIO_MODEL env)")
     parser.add_argument("--raw-dir",          type=Path, default=_RAW_KUB_DIR)
     args = parser.parse_args()
 

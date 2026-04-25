@@ -319,8 +319,10 @@ def _call_lm_studio(
     api_key = _get_lm_api_key()
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
+    url = _get_lm_url()
+    logger.debug(f"LLM istek URL: {url} | key: {'set' if api_key else 'NONE'}")
     req = urllib.request.Request(
-        _get_lm_url(),
+        url,
         data=data,
         headers=headers,
         method="POST",
