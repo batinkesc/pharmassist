@@ -285,7 +285,11 @@ def _get_lm_url() -> str:
     base = os.getenv("LM_STUDIO_URL", "http://localhost:1234/v1")
     return base.rstrip("/") + "/chat/completions"
 
-_DEFAULT_MODEL = os.getenv("LM_STUDIO_MODEL", "qwen/qwen2.5-coder-14b-instruct")
+def _get_lm_api_key() -> str | None:
+    """LM_STUDIO_API_KEY env var'dan okur (Groq / Together AI vb. için)."""
+    return os.getenv("LM_STUDIO_API_KEY") or None
+
+_DEFAULT_MODEL = os.getenv("LM_STUDIO_MODEL", "llama-3.3-70b-versatile")
 
 
 def _call_lm_studio(
@@ -308,10 +312,17 @@ def _call_lm_studio(
         "stream":      False,
     }
     data = json.dumps(payload).encode("utf-8")
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "python-httpx/0.27.0",
+    }
+    api_key = _get_lm_api_key()
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
     req = urllib.request.Request(
         _get_lm_url(),
         data=data,
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         method="POST",
     )
     try:
