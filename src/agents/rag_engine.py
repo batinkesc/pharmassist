@@ -892,6 +892,59 @@ def _format_chunks_for_prompt(chunklar: list[RetrievedChunk]) -> str:
 # Ana RAG fonksiyonu
 # ---------------------------------------------------------------------------
 
+def _auto_detect_drugs_from_query(soru: str) -> list[str]:
+    """
+    Sorgu metnindeki büyük harfli ilaç adlarını NameResolver ile tespit eder.
+
+    Strateji:
+      - Türkçe ilaç adları sorgularda genellikle BÜYÜK HARF ile yazılır (LİPİTOR, BRUFEN)
+      - ≥4 karakter büyük harfli tokenlar aday olarak alınır
+      - NameResolver prefix/exact eşleşmesi ile onaylanır
+      - Fuzzy/substring fallback kullanılmaz — yanlış pozitif riski yüksek
+
+    Döner: normalize edilmiş display_name listesi (boş olabilir)
+    """
+    import re as _re
+    from src.core.name_resolver import get_resolver
+    from src.data.normalization import normalize_drug_name as _norm
+
+    # Türkçe büyük harf karakterleri içeren ≥4 karakterlik tokenlar
+    # Örn: "LİPİTOR", "BRUFEN", "METAFORMAL", "SPORANOX"
+    # Dışarıda kalır: "GFR" (3 char), "KÜB" (3 char), "NSAİİ" (resolver bulamaz)
+    candidates = _re.findall(
+        r'\b[A-ZÇĞİÖŞÜ][A-ZÇĞİÖŞÜ]{3,}(?:[\s\-][A-ZÇĞİÖŞÜ]{2,}){0,2}\b',
+        soru,
+    )
+
+    if not candidates:
+        return []
+
+    resolver = get_resolver()
+    detected: list[str] = []
+    seen: set[str] = set()
+
+    for candidate in candidates:
+        matches = resolver.resolve(candidate)
+        if not matches:
+            continue
+
+        first = matches[0]
+        if first.canonical_id in seen:
+            continue
+
+        # Kalite filtresi: ilaç display_name'inin ilk kelimesi candidate ile başlamalı
+        # Bu, fuzzy/substring eşleşmelerin yanlış sürüklenmesini önler
+        display_first = _norm(first.display_name).upper().split()[0]
+        candidate_norm = _norm(candidate).upper().split()[0]
+
+        if display_first.startswith(candidate_norm[:4]):
+            detected.append(_norm(first.display_name))
+            seen.add(first.canonical_id)
+            logger.debug(f"Auto-detect: '{candidate}' → '{first.display_name}'")
+
+    return detected
+
+
 def run_rag(
     soru: str,
     profil: PatientProfile,
@@ -918,6 +971,12 @@ def run_rag(
     # Hedef ilaç adlarını normalize et — ® ™ © gibi semboller ChromaDB filtresini kırıyor
     if hedef_ilaclar:
         hedef_ilaclar = [normalize_drug_name(i) for i in hedef_ilaclar]
+    else:
+        # hedef_ilaclar verilmemişse soru metninden otomatik tespit et
+        hedef_ilaclar = _auto_detect_drugs_from_query(soru) or None
+
+    if hedef_ilaclar:
+        logger.info(f"Hedef ilaçlar: {hedef_ilaclar}")
 
     # 1. Query augmentation
     augmented = augment_query(soru, profil, hedef_ilaclar, n_results=n_results)
