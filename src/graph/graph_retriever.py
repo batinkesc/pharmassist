@@ -3,11 +3,13 @@ Neo4j graf sorgu katmanı — CombiGraph retrieval.
 
 Fonksiyonlar:
   ilac_node_adlari_bul(sorgu_adi)     → Neo4j'deki gerçek node adı/adlarını döner
-  drug_interactions(ilac_adi)         → ilaçın bilinen etkileşimleri
-  drug_contraindications(ilac_adi)    → kontrendikasyon condition listesi
-  multi_drug_interactions(ilaclar)    → çoklu ilaç kombinasyon kontrolü
-  drugs_for_condition(kosul)          → bir durumda kontrendike ilaçlar
-  drug_summary(ilac_adi)              → node özet bilgisi
+  drug_interactions(ilac_adi)              → ilaçın bilinen etkileşimleri
+  drug_contraindications(ilac_adi)         → kontrendikasyon condition listesi
+  drug_warnings(ilac_adi, hasta_kosullar)  → HAS_WARNING node'ları (hasta koşuluna göre filtreli)
+  drug_class_interactions(ilac_adi)        → INTERACTS_WITH_CLASS kenarları
+  multi_drug_interactions(ilaclar)         → çoklu ilaç kombinasyon kontrolü
+  drugs_for_condition(kosul)               → bir durumda kontrendike ilaçlar
+  drug_summary(ilac_adi)                   → node özet bilgisi
 """
 
 import re
@@ -217,6 +219,89 @@ def _extract_reason_sentence(bolum_43: str, kosul: str) -> str:
         if len(cleaned) > 30:
             return cleaned[:200]
     return ""
+
+
+def drug_warnings(ilac_adi: str, hasta_kosullar: list[str] | None = None) -> list[dict]:
+    """
+    Bir ilacın HAS_WARNING node'larını döner.
+    hasta_kosullar verilmişse yalnızca ilgili uyarıları döner;
+    verilmemişse tüm uyarıları döner.
+    """
+    gercek_adlar = ilac_node_adlari_bul(ilac_adi)
+    if not gercek_adlar:
+        return []
+
+    rows = run_query(
+        """
+        MATCH (d:Drug)-[:HAS_WARNING]->(w:Warning)
+        WHERE d.name IN $adlar
+        RETURN w.ozet AS ozet, w.chunk_id AS chunk_id
+        LIMIT 20
+        """,
+        {"adlar": gercek_adlar},
+    )
+    if not rows:
+        return []
+
+    # Hasta koşulları yoksa: tüm uyarıları dön (LIMIT ile sınırlı)
+    if not hasta_kosullar:
+        return rows
+
+    # Koşulları Türkçe anahtar kelime setlerine eşleştir
+    anahtar_kelimeler: set[str] = set()
+    for kosul in hasta_kosullar:
+        k = kosul.lower()
+        if any(t in k for t in ["böbrek", "renal", "gfr", "kreatinin"]):
+            anahtar_kelimeler.update(["böbrek", "renal", "gfr"])
+        if any(t in k for t in ["karaciğer", "hepat", "child-pugh", "siroz"]):
+            anahtar_kelimeler.update(["karaciğer", "hepat", "siroz"])
+        if any(t in k for t in ["gebelik", "hamile", "gebe", "laktasyon"]):
+            anahtar_kelimeler.update(["gebelik", "hamile", "laktasyon"])
+        if any(t in k for t in ["yaşlı", "elderly", "geriatri"]):
+            anahtar_kelimeler.update(["yaşlı", "elderly"])
+        if any(t in k for t in ["kardiyak", "kalp yetmezliği", "qt"]):
+            anahtar_kelimeler.update(["kardiyak", "kalp", "qt"])
+
+    if not anahtar_kelimeler:
+        return rows  # bilinmeyen koşul → tüm uyarıları göster
+
+    # Sadece ilgili uyarıları döndür
+    filtered = [
+        row for row in rows
+        if any(kw in (row.get("ozet") or "").lower() for kw in anahtar_kelimeler)
+    ]
+    return filtered
+
+
+def drug_class_interactions(ilac_adi: str) -> list[dict]:
+    """
+    Bir ilacın ilaç sınıfı bazındaki etkileşimlerini döner.
+    Neo4j'deki INTERACTS_WITH_CLASS kenarlarını kullanır.
+    Örn: LARİPAM → MAO inhibitörleri [contraindicated]
+    """
+    gercek_adlar = ilac_node_adlari_bul(ilac_adi)
+    if not gercek_adlar:
+        return []
+
+    return run_query(
+        """
+        MATCH (d:Drug)-[r:INTERACTS_WITH_CLASS]->(c)
+        WHERE d.name IN $adlar
+        RETURN d.name AS ana_ilac, c.name AS sinif_adi,
+               r.severity AS siddet, r.mechanism AS mekanizma,
+               r.kaynak_madde AS kaynak
+        ORDER BY
+          CASE r.severity
+            WHEN 'contraindicated' THEN 0
+            WHEN 'severe'          THEN 1
+            WHEN 'moderate'        THEN 2
+            WHEN 'mild'            THEN 3
+            ELSE                        4
+          END
+        LIMIT 20
+        """,
+        {"adlar": gercek_adlar},
+    )
 
 
 def multi_drug_interactions(ilaclar: list[str]) -> list[dict]:
