@@ -110,7 +110,23 @@ _DRUG_MENTION_STOPWORDS = {
 CONDITION_RE = re.compile(
     r"(böbrek\s+yetmezli[gğ]i|karaci[gğ]er\s+yetmezli[gğ]i|gebelik|laktasyon"
     r"|penisilin\s+alerjisi|hipersensitivite|hipertansiyon|diyabet"
-    r"|pediyatrik|geriyatrik|[a-zçğışöüA-Z]+\s+alerjisi)",
+    r"|pediyatrik|geriyatrik|[a-zçğışöüA-Z]+\s+alerjisi"
+    # Genişletilmiş klinik durumlar (corpus rebuild'de aktif olacak)
+    r"|aktif\s+(?:mide\s+(?:veya\s+bağırsak\s+)?)?ülseri?"
+    r"|peptik\s+ülseri?"
+    r"|gastrointestinal\s+kanam[aı]"
+    r"|kalp\s+yetmezli[gğ]i"
+    r"|kardiyak\s+yetmezlik"
+    r"|solunum\s+yetmezli[gğ]i"
+    r"|a[sş]ırı\s+duyarlılık"
+    r"|bronkospazm|astım"
+    r"|kanama\s+bozuklu[gğ]u"
+    r"|trombositopeni"
+    r"|epilepsi|konvülsiyon"
+    r"|miyastenia\s+gravis"
+    r"|porfiri"
+    r"|şiddetli\s+böbrek\s+yetmezli[gğ]i"
+    r"|şiddetli\s+karaci[gğ]er\s+yetmezli[gğ]i)",
     re.IGNORECASE,
 )
 

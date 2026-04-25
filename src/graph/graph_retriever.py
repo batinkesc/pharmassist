@@ -177,8 +177,9 @@ def drug_contraindications(ilac_adi: str) -> list[dict]:
         WHERE d.name IN $adlar
         OPTIONAL MATCH (d)-[:HAS_SECTION]->(s:Section)
         WHERE s.madde_no = '4.3'
-        RETURN c.name AS kosul, r.kaynak_chunk AS kaynak,
-               s.icerik AS bolum_43
+        WITH c, collect(DISTINCT s.icerik)[0] AS bolum_43,
+             collect(DISTINCT r.kaynak_chunk)[0] AS kaynak
+        RETURN c.name AS kosul, kaynak, bolum_43
         ORDER BY c.name
         """,
         {"adlar": gercek_adlar},
