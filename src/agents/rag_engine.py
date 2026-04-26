@@ -638,6 +638,138 @@ def validate_response(yanit: str, chunklar: list, soru: str = "") -> str:
     return yanit
 
 
+# ---------------------------------------------------------------------------
+# Answer Calibration Layer — pre-LLM klinik karar kalibrasyonu
+# ---------------------------------------------------------------------------
+
+# Genişletilmiş klinik durum listesi — 4.3 eşleşme kontrolü için
+_KLINIK_DURUMLAR_EXTENDED = [
+    "hiperpotasemi", "hiperkalemi", "potasyum",
+    "hipopotasemi", "hipokalemi",
+    "böbrek yetmezliği", "renal yetmezlik", "renal", "böbrek",
+    "karaciğer yetmezliği", "hepatik", "karaciğer", "siroz",
+    "gebelik", "hamile", "laktasyon", "emzir",
+    "hipertansiyon", "kalp yetmezliği", "kardiyak",
+    "diyabet", "hipoglisemi", "hiperglisemi",
+    "alerji", "hipersensitivite",
+    "üriner", "enfeksiyon", "trombositopeni", "lökopeni",
+    # Yeni eklenenler — dışarıdan review + Q28 analizi
+    "feokromasitoma", "miyastenia gravis", "myasteni",
+    "parkinson", "epilepsi", "lupus", "porfiri",
+    "tirotoksikoz", "hipertiroidi", "hipotiroid",
+    "astım", "bronkospazm", "koah",
+    "miyopati", "rabdomiyoliz",
+    "tromboz", "pulmoner emboli",
+    "qrs", "qt uzaması", "aritmi",
+    "aktif ülser", "gastrointestinal kanama", "kanama",
+]
+
+_KONTRENDIKE_RE = re.compile(
+    r"kontrendikedir|kontrendike|kullanılmamalıdır|kullanılmaz|verilmemelidir"
+    r"|kullanımı\s+kontrendike",
+    re.IGNORECASE,
+)
+_DIKKATLI_RE = re.compile(
+    r"dikkatli\s+kullan|ihtiyatla\s+kullan|özen\s+göster|yakın\s+izlem"
+    r"|dikkatle\s+kullan|kullanılmalıdır.*dikkat",
+    re.IGNORECASE,
+)
+
+
+def _calibrate_clinical_severity(
+    chunklar: list,
+    soru: str,
+    soru_turleri: list[str],
+) -> str:
+    """
+    Getirilen chunk'lardan LLM öncesi deterministik klinik karar etiketi üretir.
+
+    Kontrendikasyon veya doz sorularında:
+    - 4.3 bölümü sorudaki klinik durumu içeriyorsa → KONTREDİKE
+    - 4.3 yok / durumu içermiyor, 4.4 dikkatli kullanım diyorsa → DİKKATLİ_KULLANIM
+    - 4.2 bölümü varsa → DOZ_AYARI_GEREKEBİLİR
+    - Hiçbiri uymuyorsa → boş string (LLM kendi karar verir)
+
+    Returns: prompt'a eklenecek ÖN DEĞERLENDİRME bloğu (string) veya ""
+    """
+    ilgili_tipler = {"kontrendikasyon", "doz", "yan_etki", "uyari"}
+    if not any(t in soru_turleri for t in ilgili_tipler):
+        return ""
+
+    soru_lower = soru.lower()
+
+    # Chunk'ları madde bazlı grupla
+    def _icerik(c) -> str:
+        return (getattr(c, "icerik", "") if hasattr(c, "icerik") else c.get("icerik", "")).lower()
+
+    def _madde(c) -> str:
+        return getattr(c, "madde_no", "") if hasattr(c, "madde_no") else c.get("madde_no", "")
+
+    chunks_43 = [c for c in chunklar if _madde(c) == "4.3"]
+    chunks_44 = [c for c in chunklar if _madde(c) == "4.4"]
+    chunks_42 = [c for c in chunklar if _madde(c) == "4.2"]
+
+    icerik_43 = " ".join(_icerik(c) for c in chunks_43)
+    icerik_44 = " ".join(_icerik(c) for c in chunks_44)
+    icerik_42 = " ".join(_icerik(c) for c in chunks_42)
+
+    # Soruda geçen klinik durumları bul
+    eslesen_durumlar = [d for d in _KLINIK_DURUMLAR_EXTENDED if d in soru_lower]
+
+    # 1. 4.3 + kontrendike kelime + klinik durum eşleşmesi → KONTREDİKE
+    if chunks_43 and _KONTRENDIKE_RE.search(icerik_43):
+        if not eslesen_durumlar:
+            # Durum belirtilmemiş sorular için de kontrendike kabul et
+            etiket = "KONTREDİKE"
+        elif any(d in icerik_43 for d in eslesen_durumlar):
+            etiket = "KONTREDİKE"
+        else:
+            # 4.3 var ama sorgunun klinik durumu 4.3'te eşleşmiyor
+            etiket = "DİKKATLİ_KULLANIM"
+    # 2. 4.3 yok / eşleşme yok ama 4.4 dikkatli kullanım diyor → DİKKATLİ
+    elif chunks_44 and _DIKKATLI_RE.search(icerik_44):
+        if eslesen_durumlar and any(d in icerik_44 for d in eslesen_durumlar):
+            etiket = "DİKKATLİ_KULLANIM"
+        elif not eslesen_durumlar and _DIKKATLI_RE.search(icerik_44):
+            etiket = "DİKKATLİ_KULLANIM"
+        else:
+            etiket = ""
+    # 3. 4.2 doz bilgisi varsa
+    elif chunks_42 and "doz" in soru_lower:
+        etiket = "DOZ_AYARI_GEREKEBİLİR"
+    else:
+        return ""
+
+    if not etiket:
+        return ""
+
+    # Etiket açıklamaları
+    aciklama = {
+        "KONTREDİKE": (
+            "Getirilen KÜB bağlamı, sorudaki klinik durum için 4.3 Kontrendikasyon bölümünde "
+            "KONTREDİKASYON içermektedir. İlk cümlen bu kararı net yansıtmalı."
+        ),
+        "DİKKATLİ_KULLANIM": (
+            "Getirilen KÜB bağlamı bu durum için 4.3 Kontrendikasyon DEĞİL; "
+            "4.4 Özel Uyarılar bölümünde DİKKATLİ KULLANIM uyarısı içermektedir. "
+            "'Kontrendikedir' veya 'kullanılmamalıdır' YAZMA — bunun yerine "
+            "'dikkatli kullanılmalıdır / yakın izlem gerekir' kullan."
+        ),
+        "DOZ_AYARI_GEREKEBİLİR": (
+            "Getirilen KÜB bağlamı 4.2 Pozoloji bölümünde bu hasta için "
+            "DOZ AYARI bilgisi içermektedir. Dozu ve eşiği kesin olarak belirt."
+        ),
+    }
+
+    logger.debug(f"[Kalibrasyon] Etiket: {etiket} | Durum: {eslesen_durumlar}")
+
+    return (
+        f"\n## KLİNİK ÖN DEĞERLENDİRME (Sistem — Değiştirilemez)\n"
+        f"**Karar Etiketi: {etiket}**\n"
+        f"{aciklama[etiket]}\n"
+    )
+
+
 _MADDE_ACIKLAMALARI: dict[str, str] = {
     "4.1": "Endikasyonlar",
     "4.2": "Pozoloji / Doz",
@@ -718,6 +850,9 @@ def _build_user_prompt(
     soru_turleri = soru_turleri or []
     etkilesim_sorusu = "etkilesim" in soru_turleri or "cyp450_etkilesim" in soru_turleri
 
+    # ── Answer Calibration Layer ─────────────────────────────────────────────
+    kalibrasyon_blogu = _calibrate_clinical_severity(chunklar, soru, soru_turleri)
+
     kub_bolumu = _format_chunks_for_prompt(chunklar)
 
     graf_bolumu = f"\n## GRAF VERİTABANI BULGULARI (Neo4j)\n{graf_baglami}\n" if graf_baglami else ""
@@ -750,17 +885,26 @@ def _build_user_prompt(
     else:
         bolum_sirasi = f"{kub_bolumu}\n{graf_bolumu}{kumlatif_bolumu}{cyp_bolumu}"
 
-    # CYP talimatı — etkileşim sorusunda daha güçlü
-    cyp_talimati = (
-        "- CYP450 MEKANİZMASI: CYP450 bölümünde mekanizma varsa (inhibisyon/indüksiyon/substrat) "
-        "→ bu mekanizmayı yanıtın ilk paragrafında açıkla. Mekanizma olmadan etkileşimi eksik anlat."
-        if etkilesim_sorusu and cyp_metin
-        else "- OTOMATİK CYP450 bulgularını yalnızca bu bölümde açıkça yazılan bilgilerle kullan."
-    )
+    # ── CYP Zorunlu Kural ────────────────────────────────────────────────────
+    # CYP bilgisi varsa → LLM kullanmak ZORUNDA (isteğe bağlı değil)
+    if cyp_metin and etkilesim_sorusu:
+        cyp_talimati = (
+            "- CYP450 ZORUNLU: CYP450 bölümünde mekanizma mevcut (inhibisyon/indüksiyon/substrat). "
+            "Bu mekanizmayı ## SONUÇ bölümünde MUTLAKA açıkla — [CYP450] etiketiyle işaretle. "
+            "CYP mekanizması açıklanmadan etkileşim yanıtı EKSİK sayılır."
+        )
+    elif cyp_metin:
+        cyp_talimati = (
+            "- CYP450 BİLGİSİ MEVCUT: Bu bölümdeki enzim bilgisi (inhibisyon/substrat/indüksiyon) "
+            "soruyla ilgiliyse yanıta dahil et — [CYP450] etiketiyle. "
+            "Yalnızca bu bölümde yazanları kullan, ek yorum ekleme."
+        )
+    else:
+        cyp_talimati = ""
 
     prompt = f"""## HASTA PROFİLİ
 {hasta_ozeti}
-
+{kalibrasyon_blogu}
 ## İLGİLİ KÜB BİLGİLERİ
 {bolum_sirasi}
 ## SORU{coverage_uyari}
