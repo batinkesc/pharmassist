@@ -71,6 +71,16 @@ WARNING_KEYWORDS = re.compile(
     r"uyarı|önlem|dikkat|risk|tehlike|güvenlik",
     re.IGNORECASE,
 )
+
+# Spesifik tıbbi durumlar — 4.4 özel uyarı bölümü ile eşleşen koşullar
+# Bu koşullar soruda geçtiğinde query zenginleştirmede 4.4 içeriği güçlendirilir
+SPECIAL_CONDITION_KEYWORDS = re.compile(
+    r"feokromasitom|miyastenia\s*gravis|myasteni|parkinson|epilepsi|lupus|porfiri"
+    r"|tirotoksikoz|hipertiroidi|hipotiroid|böbrek\s+ta[sş][ıi]|ürolitiyaz"
+    r"|glokom|prostat|bph|üreme|çocuk\s+istememe|fertil"
+    r"|alkol\s+ba[gğ][ıi]ml[ıi]|miyopati|rabdomiyoliz",
+    re.IGNORECASE,
+)
 OVERDOSE_KEYWORDS = re.compile(
     r"doz\s+aşım|toksik\s+doz|zehirlenme|overdoz",
     re.IGNORECASE,
@@ -143,6 +153,13 @@ def augment_query(
     madde_onceligi = _prioritize_sections(soru_turleri, profil)
     flags = profil.aktif_flags
     zengin_sorgu = _enrich_query(soru, profil, soru_turleri)
+
+    # Spesifik tıbbi durum varsa 4.4'ü önce al (kontrendikasyon/uyarı sorgularında)
+    if SPECIAL_CONDITION_KEYWORDS.search(soru):
+        if "4.4" in madde_onceligi:
+            madde_onceligi.remove("4.4")
+        madde_onceligi.insert(0, "4.4")
+        logger.debug(f"Spesifik tıbbi durum tespit edildi — 4.4 önceliğe alındı")
 
     logger.debug(f"Soru türleri: {soru_turleri}")
     logger.debug(f"Madde önceliği: {madde_onceligi}")
@@ -290,9 +307,35 @@ def _enrich_query(soru: str, profil: PatientProfile, soru_turleri: list[str]) ->
         ilac_metni = " ".join(profil.mevcut_ilaclar[:3])
         parcalar.append(f"ilaç etkileşimi {ilac_metni}")
 
-    # Yan etki soruları için 4.8 semantik bağlamını güçlendir
+    # Yan etki soruları için 4.8 semantik bağlamını güçlendir — semptom odaklı
     if "yan_etki" in soru_turleri:
         parcalar.append("yan etki istenmeyen etki advers reaksiyon güvenlilik profili")
+        # Spesifik semptom/risk terimleri varsa doğrudan ekle → ilgili 4.8 chunk'ı çeker
+        _YAN_ETKI_SPESIFIK = [
+            (re.compile(r"üriner|idrar\s+yolu|mesane|genitoüriner", re.IGNORECASE),
+             "üriner enfeksiyon genitoüriner idrar yolu"),
+            (re.compile(r"kanama|hemoraji|purpura|peteş", re.IGNORECASE),
+             "kanama riski hemoraji"),
+            (re.compile(r"ödem|şişlik|periferik\s+ödem", re.IGNORECASE),
+             "ödem periferik ödem sıvı tutulumu"),
+            (re.compile(r"karaciğer|hepatik|sarılık|transaminaz", re.IGNORECASE),
+             "hepatotoksisite karaciğer enzim yüksekliği"),
+            (re.compile(r"kas\s+ağrı|miyalji|rabdomiyoliz", re.IGNORECASE),
+             "miyopati rabdomiyoliz kas toksisitesi"),
+            (re.compile(r"mantar|kandida|fungal", re.IGNORECASE),
+             "mantar enfeksiyonu kandida fungal"),
+        ]
+        for pattern, terim in _YAN_ETKI_SPESIFIK:
+            if pattern.search(soru):
+                parcalar.append(terim)
+                break  # Birden fazla eşleşme karmaşıklığı artırır
+
+    # Spesifik tıbbi durum sorularında 4.4 özel uyarı içeriğini güçlendir
+    # (feokromasitoma, miyastenia gravis gibi durumlar 4.4'te uyarı olarak geçer)
+    special_match = SPECIAL_CONDITION_KEYWORDS.search(soru)
+    if special_match:
+        condition_term = special_match.group(0)
+        parcalar.append(f"özel kullanım uyarısı {condition_term} dikkatli kullanım")
 
     # Anormal lab değerlerini klinik terime çevir
     for anormal in profil.anormal_lab_degerleri:

@@ -270,8 +270,9 @@ Bağlamda bilgi varsa şunları mutlaka ekle:
    Örn: "GFR <30 mL/dak altında" veya "Child-Pugh B/C'de" gibi spesifik değer.
 2. TİP: MUTLAK mı (Madde 4.3 — hiçbir koşulda) yoksa GÖRECELI mi (Madde 4.4 — dikkatli kullan)?
    Madde 4.2/4.4 bilgisi varsa doz ayarı, izlem sıklığı, uygulama koşullarını da ver.
-3. KLİNİK YOL: Bağlamda alternatif ilaç veya strateji açıkça geçiyorsa öner.
-   Bağlamda geçmiyorsa: "Alternatif tedavi için ek klinik değerlendirme gerekir." de — icat etme.
+3. KLİNİK YOL: Bağlamda bir ilaç adı AÇIKÇA yazıyorsa onu aktar. Bağlamda ilaç adı geçmiyorsa
+   HİÇBİR spesifik ilaç adı, ilaç sınıfı veya doz önerisi yazma — sadece ilacın kullanılmaması
+   gerektiğini belirt. "DMAH", "metildopa", "heparin" vb. bağlamda yoksa YASAKTIR.
 
 BAĞLAM KAYNAK ÖNCELİĞİ:
 1. İLGİLİ KÜB BİLGİLERİ (en güvenilir — KÜB belgelerinden alınmıştır)
@@ -310,8 +311,9 @@ YASAK DAVRANIŞLAR:
 - Prompt metnini (## başlıkları, talimatları) yanıta kopyalamak.
 - Bağlamda olmayan kaynak göstermek.
 - Kaynak etiketi olmadan tıbbi iddia cümlesi yazmak.
-- Bağlamda adı AÇIKÇA GEÇMEYEN bir ilacı alternatif olarak önermek.
-  (Örn. "metildopa tercih edilebilir" — sadece bağlamda metildopadan söz ediliyorsa yaz.)
+- Bağlamda adı AÇIKÇA GEÇMEYEN bir ilacı alternatif olarak önermek — MUTLAK YASAK.
+  Bağlamda geçmeyen hiçbir ilaç adı, etken madde, ilaç sınıfı (DMAH, heparin, metildopa vb.)
+  yazılamaz. "Değerlendirilebilir", "tercih edilebilir", "kullanılabilir" formunda bile yasak.
 - ## KAYNAKLAR bölümü yazmak — bu bölüm sistem tarafından otomatik oluşturulur."""
 
 SYSTEM_PROMPT = _SYSTEM_PROMPT_BASE  # Claude API için (system role'e verilir)
@@ -790,9 +792,10 @@ def _build_user_prompt(
 {cyp_talimati}
 - YANIT DETAYI: ## SONUÇ en az 3 cümle içermeli; klinik karar için gereken tüm bilgileri
   (mekanizma, doz etkisi, izlem önerisi, uyarılar) kapsamalıdır. Eksik bölümler [BİLGİ YOK] ile belirt.
-- ALTERNATİF İLAÇ: Bağlamda adı geçmeyen SPESİFİK ilaç isimlerini alternatif olarak ÖNERME.
-  Ancak bağlamda genel ilaç sınıfı veya mekanizma geçiyorsa (örn. "böbrek yetmezliğinde
-  doz ayarı gerektiren ajanlar") → bunu genel bilgi olarak aktarabilirsin.
+- ALTERNATİF İLAÇ (MUTLAK YASAK): Bağlamda adı AÇIKÇA yazılmayan hiçbir ilaç adı,
+  etken madde veya ilaç sınıfı önerme. "DMAH", "warfarin", "heparin", "metildopa" vb.
+  bağlamda geçmiyorsa yazılamaz — "değerlendirilebilir" veya "tercih edilebilir" formunda
+  bile yasak. Yalnızca: "[Bu konuda ek klinik değerlendirme gereklidir.]" yaz.
 
 - ZORUNLU FORMAT (sadece bu iki bölüm, sırayla):
 
