@@ -88,6 +88,87 @@ OVERDOSE_KEYWORDS = re.compile(
 
 
 # ---------------------------------------------------------------------------
+# Klinik Sinonim Haritası — tıbbi kısaltma & eş anlamlı terim genişletme
+# ---------------------------------------------------------------------------
+# Sorudaki tıbbi kısaltmaları ChromaDB için tam Türkçe karşılıklarına ekler.
+# Hem soru türü tespitini hem de semantik retrieval'ı iyileştirir.
+# Format: {regex_pattern: "genişletilmiş terim(ler)"}
+
+_SINONIM_HARITASI: list[tuple[re.Pattern, str]] = [
+    # ── Böbrek / Renal ───────────────────────────────────────────────────────
+    (re.compile(r"\bKBY\b",            re.IGNORECASE), "kronik böbrek yetmezliği renal yetmezlik"),
+    (re.compile(r"\bABY\b",            re.IGNORECASE), "akut böbrek yetmezliği renal yetmezlik"),
+    (re.compile(r"\bAKI\b",            re.IGNORECASE), "akut böbrek hasarı renal yetmezlik"),
+    (re.compile(r"\beGFR\b",           re.IGNORECASE), "tahmini GFR glomerüler filtrasyon böbrek"),
+    (re.compile(r"\bCrCl\b",           re.IGNORECASE), "kreatinin klerensi böbrek fonksiyonu"),
+    # ── Karaciğer / Hepatik ─────────────────────────────────────────────────
+    (re.compile(r"\bKHY\b|\bKCY\b",    re.IGNORECASE), "karaciğer yetmezliği hepatik yetmezlik"),
+    (re.compile(r"kc\s*yet",           re.IGNORECASE), "karaciğer yetmezliği hepatik"),
+    # ── Kardiyovasküler ──────────────────────────────────────────────────────
+    (re.compile(r"\bKY\b",             re.IGNORECASE), "kalp yetmezliği kardiyak yetmezlik"),
+    (re.compile(r"\bAF\b",             re.IGNORECASE), "atriyal fibrilasyon aritmisi"),
+    (re.compile(r"\bKAH\b",            re.IGNORECASE), "koroner arter hastalığı iskemik kalp"),
+    (re.compile(r"\bIHD\b",            re.IGNORECASE), "iskemik kalp hastalığı koroner"),
+    (re.compile(r"\bMI\b",             re.IGNORECASE), "miyokard enfarktüsü kalp krizi"),
+    (re.compile(r"\bHTA\b",            re.IGNORECASE), "hipertansiyon yüksek tansiyon"),
+    (re.compile(r"\bDVT\b",            re.IGNORECASE), "derin ven trombozu venöz tromboembolizm"),
+    (re.compile(r"\bPE\b",             re.IGNORECASE), "pulmoner emboli akciğer pıhtısı"),
+    (re.compile(r"\bVTE\b",            re.IGNORECASE), "venöz tromboembolizm DVT pulmoner emboli"),
+    # ── Akciğer / Solunumsal ─────────────────────────────────────────────────
+    (re.compile(r"\bCOPD\b",           re.IGNORECASE), "kronik obstrüktif akciğer hastalığı KOAH"),
+    (re.compile(r"\bKOAH\b",           re.IGNORECASE), "kronik obstrüktif akciğer hastalığı amfizem bronşit"),
+    # ── Diyabet / Metabolik ──────────────────────────────────────────────────
+    (re.compile(r"\bT2DM\b|\bT2D\b|\bDM2\b", re.IGNORECASE), "tip 2 diyabet glisemik kontrol insülin direnci"),
+    (re.compile(r"\bT1DM\b|\bT1D\b|\bDM1\b", re.IGNORECASE), "tip 1 diyabet insüline bağımlı"),
+    (re.compile(r"\bDKA\b",            re.IGNORECASE), "diyabetik ketoasidoz metabolik asidoz"),
+    (re.compile(r"\bHHS\b",            re.IGNORECASE), "hiperosmolar hiperglisemik durum diyabet"),
+    # ── Laboratuvar / Koagülasyon ────────────────────────────────────────────
+    (re.compile(r"\bINR\b",            re.IGNORECASE), "INR protrombin zamanı antikoagülan koagülasyon"),
+    (re.compile(r"\bHbA1c\b",          re.IGNORECASE), "hemoglobin A1c glisemik kontrol diyabet izlem"),
+    (re.compile(r"\bLDL\b",            re.IGNORECASE), "LDL kolesterol düşük dansiteli lipoprotein"),
+    (re.compile(r"\bHDL\b",            re.IGNORECASE), "HDL kolesterol yüksek dansiteli lipoprotein"),
+    # ── İlaç Sınıfları / Kısaltmalar ────────────────────────────────────────
+    (re.compile(r"\bNSAİİ\b|\bNSAID\b",     re.IGNORECASE), "steroid olmayan antiinflamatuar ibuprofen diklofenak"),
+    (re.compile(r"\bACEi\b|ACE\s*inh",      re.IGNORECASE), "ACE inhibitörü anjiyotensin dönüştürücü enzim lisinopril"),
+    (re.compile(r"\bARB\b",                  re.IGNORECASE), "anjiyotensin reseptör blokörü valsartan losartan"),
+    (re.compile(r"\bBB\b",                   re.IGNORECASE), "beta bloker metoprolol bisoprolol atenolol"),
+    (re.compile(r"\bCCB\b",                  re.IGNORECASE), "kalsiyum kanal blokörü amlodipin nifedipin"),
+    (re.compile(r"\bSSRI\b",                 re.IGNORECASE), "selektif serotonin geri alım inhibitörü sertralin fluoksetin"),
+    (re.compile(r"\bTCA\b",                  re.IGNORECASE), "trisiklik antidepresan amitriptilin imipramin"),
+    (re.compile(r"\bDMAH\b|\bLMWH\b",        re.IGNORECASE), "düşük molekül ağırlıklı heparin enoksaparin nadroparin"),
+    (re.compile(r"\bASA\b",                  re.IGNORECASE), "asetilsalisilik asit aspirin antiplatelet"),
+    (re.compile(r"\bPPI\b",                  re.IGNORECASE), "proton pompa inhibitörü omeprazol pantoprazol"),
+    (re.compile(r"\bSGLT2\b|\bSGLT-2\b",     re.IGNORECASE), "SGLT-2 inhibitörü empagliflozin dapagliflozin"),
+    (re.compile(r"\bGLP.?1\b",               re.IGNORECASE), "GLP-1 agonist semaglutid liraglutid"),
+    # ── Klinik Durumlar (Türkçe kısaltma) ───────────────────────────────────
+    (re.compile(r"\bSVO\b|\bİVO\b",          re.IGNORECASE), "serebrovasküler olay inme iskemik felç"),
+    (re.compile(r"\bTIA\b",                  re.IGNORECASE), "geçici iskemik atak mini inme"),
+    (re.compile(r"\bRAS\b",                  re.IGNORECASE), "romatoid artrit eklem inflamasyonu"),
+    (re.compile(r"\bSLE\b",                  re.IGNORECASE), "sistemik lupus eritematöz otoimmün"),
+    (re.compile(r"\bMS\b",                   re.IGNORECASE), "multipl skleroz nörolojik demyelinizan"),
+]
+
+
+def _apply_synonym_expansion(soru: str) -> str:
+    """
+    Türkçe tıbbi kısaltma ve eş anlamlıları zenginleştirilmiş forma dönüştürür.
+
+    Orijinal sorguya ekleme yapar — YERİNE GEÇMEz.
+    Dönen metin yalnızca ChromaDB semantik araması için kullanılır,
+    LLM prompt'una veya kullanıcıya gösterilmez.
+    """
+    extras: list[str] = []
+    for pattern, expansion in _SINONIM_HARITASI:
+        if pattern.search(soru):
+            extras.append(expansion)
+
+    if extras:
+        logger.debug(f"Sinonim genişletme: {len(extras)} eşleşme")
+        return soru + " " + " ".join(extras)
+    return soru
+
+
+# ---------------------------------------------------------------------------
 # Arama planı veri yapısı
 # ---------------------------------------------------------------------------
 
@@ -149,10 +230,13 @@ def augment_query(
     Returns:
         AugmentedQuery — arama planları ve hasta özeti
     """
-    soru_turleri = _detect_question_types(soru, profil)
+    # Klinik kısaltma & sinonim genişletme — yalnızca retrieval için
+    soru_expanded = _apply_synonym_expansion(soru)
+
+    soru_turleri = _detect_question_types(soru_expanded, profil)
     madde_onceligi = _prioritize_sections(soru_turleri, profil)
     flags = profil.aktif_flags
-    zengin_sorgu = _enrich_query(soru, profil, soru_turleri)
+    zengin_sorgu = _enrich_query(soru_expanded, profil, soru_turleri)
 
     # Spesifik tıbbi durum varsa 4.4'ü önce al (kontrendikasyon/uyarı sorgularında)
     if SPECIAL_CONDITION_KEYWORDS.search(soru):
