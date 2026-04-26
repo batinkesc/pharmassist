@@ -1,8 +1,8 @@
 # PharmAssist — Proje Dokümantasyonu
 
-**Versiyon:** 1.2.0-milestone  
-**Son Güncelleme:** 2026-04-21  
-**Durum:** Prototip milestone ✅. RAG pipeline olgunlaştı — sorgu türü tespiti, CYP450 önceliklendirme, kontrendikasyon validasyonu iyileştirildi. RAGAS Run 10 (qwen2.5:32b): **F:0.6792 | CR:0.6677**. Sonraki hedef: yerel model ile sürekli test, RAGAS evaluator → Haiku geçişi (İngilizce prompt).
+**Versiyon:** 1.5.0-sprint  
+**Son Güncelleme:** 2026-04-26  
+**Durum:** Sprint ✅. 4 model-odaklı iyileştirme tamamlandı: (A) Answer Calibration Layer, (B) CYP Zorunlu Kural, (C) 4.4 Sub-chunking (8757 → 10.588 chunk), (D) Klinik Sinonim Genişletme. RAGAS Run 12 baseline: **F:0.7607 | CU:0.8028 | CR:0.7250 | Ort:0.7628**. Run 13 mini RAGAS'ta iyileşme ölçülüyor. 81 test geçiyor.
 
 ---
 
@@ -104,13 +104,14 @@ Pipeline 5 aşamadan oluşur:
 | Vector DB | ChromaDB (persistent) | Cosine similarity, metadata filtreli arama |
 | Graph DB | Neo4j | Kontrendikasyon ve etkileşim ilişki grafu |
 | LLM (RAG) | Claude Haiku 4.5 (Anthropic API) / Local LLM (qwen2.5:32b via LM Studio/Ollama) | Yerel: maliyet sıfır; API: ~$0.009/sorgu |
-| LLM (RAGAS Eval) | qwen2.5:32b (Ollama, Run 9-10) / Mistral-7B (Run 3-8) | Evaluator strict Türkçe uyumlu; Haiku geçişi planlanıyor |
+| LLM (Extraction) | Together AI — Qwen3-235B-A22B | KUBExtractor; LM Studio'dan Together AI'a geçildi (2026-04-25); `LM_STUDIO_URL=api.together.xyz`, `LM_STUDIO_MODEL=Qwen3-235B` |
+| LLM (RAGAS Eval) | Together AI — Qwen3-235B-A22B (Run 11-12) | Extraction ile aynı endpoint/model; `RAGAS_MODEL=Qwen3-235B`, `RAGAS_PROVIDER=local` |
 | Backend | FastAPI | REST API, Swagger UI dahil |
 | Frontend | Streamlit | Klinisyen arayüzü |
 | Config | Pydantic BaseSettings | Env var validasyonu, startup kontrolü |
-| Test | pytest | 49 test, dış bağımlılık gerektirmez |
+| Test | pytest | **81 test**, dış bağımlılık gerektirmez |
 | Container | Docker + docker-compose | Multi-stage build, Neo4j dahil |
-| Değerlendirme | RAGAS | Faithfulness + Context Recall ölçümü |
+| Değerlendirme | RAGAS 0.4.3 | Faithfulness + Context Utilization + Context Recall (3-metrik standart, Run 11+) |
 
 ---
 
@@ -196,8 +197,10 @@ PharmAssistVersion2/
 │   ├── parsed_json/                ← her PDF'in chunk JSON'u (canonical_id dahil)
 │   ├── quarantine/                 ← parse QA geçemeyen karantina raporları
 │   └── eval/
-│       ├── ragas_v3_questions.json ← aktif soru seti (33 soru)
-│       ├── RAGAS_RUN_HISTORY.md    ← Run 1–6 kronolojisi
+│       ├── ragas_v3_questions.json ← aktif soru seti (32 soru — 4 GT fix, Q11 kaldırıldı)
+│       ├── ragas_v7_qwen3_results.json  ← Run 11 (Qwen3)
+│       ├── ragas_v8_gt_fixed_results.json ← Run 12 — GÜNCEL BASELINE (F:0.7607)
+│       ├── RAGAS_RUN_HISTORY.md    ← Run 1–12 kronolojisi
 │       └── archive/                ← canonical (v1,v2,v3,v5,v6_run6) + exp runs
 │
 ├── docs/
@@ -207,7 +210,7 @@ PharmAssistVersion2/
 │
 ├── configs/
 │   └── app_config.yaml            ← RAG, LLM, Neo4j ayarları
-├── tests/                         ← pytest (49 test)
+├── tests/                         ← pytest (81 test)
 ├── chroma_db/                     ← ChromaDB persistent storage
 └── logs/                          ← sorgu geçmişi, uygulama logları
 ```
@@ -306,8 +309,8 @@ Hasta profili sorguya eklenir: `"böbrek yetmezliği GFR 38 doz ayarı"` gibi ze
 
 ### 6.2 ChromaDB Retrieval (`src/retrieval/chroma_store.py`)
 
-- **Embedding modeli:** `multilingual-e5-base`
-- **Koleksiyon:** `kub_chunks` — **64 ilaç aktif corpus**, **1.120+ chunk** (Run 10 baseline)
+- **Embedding modeli:** `multilingual-e5-large` (multilingual-e5-base'den yükseltildi)
+- **Koleksiyon:** `kub_chunks` — **501 ilaç aktif corpus**, **8.757 chunk** (2026-04-25 Groq rebuild, 561 PDF)
 - **Arama stratejisi (Faz 11 — section-aware + reranking):**
   1. Önce öncelikli maddelerle dar arama (k=8)
   2. Sonra ikincil maddelerle ek arama (k=4)
@@ -318,20 +321,39 @@ Hasta profili sorguya eklenir: `"böbrek yetmezliği GFR 38 doz ayarı"` gibi ze
 
 ### 6.3 Neo4j Graph Retrieval (`src/graph/`)
 
-**Graf Şeması:**
+**Graf Şeması (v1.4 — Groq Rebuild):**
 
 ```
 (:Drug)-[:HAS_SECTION]->(:Section)
-(:Drug)-[:INTERACTS_WITH {severity, kaynak_madde}]->(:Drug)
+(:Drug)-[:INTERACTS_WITH {severity, kaynak_madde, confidence}]->(:Drug)
 (:Drug)-[:CONTRAINDICATED_FOR {kaynak_chunk}]->(:Condition)
 (:Drug)-[:MENTIONS_INTERACTION]->(:DrugMention)
+(:Drug)-[:CYP_INHIBITOR|CYP_INDUCER|CYP_SUBSTRATE]->(:CYPEnzyme)
+(:Drug)-[:REQUIRES_DOSE_ADJUSTMENT]->(:DoseCondition)
+(:Drug)-[:INTERACTS_WITH_CLASS]->(:DrugClass)
+(:Drug)-[:HAS_WARNING]->(:Warning)
 ```
 
-**439 ilaç** Neo4j'e yüklü. `INTERACTS_WITH` ilişkileri LLM (Qwen-14B) tabanlı extraction + INN propagation ile **945 kayıt** (v1.1). Severity dağılımı: contraindicated:370 | moderate:214 | unknown:258 | severe:100 | mild:3.
+**Güncel İstatistikler (2026-04-26 — Groq Rebuild):**
 
-**LLM-based Extraction (v1.1):** `KUBExtractor` her ilaç için 4.3+4.5 bölümlerini parse anında LM Studio'ya göndererek structured JSON alır. Severity ENUM zorunlu (contraindicated|severe|moderate|mild|unknown). Unknown gelirse severity-specific retry uygulanır.
+| İlişki Tipi | Sayı | Açıklama |
+|-------------|------|----------|
+| INTERACTS_WITH | **4.021** | Drug↔Drug named bağlantı, %0 unknown |
+| CONTRAINDICATED_FOR | 969 | Kontrendike durumlar |
+| CYP_INHIBITOR | 552 | CYP enzim inhibitör bağlantıları |
+| CYP_SUBSTRATE | 225 | CYP substrat bağlantıları |
+| CYP_INDUCER | 114 | CYP indükleyici bağlantıları |
+| REQUIRES_DOSE_ADJUSTMENT | 158 | Doz ayarı gerektiren durumlar |
+| MENTIONS_INTERACTION | 10.007 | Ham metin etkileşim bahisleri |
+| INTERACTS_WITH_CLASS | 571 | İlaç sınıfı bazlı etkileşimler |
+| **Toplam Drug node** | **501** | 561 PDF'den (eski: 64 ilaç) |
+| **Toplam edge** | **25.869** | — |
 
-**INN Propagation (v1.1):** `INNResolver.propagate_to_new_drug()` — aynı INN grubundaki diğer ilaçların mevcut etkileşimlerini yeni eklenen ilaca otomatik kopyalar. Her ingestion'da çalışır, ayrı script gerekmez.
+**LLM-based Extraction (v1.4 — Together AI):** `KUBExtractor` her ilaç için 4.3+4.5 bölümlerini **Together AI Qwen3-235B**'ye göndererek structured JSON alır. LM Studio'dan Together AI bulut inference'a geçildi (2026-04-25); Groq API entegrasyonu yapıldı ardından Qwen3-235B kalitesi nedeniyle Together AI tercih edildi. Severity ENUM zorunlu; unknown gelirse retry uygulanır.
+
+**INN Propagation (v1.1):** `INNResolver.propagate_to_new_drug()` — aynı INN grubundaki ilişkileri yeni eklenen ilaca kopyalar. ⚠️ `d.inn` alanı mevcut rebuild'de boş (NULL) — INN propagation çalışmıyor. Sonraki rebuild'de düzeltilecek (bkz. Bilinen Sorunlar).
+
+⚠️ **Bilinen Sorun — d.inn = NULL:** Groq rebuild'inde `DrugIdentity.inn` alanı Neo4j Drug node'larına yazılmadı. `unique_inn = 0`. Pratik etkisi: INTERACTS_WITH node-to-node bağlı olduğu için anlık sorun yok. INN-bazlı "aynı etken madde" sorgularında eksiklik oluşabilir.
 
 **Context Limiter (v1.1):** `ContentPolicy.max_contraindications_in_context=20` — CO-DIOVAN gibi 100+ kontrendikasyonlu ilaçlarda LM Studio context overflow sorunu çözüldü.
 
@@ -349,6 +371,8 @@ Birden fazla ilacın aynı organ sistemini olumsuz etkilemesi durumunda kümüla
 İlaçların CYP450 enzim profilleri karşılaştırılarak metabolizma etkileşimleri tespit edilir.
 
 **3 senaryo:** inhibitör↔substrat (kan düzeyi artar), indükleyici↔substrat (etkinlik azalır), substrat↔substrat (rekabetif inhibisyon).
+
+**Neo4j CYP Edge'leri (v1.4):** Groq rebuild ile CYP_INHIBITOR/CYP_INDUCER/CYP_SUBSTRATE ilişkileri Neo4j'e yazılıyor (toplam 891 edge). Statik tablo + Neo4j fallback ikili katman.
 
 **Statik profil tablosu:** 84+ kritik ilaç kaydı içeren dondurulmuş (frozen) manuel liste.
 
@@ -373,13 +397,16 @@ Birden fazla ilacın aynı organ sistemini olumsuz etkilemesi durumunda kümüla
 
 **RAGAS (Retrieval Augmented Generation Assessment)** — LLM tabanlı otomatik değerlendirme çerçevesi.
 
-- **Faithfulness:** LLM yanıtındaki her iddia retrieved context'te destekleniyor mu? (`desteklenen claim / toplam claim`)
-- **Context Recall:** Ground truth'u karşılamak için gerekli bilgi chunk'larda mevcut mu?
-- **Standart evaluator:** mistralai/mistral-7b-instruct-v0.3 (LM Studio, yerel — Run 3'ten itibaren)
-- **RAG modeli:** claude-haiku-4-5-20251001 (Dalga 7 sonrası: local LLM desteği de var)
-- **Soru seti:** `data/eval/ragas_v3_questions.json` — 33 soru, gerçek klinik senaryolar
+**3-Metrik Standart (Run 11+ — 2026-04-26):**
+- **Faithfulness (F):** LLM yanıtındaki her iddia retrieved context'te destekleniyor mu? (`desteklenen claim / toplam claim`) — GT gerektirmez
+- **Context Utilization (CU):** Getirilen chunk'lar cevap için gerçekten kullanıldı mı? GT-free context_precision — Run 11'den itibaren standart
+- **Context Recall (CR):** Ground truth'u karşılamak için gerekli bilgi chunk'larda mevcut mu? GT gerektirir
 
-### Soru Seti (v3 — 33 Soru, Mevcut)
+**Değerlendirici:** Together AI Qwen3-235B-A22B (Run 11-12) — önceki: Mistral-7B (Run 3-8), qwen2.5:32b (Run 9-10)  
+**RAG modeli:** claude-haiku-4-5-20251001  
+**Soru seti:** `data/eval/ragas_v3_questions.json` — 32 soru (Q11 kaldırıldı, 4 GT düzeltmesi — 2026-04-26)
+
+### Soru Seti (v3 — 32 Soru, Mevcut — 2026-04-26 GT Fix)
 
 | Kategori | Soru Sayısı | Örnek |
 |----------|-------------|-------|
@@ -387,27 +414,36 @@ Birden fazla ilacın aynı organ sistemini olumsuz etkilemesi durumunda kümüla
 | İlaç etkileşimi / CYP450 | 10 | Tegretol+Sanorone, İsoptin+Concor, Norodol+Cordarone |
 | Böbrek/karaciğer doz ayarı | 6 | PRADAXA GFR 20, KEPPRA GFR 28 |
 | Gebelik / emzirme | 4 | Perilife gebelik, Flagyl emzirme |
-| Özel hasta grubu | 3 | Geriyatrik, pediatrik, hiperpotasemi |
+| Özel hasta grubu | 2 | Geriyatrik, pediatrik (Q11 kaldırıldı — Q33 ile çakışıyordu) |
+
+**GT Kalite Düzeltmeleri (2026-04-26):**
+- **Q02** PRADAXA GFR 20: KÜB-dışı alternatif doz (apiksaban/enoksaparin) GT'den çıkarıldı
+- **Q08** LAMICTAL DC GFR 35: "şiddetli" → "orta dereceli böbrek bozukluğu (GFR 30-60)"
+- **Q20** PROPYCIL+AMİODARON: Child-Pugh A=dikkatli, B/C=kontrendike şeklinde netleştirildi
+- **Q29** METAFORMAL GFR 15: "kontrendikedir" → "çok dikkatli kullanılmalıdır (KÜB 4.4 özel uyarı)" — feokromasitoma 4.4 uyarısı, 4.3 kontrendikasyon değil
+- **Q11** kaldırıldı: Q33 ile duplicate + GT çelişkisi
 
 ### Canonical Run Sonuçları
 
-| Run | Tarih | Evaluator | Soru | Faithfulness | Context Recall | Not |
-|-----|-------|-----------|------|-------------|---------------|-----|
-| Run 1 | 2026-04-07 | Haiku | 8 | 0.4000 | 0.7417 | Karşılaştırılamaz (farklı eval) |
-| Run 2 | 2026-04-08 | Haiku | 25 | 0.7811 | 0.8864 | Karşılaştırılamaz (farklı eval) |
-| Run 3 | 2026-04-14 | Mistral-7B | 30 | 0.7565 | 0.7377 | İlk Mistral eval; NaN %60 |
-| Run 4 | 2026-04-15 | Mistral-7B | 33 | 0.7038 | 0.7601 | NaN %3 ✅ (max_workers=1) |
-| Run 5 | 2026-04-17 | Mistral-7B | 33 | 0.6755 | **0.8646** | LM Studio fix; CR +10.4pp ↑ |
-| Run 6 | 2026-04-19 | Mistral-7B | 32 | **0.7179** | 0.8065 | GT revizyonu + 945 INTERACTS_WITH |
-| Run 7 | 2026-04-19 | Mistral-7B | 33 | 0.7036 | 0.8102 | Yeni mimari (src/core, INNResolver) |
-| Run 8 | 2026-04-19 | Mistral-7B | 33 | 0.5548 | 0.8898 | Mimari stabilizasyon (F geçici düştü) |
-| Run 9 | 2026-04-19 | qwen2.5:32b | 33 | 0.6574 | 0.6571 | Evaluator geçişi; qwen daha strict |
-| **Run 10** | **2026-04-21** | **qwen2.5:32b** | **33** | **0.6792** | **0.6677** | **4 sistematik fix; Run 9'a göre F +2.2pp CR +1.1pp ↑ — Milestone** |
+| Run | Tarih | Evaluator | Soru | F | CU | CR | Not |
+|-----|-------|-----------|------|---|----|----|-----|
+| Run 1 | 2026-04-07 | Haiku | 8 | 0.4000 | — | 0.7417 | Karşılaştırılamaz |
+| Run 2 | 2026-04-08 | Haiku | 25 | 0.7811 | — | 0.8864 | Karşılaştırılamaz |
+| Run 3 | 2026-04-14 | Mistral-7B | 30 | 0.7565 | — | 0.7377 | NaN %60 |
+| Run 4 | 2026-04-15 | Mistral-7B | 33 | 0.7038 | — | 0.7601 | NaN %3 ✅ |
+| Run 5 | 2026-04-17 | Mistral-7B | 33 | 0.6755 | — | **0.8646** | LM Studio fix |
+| Run 6 | 2026-04-19 | Mistral-7B | 32 | **0.7179** | — | 0.8065 | GT rev. + 945 IW |
+| Run 7 | 2026-04-19 | Mistral-7B | 33 | 0.7036 | — | 0.8102 | Yeni mimari |
+| Run 8 | 2026-04-19 | Mistral-7B | 33 | 0.5548 | — | 0.8898 | F geçici düştü |
+| Run 9 | 2026-04-19 | qwen2.5:32b | 33 | 0.6574 | — | 0.6571 | Evaluator geçişi |
+| Run 10 | 2026-04-21 | qwen2.5:32b | 33 | 0.6792 | — | 0.6677 | 4 sistematik fix |
+| Run 11 | 2026-04-26 | Qwen3-235B | 33 | 0.7029 | ~0.75 | 0.7283 | Yeni evaluator; 3-metrik ilk kez |
+| **Run 12** | **2026-04-26** | **Qwen3-235B** | **32** | **0.7607** | **0.8028** | **0.7250** | **GT kalite fix (4 soru); Ort=0.7628 ✓ KABUL** |
 
-> **Not:** Run 9-10 evaluator olarak qwen2.5:32b kullanır (Mistral'dan daha strict Türkçe değerlendirme). Run 3-8 ile doğrudan karşılaştırılamaz.
+> **Not:** Run 1-2 Haiku eval (karşılaştırılamaz). Run 3-8 Mistral-7B. Run 9-10 qwen2.5:32b (daha strict). Run 11-12 Together AI Qwen3-235B (3-metrik standart: F+CU+CR).
 
-**Mevcut Baseline (qwen2.5:32b evaluator):** F=0.6792 | CR=0.6677  
-**Sonraki Hedef:** Yerel modelle sürekli test + RAGAS evaluator → Haiku (İngilizce prompt) geçişi
+**Güncel Baseline (Qwen3-235B, 3-metrik):** F=0.7607 | CU=0.8028 | CR=0.7250 | **Ort=0.7628 ✓ KABUL**  
+**Sonraki Hedef:** d.inn fix + 501-ilaç yeni corpus ile Run 13 + model davranış iyileştirme
 
 > **Detaylı kronoloji ve experimental run'lar:** `data/eval/RAGAS_RUN_HISTORY.md`
 
@@ -422,21 +458,44 @@ Birden fazla ilacın aynı organ sistemini olumsuz etkilemesi durumunda kümüla
 
 ---
 
-## 11. Geliştirme Stratejisi (Post-Milestone)
+## 11. Geliştirme Stratejisi
 
-### Veri Kalitesi ✅
-Corpus, pipeline ve graf verisi olgunlaştı:
-- **64 ilaç**, 1.120+ chunk, ChromaDB'de aktif
-- **945 INTERACTS_WITH** ilişkisi (INN propagation dahil)
-- **CYP450:** 84 kayıt statik tablo + LLM fallback extraction
+### Veri Kalitesi ✅ (2026-04-26 itibarıyla)
+Corpus, pipeline ve graf verisi büyük sıçrama yaptı:
+- **501 ilaç**, **10.588 chunk** (4.4 sub-chunking sonrası), ChromaDB'de aktif
+- **4.021 INTERACTS_WITH** ilişkisi (%0 unknown — named node bağlantılar)
+- **969 CONTRAINDICATED_FOR**, **891 CYP edge**, **158 REQUIRES_DOSE_ADJUSTMENT**
+- **CYP450:** 84 kayıt statik tablo + Neo4j CYP edge + LLM fallback extraction
 - Kümülatif risk: 9 kategori, deterministik
+- RAGAS benchmark: F=0.7607 | CU=0.8028 | CR=0.7250 | **Ort=0.7628 ✓ KABUL** (Run 12)
+- 81 pytest test geçiyor
 
-### Bundan Sonraki Odak: Davranış Kalitesi
-Veri var — sorun her sorgu tipine doğru davranışın verilmesi:
-1. **Sorgu türü tespiti iyileştirmesi** — keyword coverage artırma (Q29 gibi "başlanabilir mi" → kontrendikasyon)  
-2. **Yerel model ile sürekli test** — GPU kiralama olmadan geliştirme döngüsü
-3. **RAGAS evaluator → Haiku** — İngilizce prompt + Türkçe veri ile maliyet-etkin eval
-4. **Ground truth revizyonu** — RAGAS'ın yakalayamadığı klinik doğruluk sorunları GT ile düzeltilecek
+### Sprint 2026-04-26 — Model Davranış İyileştirmeleri ✅
+
+4 model-odaklı geliştirme (GT bazlı fix yapılmadı, tüm değişiklikler sistem genelinde):
+
+| # | Fix | Açıklama | Etkilenen Dosya |
+|---|-----|----------|-----------------|
+| A | **Answer Calibration Layer** | Pre-LLM deterministik klinik etiket: 4.3 → KONTREDİKE, 4.4 → DİKKATLİ_KULLANIM, 4.2 → DOZ_AYARI. Over-conservatism bias'ını azaltır. | `rag_engine.py` |
+| B | **CYP Zorunlu Kural** | Etkileşim sorusunda CYP bilgisi mevcutsa LLM MUTLAKA [CYP450] etiketiyle açıklamalı. | `rag_engine.py` |
+| C | **4.4 Sub-chunking** | 2500+ karakter 4.4 bölümleri paragrafa göre ~2200 karakter parçalara bölündü (additive). 422 ilaç, 1827 yeni sub-chunk. Feokromasitoma gibi rare condition'lar artık ayrı embedding'e sahip. | `subsection_parser.py`, `add_44_subchunks.py` |
+| D | **Klinik Sinonim Genişletme** | 40+ tıbbi kısaltma (KBY/KOAH/DVT/SSRI vb.) → tam Türkçe karşılığı. Yalnızca ChromaDB retrieval'da kullanılır. | `query_augmentor.py` |
+
+Ayrıca Run 12 öncesinde:
+- **SPECIAL_CONDITION_KEYWORDS**: feokromasitoma/miyastenia gravis/QT uzaması → 4.4 öncelik
+- **System prompt guardrail**: KÜB dışı ilaç önerisi MUTLAK YASAK
+
+### Bilinen Sorunlar (Çözüm Bekleyen)
+| # | Sorun | Etki | Öncelik |
+|---|-------|------|---------|
+| 1 | Q14/Q23 context_utilization NaN | RAGAS ortalamasını etkiliyor (2/32 = %6) | Düşük |
+| 2 | LIPITON/URIKOLIZ eval adı eşleşme sorunu | Eval coverage eksik görünüyor (RAG'da eşleşiyor) | Düşük |
+
+### Sonraki Hedefler
+1. **Run 13** — Sprint iyileştirmeleri sonrası tam RAGAS eval (mini test önce)
+2. **HyDE** — Hypothetical Document Embeddings retrieval geliştirme
+3. **Contextual Compression** — Chunk'lardan ilgili bölümü öne çıkarma
+4. **UI güncellemesi** — 501 ilaç corpus ile multiselect refresh
 
 ### Run 1–2 Arasında Uygulanan Düzeltmeler (v2 Fix)
 
@@ -1142,7 +1201,7 @@ Eklenen kayıtlar:
 
 ```
 data/eval/
-├── ragas_v3_questions.json          ← aktif soru seti (33 soru)
+├── ragas_v3_questions.json          ← aktif soru seti (32 soru — GT fix 2026-04-26)
 ├── RAGAS_RUN_HISTORY.md             ← kronolojik run tablosu
 ├── QUICK_REFERENCE.md
 └── archive/

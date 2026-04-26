@@ -1,0 +1,127 @@
+[
+  {
+    "id": "v3_q02",
+    "kategori": "doz_bobrek",
+    "soru": "GFR 20 olan hastada PRADAXA dozu nasıl ayarlanmalı?",
+    "ground_truth": "Dabigatran (PRADAXA) GFR 30 mL/dak altında kontrendikedir. GFR 20 olan bu hastada PRADAXA kullanılmamalıdır. Böbrek fonksiyonu ve kanama riski takip edilmeli; antikoagülan tedavi gerekliyse GFR'ye göre doz ayarlanabilen alternatifler değerlendirilmelidir.",
+    "hasta": {
+      "yas": 72,
+      "cinsiyet": "erkek",
+      "gfr": 20.0,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": [],
+      "alerjiler": [],
+      "endikasyonlar": [
+        "atriyal fibrilasyon"
+      ],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {
+        "kreatinin": 3.1
+      }
+    },
+    "hedef_ilaclar": [
+      "PRADAXA® 150 mg sert kapsül"
+    ]
+  },
+  {
+    "id": "v3_q05",
+    "kategori": "kontrendikasyon_karaciger",
+    "soru": "Child-Pugh C karaciğer yetmezliği olan hastada ONAXAN kullanılabilir mi?",
+    "ground_truth": "Rivaroksaban (ONAXAN) Child-Pugh B ve C karaciğer hastalığında kontrendikedir. Karaciğer yetmezliği koagülopati ile ilişkili olduğundan ve rivaroksaban hepatik metabolizma ile atılımına bağlı olduğundan, bu hastalarda kullanılmamalıdır. Alternatif antikoagülan olarak düşük molekül ağırlıklı heparin (DMAH) değerlendirilebilir; karaciğer fonksiyonu ve kanama riski takip edilmelidir.",
+    "hasta": {
+      "yas": 55,
+      "cinsiyet": "erkek",
+      "gfr": null,
+      "karaciger_skoru": "C",
+      "mevcut_ilaclar": [],
+      "alerjiler": [],
+      "endikasyonlar": [
+        "derin ven trombozu"
+      ],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {
+        "alt": 180,
+        "bilirubin": 3.2
+      }
+    },
+    "hedef_ilaclar": [
+      "ONAXAN® 20 mg film kaplı tablet"
+    ]
+  },
+  {
+    "id": "v3_q06",
+    "kategori": "doz_pediyatrik",
+    "soru": "8 yaşındaki 25 kg ağırlığında epilepsi hastasında KEPPRA dozu nasıl belirlenmeli?",
+    "ground_truth": "Levetirasetam (KEPPRA) 4-11 yaş arası çocuklarda başlangıç dozu günde iki kez 10 mg/kg (vücut ağırlığına göre). 25 kg için başlangıç dozu günde iki kez 250 mg'dır. İdame doz titrasyon ile günde iki kez 30 mg/kg'a kadar artırılabilir.",
+    "hasta": {
+      "yas": 8,
+      "cinsiyet": "erkek",
+      "kilo": 25.0,
+      "gfr": null,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": [],
+      "alerjiler": [],
+      "endikasyonlar": [
+        "epilepsi"
+      ],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {}
+    },
+    "hedef_ilaclar": [
+      "KEPPRA 250 mg film kaplı tablet"
+    ]
+  },
+  {
+    "id": "v3_q24",
+    "kategori": "etkilesim_doz",
+    "soru": "TEGRETOL kullanan hastada LAMICTAL DC dozu neden artırılmalıdır?",
+    "ground_truth": "Karbamazepin (TEGRETOL) güçlü CYP3A4 indükleyicisidir ve aynı zamanda lamotrijin glukuronidasyonunu hızlandırır. Lamotrijin (LAMICTAL DC) karbamazepin ile birlikte kullanıldığında plazma yarılanma ömrü yaklaşık yarıya iner. Bu nedenle lamotrijin dozu karbamazepin alan hastalarda belirgin şekilde artırılmalıdır. Karbamazepin ile birlikte lamotrijin dozu yaklaşık iki katına çıkarılabilir (200-400 mg/gün aralığı); doz titrasyonu ve klinik yanıt takip edilmelidir.",
+    "hasta": {
+      "yas": 35,
+      "cinsiyet": "kadın",
+      "gfr": null,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": [
+        "TEGRETOL 200 mg"
+      ],
+      "alerjiler": [],
+      "endikasyonlar": [
+        "epilepsi"
+      ],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {}
+    },
+    "hedef_ilaclar": [
+      "TEGRETOL® 200 mg değiştirilmiş salımlı tablet",
+      "LAMICTAL DC 100 mg çözünür / çiğneme tableti"
+    ]
+  },
+  {
+    "id": "v3_q29",
+    "kategori": "kontrendikasyon",
+    "soru": "Feokromasitoma hastasına NORODOL başlanabilir mi?",
+    "ground_truth": "Haloperidol (NORODOL) feokromasitomalu hastalarda çok dikkatli kullanılmalıdır. KÜB madde 4.4 özel kullanım uyarıları bölümünde feokromasitoma için dikkatli kullanım uyarısı mevcuttur; kontrendikasyon değildir. Bu hastalarda hipertansif kriz riski gözetilerek dikkatli klinik değerlendirme ve izlem yapılmalıdır. Antipsikotik ihtiyacı için psikiyatri konsültasyonu önerilir.",
+    "hasta": {
+      "yas": 40,
+      "cinsiyet": "kadın",
+      "gfr": null,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": [],
+      "alerjiler": [],
+      "endikasyonlar": [
+        "psikoz",
+        "feokromasitoma"
+      ],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {}
+    },
+    "hedef_ilaclar": [
+      "NORODOL® 5 mg tablet"
+    ]
+  }
+]

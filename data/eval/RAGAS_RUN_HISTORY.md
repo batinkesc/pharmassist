@@ -1,6 +1,6 @@
 # RAGAS Run History — Kronolojik Sıra
 
-**Son Güncelleme:** 2026-04-21
+**Son Güncelleme:** 2026-04-26
 
 ---
 
@@ -20,18 +20,33 @@ Bu çalıştırmalar sistemin gerçek performansını ölçmek için yapıldı.
 | **Run 8** | `ragas_v8_mistral_results.json` | 2026-04-19 | 33 | Mistral local | 0.5548 | **0.8898** | Mistral eval — F düştü, CR yüksek; mimari stabilizasyon |
 | **Run 9** | `ragas_v9_qwen25_results.json` | 2026-04-19 | 33 | qwen2.5:32b | 0.6574 | 0.6571 | İlk qwen2.5:32b eval; Mistral→qwen geçişi; CR düşük (evaluator stricter) |
 | **Run 10** | `ragas_v10_qwen25_results.json` | 2026-04-21 | 33 | qwen2.5:32b | **0.6792** | **0.6677** | 4 sistematik fix: SIDE_EFFECT_KW, INTERACTION_KW, CYP öncelik, K.end. validasyon; Run 9'a göre F +2.2pp CR +1.1pp ↑ |
+| **Run 11** | `ragas_v7_qwen3_results.json` | 2026-04-26 | 33 | Together AI Qwen3-235B | 0.7029 | 0.7283 | Yeni evaluator (Together API); 3-metrik seti ilk kez: F+CU+CR; **CU=0.7xxx** (yeni metrik) |
+| **Run 12** | `ragas_v8_gt_fixed_results.json` | 2026-04-26 | 32 | Together AI Qwen3-235B | **0.7607** | **0.7250** | GT kalite düzeltmesi (Q02/Q08/Q20/Q29) + Q11 kaldırıldı; CU=0.8028; Genel ort=0.7628 ✓ KABUL; 2 NaN (Q14,Q23) |
+| **Mini-13** | `mini_ragas_run13.json` | 2026-04-26 | 5 | Together AI Qwen3-235B | 0.6989 | **0.8167** | Sprint fix doğrulama (5 zor soru); Q29 feokromasitoma: CR 0.0→0.75 ✅; CU=0.6605; Ort=0.7254 |
 
 ### Özet Trend
 
 ```
-Faithfulness:    0.40 → 0.78 → 0.76 → 0.70 → 0.68 → 0.72 → 0.70 → 0.55 → 0.66 → 0.68
-Context Recall:  0.74 → 0.89 → 0.74 → 0.76 → 0.86 → 0.81 → 0.81 → 0.89 → 0.66 → 0.67
+Faithfulness:    0.40 → 0.78 → 0.76 → 0.70 → 0.68 → 0.72 → 0.70 → 0.55 → 0.66 → 0.68 → 0.70 → 0.76
+Context Recall:  0.74 → 0.89 → 0.74 → 0.76 → 0.86 → 0.81 → 0.81 → 0.89 → 0.66 → 0.67 → 0.73 → 0.73
 ```
 Run 2'nin Haiku eval skoru direkt karşılaştırılamaz.  
-Run 3-8: Mistral local evaluator. Run 9-10: qwen2.5:32b evaluator (daha strict → CR düşük görünür).
+Run 3-8: Mistral local evaluator. Run 9-10: qwen2.5:32b evaluator (daha strict → CR düşük görünür).  
+Run 11-12: Together AI Qwen3-235B evaluator; 3-metrik standard (F+CU+CR) devrede.  
+
+**Yeni Metrik — Context Utilization (CU):** Run 11'den itibaren standart. "Getirilen chunk'lar cevap için gerçekten kullanıldı mı?" sorusunu ölçer. GT gerektirmez (GT-free). Run 12: CU=0.8028.
 
 Run 2'nin Haiku eval skoru direkt karşılaştırılamaz (farklı evaluator).  
 Run 3'ten itibaren tüm evaluator Mistral local — bu çalıştırmalar karşılaştırılabilir.
+
+**Mini-13 Soru Bazlı (Sprint doğrulama):**
+| Soru ID | Soru | F | CU | CR | Not |
+|---------|------|---|----|----|-----|
+| v3_q02 | PRADAXA GFR 20 doz | 0.667 | 1.000 | 1.000 | CU mükemmel |
+| v3_q05 | ONAXAN Child-Pugh C | 0.300 | 0.833 | 0.333 | Retrieval sorunu devam ediyor |
+| v3_q06 | KEPPRA pediyatrik doz | 1.000 | 0.500 | 1.000 | F mükemmel; CU iyileşebilir |
+| v3_q24 | TEGRETOL+LAMICTAL | 0.778 | 0.143 | 1.000 | CR fix ✅; CU düşük (17 chunk → az kullanım) |
+| v3_q29 | **NORODOL feokromasitoma** | 0.750 | 0.826 | **0.750** | **4.4 sub-chunk fix: CR 0.0→0.75 ✅** |
 
 ---
 
@@ -62,7 +77,7 @@ Bu çalıştırmalar evaluator seçimi, NaN sorunu ve Turkish patch gibi konular
 |-------|--------|------------------|
 | `archive/v1/test_questions.json` | 8 soru — Dalga 1 temel | Run 1 |
 | `archive/v2/ragas_v2_questions.json` | 25 soru — Dalga 2 | Run 2, Exp-v4 through v8 |
-| `ragas_v3_questions.json` | 33 soru — Dalga 3 (mevcut) | Run 3 (30), Run 4-5 (33) |
+| `ragas_v3_questions.json` | 33 soru — Dalga 3 (mevcut) | Run 3 (30), Run 4-5 (33), Run 11 (33), Run 12 (32, Q11 kaldırıldı, 4 GT fix) |
 | `archive/v10/ragas_v10_clean_questions.json` | 5 soru — Turkish patch | Exp-v9, Exp-v10 |
 
 ---
@@ -72,3 +87,5 @@ Bu çalıştırmalar evaluator seçimi, NaN sorunu ve Turkish patch gibi konular
 - **Haiku (Anthropic API):** Türkçe metni zayıf puanlıyor; ground truth basit olduğunda şişirilmiş Context Recall verir.
 - **Mistral local (LM Studio):** Run 3'ten itibaren standart evaluator. Daha strict, Türkçe uyumlu.
 - **NaN:** Mistral'ın RAGAS JSON çıktısını parse edemediği durumlarda NaN oluşur — o soru ortalamadan çıkarılır.
+- **Together AI Qwen3-235B:** Run 11+ evaluator. Mistral/qwen2.5'ten daha tutarlı JSON çıktısı; NaN oranı düşük. Context_utilization NaN: LLM karmaşık sorularda CU judgment üretemediğinde (Q14 ALDACTONE+PLASORİN, Q23 TEGRETOL+LAMICTAL).
+- **Context Utilization (CU):** Run 11'den itibaren standart metrik. Rakam interpretation: 0.80+ = iyi retrieval-answer alignment, 0.50 altı = getirilen chunk'lar cevaba yansımıyor.
