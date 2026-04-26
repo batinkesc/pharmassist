@@ -88,6 +88,13 @@ def _make_chunk_id(drug_name: str, sub_key: str, source_file: str) -> str:
     return f"{slug}_4_2_{sub_key}_{h}"
 
 
+def _make_44_chunk_id(drug_name: str, part_idx: int, source_file: str) -> str:
+    raw = f"{drug_name}_4.4_part{part_idx}_{source_file}"
+    h = hashlib.md5(raw.encode()).hexdigest()[:10]
+    slug = re.sub(r"[^A-Z0-9]", "_", drug_name.upper())[:25]
+    return f"{slug}_4_4_part{part_idx}_{h}"
+
+
 def extract_42_subchunks(base_chunk: dict) -> list[dict]:
     """
     4.2 base chunk'ından alt popülasyon chunk'larını üretir.
@@ -186,4 +193,122 @@ def extract_42_subchunks(base_chunk: dict) -> list[dict]:
         sub_chunks.append(chunk)
         logger.debug(f"  + Sub-chunk: {hit['key']} ({len(sub_content)} karakter)")
 
+    return sub_chunks
+
+
+# ---------------------------------------------------------------------------
+# 4.4 Sub-chunking — paragraf tabanlı bölme
+# ---------------------------------------------------------------------------
+
+# 4.4 bölümü bu uzunluğun altındaysa bölmeye gerek yok
+_44_SPLIT_THRESHOLD = 2500
+# Her sub-chunk'ın hedef maksimum karakter sayısı
+_44_MAX_SUB_CHARS = 2200
+# Her sub-chunk başına eklenecek bağlam prefix (ilk N karakter)
+_44_INTRO_CHARS = 280
+
+
+def extract_44_subchunks(base_chunk: dict) -> list[dict]:
+    """
+    4.4 Özel kullanım uyarıları bölümü için paragraf-tabanlı sub-chunk üretici.
+
+    Strateji:
+    - 4.4 chunk _44_SPLIT_THRESHOLD karakterden kısaysa bölme — zaten yönetilebilir.
+    - Büyük 4.4 chunk'larını paragrafa göre _44_MAX_SUB_CHARS boyutunda parçalara böl.
+    - Her sub-chunk'a kısa bağlam prefix (madde girişi) eklenir.
+    - Sadece ek sub-chunk'lar döner; base chunk DEĞİŞTİRİLMEZ.
+
+    Neden gerekli?
+    - Bazı ilaçlar için 4.4 = 7000–23000 karakter tek monolitik chunk.
+    - "Feokromasitoma" gibi nadir klinik durumlar chunk sonunda gömülüyor →
+      embedding diğer içeriği temsil ediyor → retrieval başarısız (CR=0).
+    - Küçük sub-chunk'lar spesifik koşulların embedding'de öne çıkmasını sağlar.
+    """
+    from datetime import datetime
+
+    text = base_chunk.get("icerik", "")
+    drug_name = base_chunk.get("ilac_adi", "")
+    source_file = base_chunk.get("kaynak_dosya", "")
+    base_page = base_chunk.get("sayfa", 0)
+    madde_baslik = base_chunk.get("madde_baslik", "Özel kullanım uyarıları ve önlemleri")
+    toplam_sayfa = base_chunk.get("toplam_sayfa", 0)
+    parse_tarihi = base_chunk.get("parse_tarihi", datetime.now().isoformat())
+    base_chunk_id = base_chunk.get("chunk_id", "")
+
+    if len(text) <= _44_SPLIT_THRESHOLD:
+        logger.debug(f"{drug_name}: 4.4 kısa ({len(text)} karakter) — bölme atlandı.")
+        return []
+
+    # ── Intro prefix ────────────────────────────────────────────────────────
+    # İlk paragrafı veya ilk _44_INTRO_CHARS karakteri intro olarak al
+    paragraphs = [p.strip() for p in re.split(r"\n{2,}", text) if p.strip()]
+    if not paragraphs:
+        return []
+
+    # Intro: ilk paragraf ya da ilk _44_INTRO_CHARS karakter
+    intro_text = paragraphs[0][:_44_INTRO_CHARS]
+    content_paragraphs = paragraphs[1:] if len(paragraphs) > 1 else paragraphs
+
+    # ── Paragrafları gruplara böl ───────────────────────────────────────────
+    groups: list[list[str]] = []
+    current: list[str] = []
+    current_size = 0
+
+    for para in content_paragraphs:
+        para_len = len(para)
+        if current_size + para_len > _44_MAX_SUB_CHARS and current:
+            groups.append(current)
+            current = [para]
+            current_size = para_len
+        else:
+            current.append(para)
+            current_size += para_len
+
+    if current:
+        groups.append(current)
+
+    if len(groups) <= 1:
+        logger.debug(f"{drug_name}: 4.4 bölme sonucu tek grup — atlandı.")
+        return []
+
+    # ── Sub-chunk üret ──────────────────────────────────────────────────────
+    sub_chunks: list[dict] = []
+    total = len(groups)
+
+    for idx, group in enumerate(groups, 1):
+        content = "\n\n".join(group).strip()
+        if len(content) < 50:
+            logger.debug(f"  Atlandı (çok kısa): part{idx}")
+            continue
+
+        full_content = (
+            f"[{madde_baslik} — Bölüm {idx}/{total}]\n\n"
+            f"[Bağlam — Madde 4.4 girişi]: {intro_text}\n\n"
+            f"--- Devam (Bölüm {idx}/{total}) ---\n"
+            f"{content}"
+        )
+
+        chunk = {
+            "chunk_id":          _make_44_chunk_id(drug_name, idx, source_file),
+            "ilac_adi":          drug_name,
+            "madde_no":          "4.4",
+            "alt_madde":         f"part{idx}",
+            "alt_madde_etiketi": f"Özel Uyarılar — Bölüm {idx}/{total}",
+            "madde_baslik":      f"{madde_baslik} — Bölüm {idx}/{total}",
+            "patient_flags":     [],
+            "icerik":            full_content,
+            "sayfa":             base_page,
+            "kaynak_dosya":      source_file,
+            "risk_seviyesi":     "warning",
+            "oncelik":           "important",
+            "toplam_sayfa":      toplam_sayfa,
+            "parse_tarihi":      parse_tarihi,
+            "ust_chunk_id":      base_chunk_id,
+        }
+        sub_chunks.append(chunk)
+        logger.debug(f"  + 4.4 sub-chunk: part{idx} ({len(content)} karakter)")
+
+    if sub_chunks:
+        logger.info(f"{drug_name}: 4.4 bölündü → {len(sub_chunks)} sub-chunk "
+                    f"(orijinal: {len(text)} karakter)")
     return sub_chunks

@@ -31,7 +31,7 @@ from .kub_sections import (
     IMPORTANT_SECTIONS,
     SECTION_RISK_LEVEL,
 )
-from .subsection_parser import extract_42_subchunks
+from .subsection_parser import extract_42_subchunks, extract_44_subchunks
 from src.data.normalization import normalize_drug_name
 
 
@@ -669,6 +669,15 @@ class KUBParser:
             chunks.extend(sub_chunks)
             if sub_chunks:
                 logger.info(f"  + 4.2 sub-chunk: {[s['alt_madde'] for s in sub_chunks]}")
+
+        # 4.4 sub-chunk'ları — büyük Özel Uyarılar bölümlerini parçala
+        chunk_44 = next((c for c in chunks if c["madde_no"] == "4.4"), None)
+        if chunk_44:
+            sub_chunks_44 = extract_44_subchunks(chunk_44)
+            chunks.extend(sub_chunks_44)
+            if sub_chunks_44:
+                logger.info(f"  + 4.4 sub-chunk: {len(sub_chunks_44)} bölüm "
+                            f"(orijinal {len(chunk_44['icerik'])} karakter)")
 
         ozel_uyari_var = any(c["madde_no"] == "ozel_uyari" for c in chunks)
         result = {
