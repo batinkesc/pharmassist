@@ -386,7 +386,10 @@ def _build_filtered_hasta_ozeti(profil, chunklar: list) -> str:
         return profil if isinstance(profil, str) else ""
 
     satirlar = []
-    satirlar.append(f"Yaş: {profil.yas}, Cinsiyet: {profil.cinsiyet}")
+    # yas=0 → varsayılan (belirtilmemiş); "Yaş: 0" prompt'a girerse model değer üretebilir
+    yas_str = str(profil.yas) if profil.yas and profil.yas > 0 else "belirtilmemiş"
+    cinsiyet_str = profil.cinsiyet if profil.cinsiyet and profil.cinsiyet != "belirtilmemiş" else "belirtilmemiş"
+    satirlar.append(f"Yaş: {yas_str}, Cinsiyet: {cinsiyet_str}")
 
     # Böbrek — yalnızca ilacın KÜB'ünde renal bölüm varsa ekle
     if profil.bobrek_yetmezligi:
