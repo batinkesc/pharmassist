@@ -757,7 +757,9 @@ def _calibrate_clinical_severity(
         ),
         "DOZ_AYARI_GEREKEBİLİR": (
             "Getirilen KÜB bağlamı 4.2 Pozoloji bölümünde bu hasta için "
-            "DOZ AYARI bilgisi içermektedir. Dozu ve eşiği kesin olarak belirt."
+            "DOZ AYARI bilgisi içermektedir. KÜB'de belirtilen doz bilgilerini aktar. "
+            "KÜB'de bulunmayan spesifik değerler (GFR eşiği, mg miktarı) EKLEME — "
+            "yalnızca verilen bağlamda yer alan bilgileri kullan."
         ),
     }
 
@@ -885,13 +887,14 @@ def _build_user_prompt(
     else:
         bolum_sirasi = f"{kub_bolumu}\n{graf_bolumu}{kumlatif_bolumu}{cyp_bolumu}"
 
-    # ── CYP Zorunlu Kural ────────────────────────────────────────────────────
-    # CYP bilgisi varsa → LLM kullanmak ZORUNDA (isteğe bağlı değil)
+    # ── CYP Kural (v2 — sınırlı aktarım) ────────────────────────────────────
+    # CYP bilgisi varsa → SADECE verilen metni aktar, kendi bilgini ekleme
     if cyp_metin and etkilesim_sorusu:
         cyp_talimati = (
-            "- CYP450 ZORUNLU: CYP450 bölümünde mekanizma mevcut (inhibisyon/indüksiyon/substrat). "
-            "Bu mekanizmayı ## SONUÇ bölümünde MUTLAKA açıkla — [CYP450] etiketiyle işaretle. "
-            "CYP mekanizması açıklanmadan etkileşim yanıtı EKSİK sayılır."
+            "- CYP450 BİLGİSİ: Yukarıdaki CYP450 bölümündeki mekanizma bilgisini (inhibisyon/indüksiyon/substrat) "
+            "## SONUÇ'ta kısaca [CYP450] etiketiyle belirt. "
+            "SADECE yukarıda verilen CYP450 metnindeki bilgileri aktar — "
+            "KÜB veya CYP bölümünde olmayan ek mekanizma bilgisi, [BİLGİ YOK] açıklaması veya genel LLM bilgisi EKLEME."
         )
     elif cyp_metin:
         cyp_talimati = (
