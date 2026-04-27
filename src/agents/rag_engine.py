@@ -106,10 +106,95 @@ class RAGResponse:
 
 
 # ---------------------------------------------------------------------------
+# HyDE — Hypothetical Document Embeddings
+# ---------------------------------------------------------------------------
+
+def _generate_hyde_document(
+    soru: str,
+    hedef_ilaclar: list[str] | None,
+    soru_turleri: list[str],
+) -> str | None:
+    """
+    Verilen klinik soruya yanıt verebilecek kısa bir KÜB (prospektüs) paragrafı üretir.
+    Bu varsayımsal metin, gerçek KÜB chunk'larına anlam olarak daha yakın embedding
+    oluşturur → semantic retrieval kalitesini artırır (HyDE tekniği).
+
+    Dönüş:
+        str  — 2-3 cümlelik varsayımsal KÜB metni (retrieval query olarak kullanılır)
+        None — API hatası veya ilgisiz sorular için
+    """
+    # Yalnızca semantik retrieval'ı iyileştireceği durumlar için çalıştır
+    # Basit ilaç adı aramaları için gereksiz
+    if not soru or len(soru.strip()) < 15:
+        return None
+
+    ilac_str = ", ".join(hedef_ilaclar) if hedef_ilaclar else "ilgili ilaç"
+    tur_ipucu = ""
+    if "kontrendikasyon" in soru_turleri:
+        tur_ipucu = "Bölüm 4.3 (Kontrendikasyonlar) veya 4.4 (Özel uyarılar) çerçevesinde"
+    elif "etkilesim" in soru_turleri:
+        tur_ipucu = "Bölüm 4.5 (İlaç etkileşimleri) çerçevesinde"
+    elif "doz" in soru_turleri:
+        tur_ipucu = "Bölüm 4.2 (Pozoloji ve uygulama şekli) çerçevesinde"
+    elif "gebelik" in soru_turleri:
+        tur_ipucu = "Bölüm 4.6 (Gebelik ve emzirme döneminde kullanım) çerçevesinde"
+
+    system_prompt = (
+        "Sen bir ilaç Kısa Ürün Bilgisi (KÜB/prospektüs) uzmanısın. "
+        "Kullanıcının sorusuna yanıt verecek gerçekçi bir KÜB paragrafı yaz. "
+        "2-3 kısa cümle, teknik Türkçe terminoloji, spesifik tıbbi detaylar. "
+        "Bu metin bir retrieval sistemi için kullanılacak — gerçekmiş gibi yaz."
+    )
+    user_prompt = (
+        f"Soru: {soru}\n"
+        f"İlaç: {ilac_str}\n"
+        f"{('Konu: ' + tur_ipucu) if tur_ipucu else ''}\n\n"
+        "Bu soruya yanıt verecek kısa bir KÜB paragrafı yaz (2-3 cümle):"
+    )
+
+    try:
+        provider = os.getenv("LLM_PROVIDER", "claude").lower()
+        if provider == "claude":
+            client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
+            response = client.messages.create(
+                model=DEFAULT_MODEL,  # Haiku — hızlı ve ucuz
+                max_tokens=200,
+                system=system_prompt,
+                messages=[{"role": "user", "content": user_prompt}],
+            )
+            hyde_text = response.content[0].text.strip()
+        else:
+            # Local/OpenAI-uyumlu provider (LM Studio vb.)
+            local_client = openai.OpenAI(
+                base_url=os.getenv("LLM_BASE_URL", "http://localhost:1234/v1"),
+                api_key="local",
+            )
+            response = local_client.chat.completions.create(
+                model=DEFAULT_LOCAL_MODEL,
+                max_tokens=200,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+            )
+            hyde_text = response.choices[0].message.content.strip()
+
+        logger.debug(f"HyDE doc üretildi ({len(hyde_text)} karakter): {hyde_text[:80]}...")
+        return hyde_text
+
+    except Exception as e:
+        logger.warning(f"HyDE oluşturulamadı (devam ediliyor): {e}")
+        return None
+
+
+# ---------------------------------------------------------------------------
 # Retrieval katmanı
 # ---------------------------------------------------------------------------
 
-def _retrieve_chunks(augmented: AugmentedQuery) -> list[RetrievedChunk]:
+def _retrieve_chunks(
+    augmented: AugmentedQuery,
+    hyde_sorgu: str | None = None,
+) -> list[RetrievedChunk]:
     """
     AugmentedQuery'deki planları çalıştırır, chunk'ları toplar ve sıralar.
 
@@ -189,6 +274,22 @@ def _retrieve_chunks(augmented: AugmentedQuery) -> list[RetrievedChunk]:
             )
             for r in raw_sec:
                 _ekle(r)
+
+        # 3. HyDE geçişi — varsayımsal KÜB metni ile ek semantik retrieval
+        if hyde_sorgu:
+            hyde_sections = plan.madde_onceligi[:3] if plan.madde_onceligi else []
+            if hyde_sections:
+                raw_hyde = hybrid_batch_search(
+                    query=hyde_sorgu,
+                    priority_sections=hyde_sections,
+                    secondary_sections=[],
+                    filter_ilac=[plan.ilac_adi] if plan.ilac_adi else None,
+                    filter_patient_flags=None,  # HyDE geçişi flags filtresi almaz
+                    k_priority=8,
+                    k_secondary=0,
+                )
+                for r in raw_hyde:
+                    _ekle(r)
 
     # İlaç adı boosting: hedef ilaçla exact match eden chunk'lar +0.05 skor alır
     # Bu, reranker'a giden aday havuzunu iyileştirir (sıralama reranker'a bırakılır)
@@ -1139,8 +1240,21 @@ def run_rag(
     augmented = augment_query(soru, profil, hedef_ilaclar, n_results=n_results)
     logger.info(f"Soru türleri: {augmented.soru_turleri}")
 
+    # 1b. HyDE — varsayımsal KÜB paragrafı ile retrieval kalitesini artır
+    hyde_sorgu: str | None = None
+    try:
+        hyde_sorgu = _generate_hyde_document(
+            soru=soru,
+            hedef_ilaclar=hedef_ilaclar,
+            soru_turleri=augmented.soru_turleri,
+        )
+        if hyde_sorgu:
+            logger.info(f"HyDE aktif ({len(hyde_sorgu)} karakter)")
+    except Exception as _hyde_err:
+        logger.warning(f"HyDE atlandı: {_hyde_err}")
+
     # 2. ChromaDB retrieval
-    chunklar = _retrieve_chunks(augmented)
+    chunklar = _retrieve_chunks(augmented, hyde_sorgu=hyde_sorgu)
     logger.info(f"{len(chunklar)} chunk alındı (min skor: {chunklar[-1].score:.3f} max: {chunklar[0].score:.3f})" if chunklar else "Chunk bulunamadı")
 
     # 3. Neo4j CombiGraph bağlamı
