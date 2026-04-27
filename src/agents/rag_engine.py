@@ -936,6 +936,9 @@ def _build_user_prompt(
 - KAYNAK ÖNCELİĞİ: KÜB bilgisi > CYP450 mekanizması > Graf. Çakışmada KÜB önceliklidir.
 - Madde 4.4 (Uyarılar) ve 4.8 (Yan etkiler) soruyla ilgiliyse — mutlaka değerlendir.
 - Hasta profilini göz önünde bulundur: yaş, böbrek/karaciğer fonksiyonu, mevcut ilaçlar.
+- HASTA DEĞERİ YASAĞI: Hasta profilinde veya soruda açıkça belirtilmeyen sayısal hasta değerlerini
+  (yaş, GFR, kreatinin, ağırlık, laboratuvar sonuçları vb.) ÜRETME ve YAZMA.
+  Profil boşsa ya da değer verilmemişse → o değere atıfta bulunma.
 - OTOMATİK KÜMÜLATİF RİSK bulgularını yalnızca KÜB'de desteklenen konular için kullan.
 {cyp_talimati}
 - YANIT DETAYI: ## SONUÇ en az 3 cümle içermeli; klinik karar için gereken tüm bilgileri
