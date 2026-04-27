@@ -1,6 +1,6 @@
 # RAGAS Run History — Kronolojik Sıra
 
-**Son Güncelleme:** 2026-04-26
+**Son Güncelleme:** 2026-04-27
 
 ---
 
@@ -23,16 +23,17 @@ Bu çalıştırmalar sistemin gerçek performansını ölçmek için yapıldı.
 | **Run 11** | `ragas_v7_qwen3_results.json` | 2026-04-26 | 33 | Together AI Qwen3-235B | 0.7029 | 0.7283 | Yeni evaluator (Together API); 3-metrik seti ilk kez: F+CU+CR; **CU=0.7xxx** (yeni metrik) |
 | **Run 12** | `ragas_v8_gt_fixed_results.json` | 2026-04-26 | 32 | Together AI Qwen3-235B | **0.7607** | **0.7250** | GT kalite düzeltmesi (Q02/Q08/Q20/Q29) + Q11 kaldırıldı; CU=0.8028; Genel ort=0.7628 ✓ KABUL; 2 NaN (Q14,Q23) |
 | **Mini-13** | `mini_ragas_run13.json` | 2026-04-26 | 5 | Together AI Qwen3-235B | 0.6989 | **0.8167** | Sprint fix doğrulama (5 zor soru); Q29 feokromasitoma: CR 0.0→0.75 ✅; CU=0.6605; Ort=0.7254 |
+| **Run 13** | `ragas_v9_run13_results.json` | 2026-04-27 | 32 | Together AI Qwen3-235B | 0.6740 | 0.7365 | Sprint v1.5.0 etki ölçümü; CU=0.7829; Genel ort=0.7311; CR ↑ +1.2pp ✅; F ↓ −8.7pp ⚠️; 4 NaN F; **Run 12 baseline korunuyor** |
 
 ### Özet Trend
 
 ```
-Faithfulness:    0.40 → 0.78 → 0.76 → 0.70 → 0.68 → 0.72 → 0.70 → 0.55 → 0.66 → 0.68 → 0.70 → 0.76
-Context Recall:  0.74 → 0.89 → 0.74 → 0.76 → 0.86 → 0.81 → 0.81 → 0.89 → 0.66 → 0.67 → 0.73 → 0.73
+Faithfulness:    0.40 → 0.78 → 0.76 → 0.70 → 0.68 → 0.72 → 0.70 → 0.55 → 0.66 → 0.68 → 0.70 → 0.76 → 0.67
+Context Recall:  0.74 → 0.89 → 0.74 → 0.76 → 0.86 → 0.81 → 0.81 → 0.89 → 0.66 → 0.67 → 0.73 → 0.73 → 0.74
 ```
 Run 2'nin Haiku eval skoru direkt karşılaştırılamaz.  
 Run 3-8: Mistral local evaluator. Run 9-10: qwen2.5:32b evaluator (daha strict → CR düşük görünür).  
-Run 11-12: Together AI Qwen3-235B evaluator; 3-metrik standard (F+CU+CR) devrede.  
+Run 11-13: Together AI Qwen3-235B evaluator; 3-metrik standard (F+CU+CR) devrede.  
 
 **Yeni Metrik — Context Utilization (CU):** Run 11'den itibaren standart. "Getirilen chunk'lar cevap için gerçekten kullanıldı mı?" sorusunu ölçer. GT gerektirmez (GT-free). Run 12: CU=0.8028.
 
@@ -47,6 +48,49 @@ Run 3'ten itibaren tüm evaluator Mistral local — bu çalıştırmalar karşı
 | v3_q06 | KEPPRA pediyatrik doz | 1.000 | 0.500 | 1.000 | F mükemmel; CU iyileşebilir |
 | v3_q24 | TEGRETOL+LAMICTAL | 0.778 | 0.143 | 1.000 | CR fix ✅; CU düşük (17 chunk → az kullanım) |
 | v3_q29 | **NORODOL feokromasitoma** | 0.750 | 0.826 | **0.750** | **4.4 sub-chunk fix: CR 0.0→0.75 ✅** |
+
+**Run 13 Soru Bazlı (Sprint v1.5.0 tam ölçüm, 32 soru):**
+| Soru | F | CU | CR | Not |
+|------|---|----|----|-----|
+| TEGRETOL+SANORONE etkileşim | 0.636 | 1.000 | 0.750 | |
+| PRADAXA GFR 20 doz | 0.714 | 1.000 | 0.667 | |
+| SPORANOX+CORDARONE CYP | 0.545 | 0.677 | 0.600 | |
+| LAROXYL gebelik | 1.000 | 1.000 | 0.600 | |
+| **ONAXAN Child-Pugh C** | **0.750** | 0.833 | **0.750** | Answer Calibration ✅ (Run 12: CR=? iyileşme) |
+| KEPPRA pediyatrik doz | 0.889 | 0.500 | 1.000 | |
+| İSOPTİN+CONCOR | 0.411 | 0.826 | 1.000 | F düşük |
+| LAMICTAL DC GFR 35 | 0.500 | 1.000 | 0.500 | |
+| ARLEC astım | 0.667 | 0.667 | 0.667 | |
+| PLAVIX+CANDİDİN antiplatelet | NaN | 0.729 | 0.600 | F NaN |
+| NORODOL+CORDARONE | NaN | NaN | 0.800 | F+CU NaN |
+| XANAX yaşlı doz | NaN | 1.000 | 0.667 | F NaN |
+| BRUFEN aktif ülser | 0.857 | 0.754 | 0.667 | |
+| ALDACTONE+PLASORİN doz | 0.429 | 1.000 | 0.750 | |
+| COLCHICUM GFR 40 | 0.429 | 0.833 | 0.500 | |
+| CYMBALTA+ALTİZEM | 0.424 | 1.000 | 0.333 | F+CR düşük |
+| COZAAR gebelik | 0.929 | 0.770 | 0.750 | |
+| CLEXANE+PLAVIX kanama | 0.636 | 0.696 | 1.000 | |
+| LİPİTOR Child-Pugh A | 0.750 | 0.698 | 0.800 | |
+| PROPYCIL+SANORONE | 0.600 | 0.926 | 1.000 | |
+| AMARYL GFR 25 | 0.444 | 0.659 | 0.333 | |
+| AVELOX miyastenia gravis | 0.875 | 0.533 | 0.750 | |
+| TEGRETOL+LAMICTAL DC doz | 1.000 | 0.611 | 1.000 | |
+| JARDIANCE üriner enfeksiyon | 0.778 | 0.291 | 0.667 | CU düşük |
+| CO-DIOVAN hiperpotasemi | 0.473 | 0.942 | 1.000 | Answer Calibration ✅ |
+| **RENITEC 80 yaş doz** | **0.133** | 1.000 | 0.500 | F çok düşük — analiz gerekiyor |
+| İMURAN+ÜRİKOLİZ | 1.000 | 0.796 | 1.000 | |
+| **NORODOL feokromasitoma** | 0.571 | **0.948** | 0.500 | CU ↑; CR sub-chunk bağımlı |
+| METAFORMAL GFR 15 | 0.889 | 0.915 | 1.000 | |
+| JARDIANCE yan etki | NaN | 0.325 | 0.667 | F NaN |
+| PLAVIX+CANDİDİN mantar | 0.643 | 1.000 | 1.000 | |
+| LUSTRAL emzirme | 0.900 | 0.333 | 0.750 | |
+
+**Run 13 Kök Neden Analizi (F −8.7pp):**
+- 4 NaN Faithfulness (Q10, Q11, Q12, Q30) — Run 12'de 0 NaN vardı → ortalamayı düşürüyor
+- Answer Calibration Layer: bazı sorularda severity override → LLM output ile KÜB metni semantik uyumsuzluğu
+- CYP Zorunlu Kural: CYP açıklaması her zaman retrieved chunk'larda karşılığı yok → F penaltısı
+- Q26 RENITEC F=0.133 anomali → inceleme listesine alındı
+- **Run 12 (F=0.7607, CU=0.8028, CR=0.7250) → Aktif Baseline korunuyor**
 
 ---
 

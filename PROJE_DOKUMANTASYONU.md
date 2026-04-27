@@ -1,8 +1,8 @@
 # PharmAssist — Proje Dokümantasyonu
 
-**Versiyon:** 1.5.0-sprint  
-**Son Güncelleme:** 2026-04-26  
-**Durum:** Sprint ✅. 4 model-odaklı iyileştirme tamamlandı: (A) Answer Calibration Layer, (B) CYP Zorunlu Kural, (C) 4.4 Sub-chunking (8757 → 10.588 chunk), (D) Klinik Sinonim Genişletme. RAGAS Run 12 baseline: **F:0.7607 | CU:0.8028 | CR:0.7250 | Ort:0.7628**. Run 13 mini RAGAS'ta iyileşme ölçülüyor. 81 test geçiyor.
+**Versiyon:** 1.5.1  
+**Son Güncelleme:** 2026-04-27  
+**Durum:** Sprint tamamlandı. Run 13 sonuçlandı: CR ↑ +1.2pp ✅, F ↓ −8.7pp ⚠️ (faithfulness regresyonu — kök neden analizi gerekiyor). **Aktif Baseline: Run 12** (F:0.7607 | CU:0.8028 | CR:0.7250 | Ort:0.7628). Run 13: F:0.6740 | CU:0.7829 | CR:0.7365 | Ort:0.7311. 81 test geçiyor.
 
 ---
 
@@ -199,8 +199,9 @@ PharmAssistVersion2/
 │   └── eval/
 │       ├── ragas_v3_questions.json ← aktif soru seti (32 soru — 4 GT fix, Q11 kaldırıldı)
 │       ├── ragas_v7_qwen3_results.json  ← Run 11 (Qwen3)
-│       ├── ragas_v8_gt_fixed_results.json ← Run 12 — GÜNCEL BASELINE (F:0.7607)
-│       ├── RAGAS_RUN_HISTORY.md    ← Run 1–12 kronolojisi
+│       ├── ragas_v8_gt_fixed_results.json ← Run 12 — AKTİF BASELINE (F:0.7607)
+│       ├── ragas_v9_run13_results.json   ← Run 13 — Sprint ölçümü (F:0.6740, CR ↑)
+│       ├── RAGAS_RUN_HISTORY.md    ← Run 1–13 kronolojisi
 │       └── archive/                ← canonical (v1,v2,v3,v5,v6_run6) + exp runs
 │
 ├── docs/
@@ -438,12 +439,14 @@ Birden fazla ilacın aynı organ sistemini olumsuz etkilemesi durumunda kümüla
 | Run 9 | 2026-04-19 | qwen2.5:32b | 33 | 0.6574 | — | 0.6571 | Evaluator geçişi |
 | Run 10 | 2026-04-21 | qwen2.5:32b | 33 | 0.6792 | — | 0.6677 | 4 sistematik fix |
 | Run 11 | 2026-04-26 | Qwen3-235B | 33 | 0.7029 | ~0.75 | 0.7283 | Yeni evaluator; 3-metrik ilk kez |
-| **Run 12** | **2026-04-26** | **Qwen3-235B** | **32** | **0.7607** | **0.8028** | **0.7250** | **GT kalite fix (4 soru); Ort=0.7628 ✓ KABUL** |
+| **Run 12** | **2026-04-26** | **Qwen3-235B** | **32** | **0.7607** | **0.8028** | **0.7250** | **GT kalite fix (4 soru); Ort=0.7628 ✓ KABUL → AKTİF BASELINE** |
+| Run 13 | 2026-04-27 | Qwen3-235B | 32 | 0.6740 | 0.7829 | 0.7365 | Sprint v1.5.0 etki ölçümü; CR ↑ ✅; F ↓ ⚠️ (4 NaN); Ort=0.7311 |
 
-> **Not:** Run 1-2 Haiku eval (karşılaştırılamaz). Run 3-8 Mistral-7B. Run 9-10 qwen2.5:32b (daha strict). Run 11-12 Together AI Qwen3-235B (3-metrik standart: F+CU+CR).
+> **Not:** Run 1-2 Haiku eval (karşılaştırılamaz). Run 3-8 Mistral-7B. Run 9-10 qwen2.5:32b (daha strict). Run 11-13 Together AI Qwen3-235B (3-metrik standart: F+CU+CR).
 
-**Güncel Baseline (Qwen3-235B, 3-metrik):** F=0.7607 | CU=0.8028 | CR=0.7250 | **Ort=0.7628 ✓ KABUL**  
-**Sonraki Hedef:** d.inn fix + 501-ilaç yeni corpus ile Run 13 + model davranış iyileştirme
+**Aktif Baseline (Qwen3-235B, 3-metrik):** F=0.7607 | CU=0.8028 | CR=0.7250 | **Ort=0.7628 ✓ KABUL** (Run 12)  
+**Run 13 Özeti:** CR ↑ +1.2pp (sub-chunk fix etkisi), F ↓ −8.7pp (Answer Calibration + CYP rule yan etki + 4 NaN) — regresyon analizi sonraki hedef  
+**Sonraki Hedef:** F regresyonunu kök neden analizi (Q26 RENITEC anomali, NaN soruları), HyDE implementasyonu
 
 > **Detaylı kronoloji ve experimental run'lar:** `data/eval/RAGAS_RUN_HISTORY.md`
 
@@ -492,10 +495,11 @@ Ayrıca Run 12 öncesinde:
 | 2 | LIPITON/URIKOLIZ eval adı eşleşme sorunu | Eval coverage eksik görünüyor (RAG'da eşleşiyor) | Düşük |
 
 ### Sonraki Hedefler
-1. **Run 13** — Sprint iyileştirmeleri sonrası tam RAGAS eval (mini test önce)
-2. **HyDE** — Hypothetical Document Embeddings retrieval geliştirme
-3. **Contextual Compression** — Chunk'lardan ilgili bölümü öne çıkarma
-4. **UI güncellemesi** — 501 ilaç corpus ile multiselect refresh
+1. **F Regresyon Analizi** — Run 13 F=0.674 kök neden: NaN soruları (Q10/Q11/Q12/Q30), Answer Calibration etki, CYP zorunlu kural → hedeflenen fix
+2. **Q26 RENITEC Anomali** — F=0.133 çok düşük, model yanıtı analiz edilmeli
+3. **HyDE** — Hypothetical Document Embeddings retrieval geliştirme
+4. **Contextual Compression** — Chunk'lardan ilgili bölümü öne çıkarma
+5. **UI güncellemesi** — 501 ilaç corpus ile multiselect refresh
 
 ### Run 1–2 Arasında Uygulanan Düzeltmeler (v2 Fix)
 
