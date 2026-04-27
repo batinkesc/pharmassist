@@ -758,8 +758,9 @@ def _calibrate_clinical_severity(
         "DOZ_AYARI_GEREKEBİLİR": (
             "Getirilen KÜB bağlamı 4.2 Pozoloji bölümünde bu hasta için "
             "DOZ AYARI bilgisi içermektedir. KÜB'de belirtilen doz bilgilerini aktar. "
-            "KÜB'de bulunmayan spesifik değerler (GFR eşiği, mg miktarı) EKLEME — "
-            "yalnızca verilen bağlamda yer alan bilgileri kullan."
+            "KÜB'de bulunmayan spesifik değerler (GFR eşiği, mg miktarı, laboratuvar değerleri) EKLEME — "
+            "hastanın GFR, kreatinin veya diğer değerlerini TAHMIN ETME; "
+            "yalnızca soruda/profilde açıkça verilen ve KÜB bağlamındaki bilgileri kullan."
         ),
     }
 
