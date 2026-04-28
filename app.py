@@ -350,6 +350,9 @@ if "pending_lab" not in st.session_state:
 if "lab_dosya_adi" not in st.session_state:
     st.session_state.lab_dosya_adi = ""
 
+if "lab_parse_hata" not in st.session_state:
+    st.session_state.lab_parse_hata = ""
+
 # İlaç listesini session'a al — sadece bir kere yüklenir, spinner görünmez
 if "ilac_listesi" not in st.session_state:
     st.session_state.ilac_listesi = _get_ilac_listesi()
@@ -639,39 +642,61 @@ with col_chat:
                         parsed = parse_lab_file(lab_dosya.read(), lab_dosya.name)
                         st.session_state.pending_lab = parsed
                         st.session_state.lab_dosya_adi = lab_dosya.name
+                        if not parsed:
+                            st.session_state.lab_parse_hata = "Lab değeri bulunamadı — PDF formatı tanınmadı."
+                        else:
+                            st.session_state.lab_parse_hata = ""
                     except Exception as e:
-                        st.error(f"Parse hatası: {e}")
+                        st.session_state.lab_parse_hata = f"Parse hatası: {e}"
+                # Spinner bittikten SONRA rerun → popover kapansa bile
+                # aşağıdaki onay kutusu visible olacak
+                st.rerun()
 
-            # Onay ekranı
-            if st.session_state.pending_lab:
-                st.success(f"**{len(st.session_state.pending_lab)} değer bulundu:**")
-                for param, val in st.session_state.pending_lab.items():
-                    st.markdown(f"- **{param}:** {val}")
-                kab, iptal = st.columns(2)
-                with kab:
-                    if st.button("✅ Ekle", key="lab_kab", use_container_width=True):
-                        st.session_state.ctx.lab_degerleri.update(
-                            {k: float(v) for k, v in st.session_state.pending_lab.items()}
-                        )
-                        st.session_state.pending_lab = {}
-                        st.session_state.lab_dosya_adi = ""
-                        st.rerun()
-                with iptal:
-                    if st.button("✖ İptal", key="lab_iptal", use_container_width=True):
-                        st.session_state.pending_lab = {}
-                        st.session_state.lab_dosya_adi = ""
-                        st.rerun()
-            elif st.session_state.ctx.lab_degerleri:
-                st.markdown("**Mevcut lab değerleri:**")
+            # Popover içi: sadece mevcut lab özeti
+            if st.session_state.ctx.lab_degerleri and not st.session_state.pending_lab:
+                st.markdown("**Profildeki lab değerleri:**")
                 for p, v in st.session_state.ctx.lab_degerleri.items():
                     st.markdown(f"- {p}: {v}")
                 if st.button("🗑️ Temizle", key="lab_temizle", use_container_width=True):
                     st.session_state.ctx.lab_degerleri = {}
                     st.rerun()
+            elif not st.session_state.ctx.lab_degerleri and not st.session_state.pending_lab:
+                st.caption("Henüz lab değeri eklenmedi.")
 
     with btn_gonder:
         gonder = st.button("Sorgula →", type="primary", use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
+
+    # ── Lab Onay Kutusu — popover DIŞINDA, her zaman görünür ────────────────
+    if st.session_state.get("lab_parse_hata"):
+        st.error(st.session_state.lab_parse_hata)
+        st.session_state.lab_parse_hata = ""
+
+    if st.session_state.pending_lab:
+        n = len(st.session_state.pending_lab)
+        fname = st.session_state.lab_dosya_adi
+        with st.container(border=True):
+            st.markdown(f"📋 **{fname}** — **{n} lab değeri okundu**, profilinize eklensin mi?")
+            # Değerleri satır halinde göster
+            cols_vals = st.columns(min(n, 6))
+            for i, (param, val) in enumerate(st.session_state.pending_lab.items()):
+                with cols_vals[i % len(cols_vals)]:
+                    st.metric(label=param, value=val)
+            c_kab, c_iptal = st.columns([1, 1])
+            with c_kab:
+                if st.button("✅ Profilime Ekle", key="lab_kab", use_container_width=True, type="primary"):
+                    st.session_state.ctx.lab_degerleri.update(
+                        {k: float(v) for k, v in st.session_state.pending_lab.items()}
+                    )
+                    st.session_state.pending_lab = {}
+                    st.session_state.lab_dosya_adi = ""
+                    st.toast(f"✅ {n} lab değeri profile eklendi!", icon="✅")
+                    st.rerun()
+            with c_iptal:
+                if st.button("✖ İptal", key="lab_iptal", use_container_width=True):
+                    st.session_state.pending_lab = {}
+                    st.session_state.lab_dosya_adi = ""
+                    st.rerun()
 
 # ─── Sorgu İşleme ────────────────────────────────────────────────────────────
 
