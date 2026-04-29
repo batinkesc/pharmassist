@@ -46,12 +46,12 @@ ChromaDB   Neo4j          ← 11.843 KÜB chunk + ilaç etkileşim grafu
 | Katman | Teknoloji |
 |--------|-----------|
 | PDF Parsing | PyMuPDF + pdfplumber |
-| Lab Raporu | PyMuPDF (e-Nabız formatı, 44+ parametre) |
+| Lab Raporu | PyMuPDF (hastane PDF formatı, 44+ parametre) |
 | Embeddings | `multilingual-e5-base` |
 | Reranking | `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1` |
 | Vector DB | ChromaDB |
 | Graph DB | Neo4j |
-| LLM | Groq API (llama-3.3-70b) / Claude Haiku 3.5 |
+| LLM | Claude Haiku 4.5 (varsayılan) / Groq API (opsiyonel) |
 | Frontend | Streamlit |
 | Test | pytest — 95 test |
 
@@ -80,7 +80,7 @@ ChromaDB   Neo4j          ← 11.843 KÜB chunk + ilaç etkileşim grafu
 | Context Recall | **0.7250** |
 | **Ortalama** | **0.7628** |
 
-Evaluator: Claude Haiku 3.5 — 21 klinik soru (GT kalite doğrulamalı)
+Evaluator: Together AI Qwen3-235B — 32 klinik soru (GT kalite doğrulamalı)
 
 Geçmiş: `data/eval/RAGAS_RUN_HISTORY.md`
 
@@ -111,8 +111,8 @@ Serbest metin sorgularından otomatik çıkarır:
 - Lab değerleri (metin içi: `ALT: 45`, `INR: 2.1`)
 - Hedef ilaç (`"eklemek istiyorum"`, `"yazmak istiyorum"`, `"sordu"` vb.)
 
-### e-Nabız Lab Raporu Entegrasyonu
-- PDF yükle → 44+ parametre otomatik çıkarılır
+### Lab Sonuç PDF'den Veri Çıkarma
+- Hastane/laboratuvar çıktısı PDF yükle → 44+ parametre otomatik çıkarılır
 - Değerler profil paneline direkt eklenir
 - Renk kodlaması: kritik / anormal / normal
 - Profil panelinden bireysel değer silme
