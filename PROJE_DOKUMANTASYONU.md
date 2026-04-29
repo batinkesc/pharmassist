@@ -1,8 +1,8 @@
 # PharmAssist — Proje Dokümantasyonu
 
-**Versiyon:** 1.6.0  
+**Versiyon:** 1.7.0  
 **Son Güncelleme:** 2026-04-29  
-**Durum:** VALIDATE Pipeline v2 tamamlandı (6 adım). Run 17: F=0.7089 CU=0.7487 CR=0.7630 Ort=0.7402. **Aktif Baseline: Run 12** (F:0.7607 | CU:0.8028 | CR:0.7250 | Ort:0.7628 ✓). CR trendi: +3.8pp ↑ (R12→R17). F ~−5pp — CO-DİOVAN false positive başlıca neden. **95 test geçiyor.** Diyagramlar güncellendi.
+**Durum:** VALIDATE Pipeline v2 tamamlandı (6 adım). Fix #4+#5 (graph kontrendikasyon filtreleme + lab sorgu izolasyonu) uygulandı. **AKTİF BASELINE: Run 18** (F:0.7127 | CU:0.7516 | CR:0.9343 | Ort:0.7995 ✓) — Gemini GT revizyonu (33 soru, kısa GT ~%55 kısalma). CR +20.9pp ↑↑ (0.7250→0.9343). **95 test geçiyor.** Eski baseline: Run 12 (F:0.7607 | CU:0.8028 | CR:0.7250).
 
 ---
 
