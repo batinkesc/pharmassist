@@ -3,7 +3,7 @@
     "id": "v3_q01",
     "kategori": "kontrendikasyon",
     "soru": "TEGRETOL kullanan hastaya SANORONE eklenebilir mi?",
-    "ground_truth": "Karbamazepin (TEGRETOL) güçlü bir CYP3A4 indükleyicisidir; aynı zamanda kendisi de CYP3A4 substratıdır. CYP3A4 substratı olan amiodaronun (SANORONE) plazma düzeyini düşürebilir. Birlikte kullanımda kontrendike değildir ancak etkileşim nedeniyle dikkatli olunmalıdır.",
+    "ground_truth": "Karbamazepin (TEGRETOL) ile amiodaron (SANORONE) kombinasyonu kontrendike değildir ancak her ikisi de CYP3A4 substratıdır; karbamazepin güçlü CYP3A4 indükleyicisi olarak amiodaronun plazma düzeyini düşürür. Birlikte kullanımda dikkatli olunmalı, kardiyak izlem yapılmalıdır.",
     "hasta": {
       "yas": 58,
       "cinsiyet": "erkek",
@@ -22,7 +22,7 @@
       "lab_degerleri": {}
     },
     "hedef_ilaclar": [
-      "TEGRETOL 200 mg değiştirilmiş salımlı tablet",
+      "TEGRETOL® 200 mg değiştirilmiş salımlı tablet",
       "SANORONE 200 mg tablet"
     ]
   },
@@ -30,7 +30,7 @@
     "id": "v3_q02",
     "kategori": "doz_bobrek",
     "soru": "GFR 20 olan hastada PRADAXA dozu nasıl ayarlanmalı?",
-    "ground_truth": "Dabigatran (PRADAXA) GFR 30 mL/dak altında kontrendikedir. GFR 20 olan bu hastada PRADAXA kullanılmamalıdır.",
+    "ground_truth": "Dabigatran (PRADAXA) GFR 30 mL/dak altında kontrendikedir. GFR 20 olan bu hastada PRADAXA kullanılmamalıdır. Böbrek fonksiyonu ve kanama riski takip edilmeli; antikoagülan tedavi gerekliyse GFR'ye göre doz ayarlanabilen alternatifler değerlendirilmelidir.",
     "hasta": {
       "yas": 72,
       "cinsiyet": "erkek",
@@ -48,14 +48,14 @@
       }
     },
     "hedef_ilaclar": [
-      "PRADAXA 150 mg sert kapsül"
+      "PRADAXA® 150 mg sert kapsül"
     ]
   },
   {
     "id": "v3_q03",
     "kategori": "cyp450_etkilesim",
     "soru": "SPORANOX kullanan hastada CORDARONE kan düzeyi nasıl etkilenir?",
-    "ground_truth": "İtrakonazol (SPORANOX) güçlü CYP3A4 inhibitörüdür. CYP3A4 substratı olan amiodaronun (CORDARONE) plazma konsantrasyonu artarak QT uzaması riski yükselir. Bu kombinasyondan kaçınılmalıdır.",
+    "ground_truth": "İtrakonazol (SPORANOX) güçlü CYP3A4 inhibitörüdür. Amiodaron (CORDARONE) CYP3A4 substratıdır. Birlikte kullanımda amiodaronun plazma konsantrasyonu artar, QT uzaması ve kardiyak toksisite riski yükselir. Bu kombinasyondan kaçınılmalıdır. Alternatif antifungal (örn. amfoterisin B) tercih edilmeli; zorunluysa kardiyak izlem ve EKG takibi yapılmalıdır.",
     "hasta": {
       "yas": 64,
       "cinsiyet": "kadın",
@@ -82,7 +82,7 @@
     "id": "v3_q04",
     "kategori": "gebelik",
     "soru": "Gebelikte LAROXYL kullanımı güvenli midir?",
-    "ground_truth": "Amitriptilin (LAROXYL) gebelik kategorisi C'dir. Gebelikte kullanımı önerilmez, yalnızca beklenen yararın fetüs üzerindeki potansiyel riskten üstün olduğu durumlarda kullanılmalıdır.",
+    "ground_truth": "Amitriptilin (LAROXYL) gebelikte kullanımı önerilmez. Gebelik kategorisi C olup hayvansal çalışmalarda fetal risk gösterilmiştir. Özellikle üçüncü trimesterde neonatal yoksunluk sendromu riski vardır. Klinik zorunluluk yoksa kullanılmamalıdır. Gebelikte daha güvenli alternatifler (örn. SSRI) tercih edilmeli; zorunluysa dikkatli klinik değerlendirme ve neonatal izlem gereklidir.",
     "hasta": {
       "yas": 28,
       "cinsiyet": "kadın",
@@ -105,7 +105,7 @@
     "id": "v3_q05",
     "kategori": "kontrendikasyon_karaciger",
     "soru": "Child-Pugh C karaciğer yetmezliği olan hastada ONAXAN kullanılabilir mi?",
-    "ground_truth": "Rivaroksaban (ONAXAN) koagülopati ile ilişkili klinik olarak anlamlı kanama riski taşıyan Child-Pugh B ve C karaciğer hastalığı olan hastalarda kontrendikedir.",
+    "ground_truth": "Rivaroksaban (ONAXAN) Child-Pugh B ve C karaciğer hastalığında kontrendikedir. Karaciğer yetmezliği koagülopati ile ilişkili olduğundan ve rivaroksaban hepatik metabolizma ile atılımına bağlı olduğundan, bu hastalarda kullanılmamalıdır. Alternatif antikoagülan olarak düşük molekül ağırlıklı heparin (DMAH) değerlendirilebilir; karaciğer fonksiyonu ve kanama riski takip edilmelidir.",
     "hasta": {
       "yas": 55,
       "cinsiyet": "erkek",
@@ -124,14 +124,14 @@
       }
     },
     "hedef_ilaclar": [
-      "ONAXAN 20 mg film kaplı tablet"
+      "ONAXAN® 20 mg film kaplı tablet"
     ]
   },
   {
     "id": "v3_q06",
     "kategori": "doz_pediyatrik",
     "soru": "8 yaşındaki 25 kg ağırlığında epilepsi hastasında KEPPRA dozu nasıl belirlenmeli?",
-    "ground_truth": "Levetirasetam (KEPPRA) 4-11 yaş arası çocuklarda başlangıç dozu günde iki kez 10 mg/kg'dır. 25 kg ağırlığındaki bir çocuk için başlangıç dozu günde iki kez 250 mg olmalıdır.",
+    "ground_truth": "Levetirasetam (KEPPRA) 4-11 yaş arası çocuklarda başlangıç dozu günde iki kez 10 mg/kg (vücut ağırlığına göre). 25 kg için başlangıç dozu günde iki kez 250 mg'dır. İdame doz titrasyon ile günde iki kez 30 mg/kg'a kadar artırılabilir.",
     "hasta": {
       "yas": 8,
       "cinsiyet": "erkek",
@@ -155,7 +155,7 @@
     "id": "v3_q07",
     "kategori": "etkilesim_farmakodinamik",
     "soru": "İSOPTİN kullanan hastaya CONCOR eklenirse ne olur?",
-    "ground_truth": "Verapamil (İSOPTİN) ve bisoprolol (CONCOR) kombinasyonu AV blok ve bradikardi riskini artırır. Birlikte kullanımlarında dikkatli olunmalıdır.",
+    "ground_truth": "Verapamil (İSOPTİN) ve bisoprolol (CONCOR) kombinasyonu AV blok ve bradikardi riskini artırır. Her ikisi de kalp hızını yavaşlattığından bu kombinasyondan kaçınılmalı veya çok yakın kardiyak izlem altında kullanılmalıdır. KÜB'de bu kombinasyon için özel uyarı mevcuttur.",
     "hasta": {
       "yas": 66,
       "cinsiyet": "erkek",
@@ -174,15 +174,15 @@
       "lab_degerleri": {}
     },
     "hedef_ilaclar": [
-      "İSOPTİN SR 240 mg Film Tablet",
-      "CONCOR 10 mg film kaplı tablet"
+      "İSOPTİN® SR 240 mg Film Tablet",
+      "CONCOR® 10 mg film kaplı tablet"
     ]
   },
   {
     "id": "v3_q08",
     "kategori": "doz_bobrek",
     "soru": "GFR 35 olan hastada LAMICTAL DC dozu nasıl ayarlanmalı?",
-    "ground_truth": "Lamotrijin (LAMICTAL DC) böbrek yetmezliğinde dikkatli kullanılmalıdır. GFR 35 orta dereceli böbrek bozukluğu olup, doz azaltımı veya dikkatli doz titrasyonu gerekebilir.",
+    "ground_truth": "Lamotrijin (LAMICTAL DC) böbrek yetmezliğinde dikkatli kullanılmalıdır. GFR 35, orta dereceli böbrek bozukluğu kategorisindedir (GFR 30-60). Bu hasta grubunda başlangıç ve idame dozlarının azaltılması gerekebilir; klinik yanıt ve tolerabiliteye göre doz titre edilmelidir. Başlangıç dozu 25 mg/gün olarak değerlendirilebilir; klinik yanıt ve yan etkiler dikkatle izlenmelidir.",
     "hasta": {
       "yas": 45,
       "cinsiyet": "kadın",
@@ -208,7 +208,7 @@
     "id": "v3_q09",
     "kategori": "kontrendikasyon",
     "soru": "Astım hastasına ARLEC başlanabilir mi?",
-    "ground_truth": "Karvedilol (ARLEC) kardiyoselektif olmayan beta bloker özelliği nedeniyle reaktif hava yolu hastalığı, bronkospazm geçmişi ve astım durumlarında kontrendikedir.",
+    "ground_truth": "Karvedilol (ARLEC) reaktif hava yolu hastalığı ve bronkospazm geçmişi olan hastalarda kontrendikedir. Astım, karvedilol için mutlak kontrendikasyondur; kardiyoselektif olmayan beta-bloker özelliği nedeniyle bronkospazm şiddetlenebilir. Alternatif olarak kardiyoselektif beta-bloker (metoprolol veya bisoprolol) tercih edilmeli; solunum fonksiyonları dikkatle izlenmelidir.",
     "hasta": {
       "yas": 52,
       "cinsiyet": "kadın",
@@ -225,14 +225,14 @@
       "lab_degerleri": {}
     },
     "hedef_ilaclar": [
-      "ARLEC 6,25 mg tablet"
+      "ARLEC® 6,25 mg tablet"
     ]
   },
   {
     "id": "v3_q10",
     "kategori": "cyp450_etkilesim",
     "soru": "PLAVIX kullanan hastaya CANDİDİN başlanırsa antiplatelet etki nasıl değişir?",
-    "ground_truth": "Flukonazol (CANDİDİN) CYP2C19 inhibitörüdür. Klopidogrelin (PLAVIX) aktif metabolite dönüşümünü inhibe ederek antiplatelet etkisini azaltır.",
+    "ground_truth": "Flukonazol (CANDİDİN) güçlü CYP2C19 inhibitörüdür. Klopidogrel (PLAVIX) CYP2C19 üzerinden aktif metabolite dönüştürülür. Flukonazol bu dönüşümü inhibe ederek klopidogrelin antiplatelet etkisini önemli ölçüde azaltır. Stent olan hastalarda bu kombinasyondan kaçınılmalıdır. CYP2C19 etkisi olmayan antifungal (örn. terbinafin) alternatif olarak tercih edilmeli; zorunluysa antiplatelet etki ve trombotik risk dikkatle takip edilmelidir.",
     "hasta": {
       "yas": 61,
       "cinsiyet": "erkek",
@@ -251,7 +251,7 @@
       "lab_degerleri": {}
     },
     "hedef_ilaclar": [
-      "PLAVIX 75 mg film kaplı tablet",
+      "PLAVIX® 75 mg film kaplı tablet",
       "CANDİDİN 150 mg kapsül"
     ]
   },
@@ -259,7 +259,7 @@
     "id": "v3_q12",
     "kategori": "etkilesim_ciddi",
     "soru": "NORODOL ile CORDARONE birlikte kullanılabilir mi?",
-    "ground_truth": "Haloperidol (NORODOL) ve amiodaron (CORDARONE) her ikisi de QT intervalini uzatır. Bu kombinasyon Torsades de Pointes ve ventriküler aritmi riskini artırdığından birlikte kullanımlarında dikkatli olunmalıdır.",
+    "ground_truth": "Haloperidol (NORODOL) ve amiodaron (CORDARONE) her ikisi de QT intervalini uzatır. Bu kombinasyon Torsades de Pointes ve ventriküler aritmiler açısından yüksek risk taşır. Birlikte kullanımdan kaçınılmalı; zorunluysa EKG monitorizasyonu yapılmalıdır. Her iki ilaç da hERG kanalını inhibe ederek QT uzatır; birlikte kullanım zorunluysa EKG izlemi, elektrolit takibi ve dikkatli klinik değerlendirme gereklidir. QT uzaması hERG kanal inhibisyonu mekanizmasıyla oluşur.",
     "hasta": {
       "yas": 70,
       "cinsiyet": "erkek",
@@ -278,7 +278,7 @@
       "lab_degerleri": {}
     },
     "hedef_ilaclar": [
-      "NORODOL 5 mg tablet",
+      "NORODOL® 5 mg tablet",
       "SANORONE 200 mg tablet"
     ]
   },
@@ -286,7 +286,7 @@
     "id": "v3_q13",
     "kategori": "doz_geriyatrik",
     "soru": "85 yaşındaki hastada XANAX başlangıç dozu ne olmalı?",
-    "ground_truth": "Alprazolam (XANAX) geriyatrik hastalarda duyarlılık artışı nedeniyle en düşük etkin dozda başlanmalıdır. Önerilen başlangıç dozu günde 2-3 kez 0.25 mg'dır.",
+    "ground_truth": "Alprazolam (XANAX) geriyatrik hastalarda en düşük etkin dozda başlanmalıdır. KÜB belgesine göre yaşlı hastalarda başlangıç dozu 0.25 mg günde 2-3 kez olarak önerilir. Sedatif etkiye karşı duyarlılık artar, düşme ve konfüzyon riski gözetilmelidir.",
     "hasta": {
       "yas": 85,
       "cinsiyet": "kadın",
@@ -302,14 +302,14 @@
       "lab_degerleri": {}
     },
     "hedef_ilaclar": [
-      "XANAX 0.5 mg tablet"
+      "XANAX® 0.5 mg tablet"
     ]
   },
   {
     "id": "v3_q14",
     "kategori": "kontrendikasyon",
     "soru": "Aktif mide ülseri olan hastada BRUFEN kullanılabilir mi?",
-    "ground_truth": "İbuprofen (BRUFEN) aktif peptik ülser hastalığı veya gastrointestinal kanaması olan hastalarda kontrendikedir.",
+    "ground_truth": "İbuprofen (BRUFEN) aktif peptik ülser hastalığında kontrendikedir. KÜB belgesinde aktif gastrointestinal ülser veya kanama, BRUFEN için mutlak kontrendikasyon olarak belirtilmiştir. Aktif ülser döneminde NSAID kullanımından kaçınılmalı; ağrı kontrolü için alternatif olarak parasetamol tercih edilmeli, hasta dikkatle izlenmelidir.",
     "hasta": {
       "yas": 48,
       "cinsiyet": "erkek",
@@ -333,7 +333,7 @@
     "id": "v3_q15",
     "kategori": "etkilesim_doz",
     "soru": "ALDACTONE kullanan hastada PLASORİN dozu neden değişebilir?",
-    "ground_truth": "Spironolakton (ALDACTONE) varfarin (PLASORİN) metabolizmasını etkileyebilir; birlikte kullanımda INR değerinin değişebileceği bildirilmiştir. Varfarin dozu ayarlaması gerekebilir.",
+    "ground_truth": "Spironolakton (ALDACTONE) varfarin (PLASORİN) metabolizmasını etkileyebilir; birlikte kullanımda INR değerinin değişebileceği bildirilmiştir. Varfarin dozu ayarlaması gerekebilir; INR yakın izlenmelidir. Varfarin dozu INR değerine göre bireyselleştirilmeli; INR hedefi 2-3 için haftalık takip önerilir. Varfarin başlangıç dozu genellikle 2-5 mg/gün olup INR yanıtına göre titre edilir.",
     "hasta": {
       "yas": 67,
       "cinsiyet": "kadın",
@@ -356,14 +356,14 @@
     },
     "hedef_ilaclar": [
       "PLASORİN 5 mg tablet",
-      "ALDACTONE-A 25 mg tablet"
+      "ALDACTONE®-A 25 mg tablet"
     ]
   },
   {
     "id": "v3_q16",
     "kategori": "doz_bobrek",
     "soru": "GFR 40 olan hastada COLCHICUM DISPERT dozu nasıl ayarlanmalı?",
-    "ground_truth": "Kolşisin (COLCHICUM DISPERT) orta dereceli böbrek yetmezliğinde (GFR 30-60) dikkatli kullanılmalı, doz azaltılmalı ve tedavi süresi kısaltılmalıdır.",
+    "ground_truth": "Kolşisin (COLCHICUM DISPERT) böbrek yetmezliğinde dikkatli kullanılmalıdır. Orta dereceli böbrek yetmezliğinde (GFR 30-60) doz azaltılmalı ve tedavi süresi kısaltılmalıdır. Nöromiyopati ve miyelosüpresyon riski artar. GFR 30-60 aralığında kolşisin 0,5 mg/gün sınırı aşılmamalı; nöromiyopati ve kan sayımı açısından dikkatli izlem gereklidir.",
     "hasta": {
       "yas": 62,
       "cinsiyet": "erkek",
@@ -381,14 +381,14 @@
       }
     },
     "hedef_ilaclar": [
-      "COLCHICUM DISPERT 0,5 mg Film Kaplı Tablet"
+      "COLCHICUM DISPERT® 0,5 mg Film Kaplı Tablet"
     ]
   },
   {
     "id": "v3_q17",
     "kategori": "cyp450_etkilesim",
     "soru": "CYMBALTA kullanan hastada ALTİZEM SR eklenirse ne olur?",
-    "ground_truth": "Duloksetin (CYMBALTA) CYP1A2 ve CYP2D6 substratıdır. Diltiazem (ALTİZEM SR) orta düzey CYP3A4 inhibitörüdür. Duloksetin metabolizması üzerinde belirgin bir etkisi beklenmez ancak dikkatli olunmalıdır.",
+    "ground_truth": "Duloksetin (CYMBALTA) CYP1A2 ve CYP2D6 substratıdır. Diltiazem (ALTİZEM SR) orta düzey CYP3A4 inhibitörüdür. Duloksetin metabolizması üzerinde belirgin etkisi sınırlıdır ancak birlikte kullanımda duloksetin plazma düzeyi izlenmeli ve yan etkiler takip edilmelidir.",
     "hasta": {
       "yas": 54,
       "cinsiyet": "kadın",
@@ -407,7 +407,7 @@
       "lab_degerleri": {}
     },
     "hedef_ilaclar": [
-      "CYMBALTA 60 mg kapsül",
+      "CYMBALTA® 60 mg kapsül",
       "ALTİZEM SR 120 mg Mikropellet Kapsül"
     ]
   },
@@ -415,7 +415,7 @@
     "id": "v3_q18",
     "kategori": "kontrendikasyon",
     "soru": "Gebelikte COZAAR kullanılabilir mi?",
-    "ground_truth": "Losartan (COZAAR) gebelikte kontrendikedir. Özellikle 2. ve 3. trimesterde fetüste böbrek hasarı ve fetal ölüm riskine yol açabilir.",
+    "ground_truth": "Losartan (COZAAR) gebelikte kontrendikedir. Gebelik kategorisi D olup özellikle 2. ve 3. trimesterde fetüste böbrek hasarı, oligohidramniyos ve ölüm riskiyle ilişkilidir. KÜB belgesinde gebelik mutlak kontrendikasyon olarak belirtilmiştir. Losartan derhal kesilmeli; antihipertansif tedavi için alternatif olarak metildopa veya labetalol tercih edilmeli, fetal izlem yapılmalıdır.",
     "hasta": {
       "yas": 32,
       "cinsiyet": "kadın",
@@ -440,7 +440,7 @@
     "id": "v3_q19",
     "kategori": "etkilesim_farmakodinamik",
     "soru": "CLEXANE kullanan hastaya PLAVIX eklenmesi kanama riskini nasıl etkiler?",
-    "ground_truth": "Enoksaparin (CLEXANE) ve klopidogrel (PLAVIX) her ikisi de kanama riskini artırır. Birlikte kullanımda majör kanama riski artabileceğinden dikkatli kullanılmalı ve kanama belirtileri izlenmelidir.",
+    "ground_truth": "Enoksaparin (CLEXANE) ve klopidogrel (PLAVIX) kombinasyonu kanama riskini artırır. Her ikisi de antitrombotik etki gösterir; birlikte kullanımda majör kanama ve gastrointestinal kanama riski yükselir. Klinik fayda-risk dengesi değerlendirilerek kullanılmalı, kanama belirtileri yakın izlenmelidir. Kanama belirtileri için hasta dikkatle izlenmeli; mümkünse tek ajan kullanılmalı veya kombine kullanım en kısa süreye indirilmelidir.",
     "hasta": {
       "yas": 68,
       "cinsiyet": "erkek",
@@ -461,14 +461,14 @@
     },
     "hedef_ilaclar": [
       "CLEXANE 4000 anti-Xa IU/0,4 mL enjeksiyonluk çözelti içeren kullanıma hazır enjektör",
-      "PLAVIX 75 mg film kaplı tablet"
+      "PLAVIX® 75 mg film kaplı tablet"
     ]
   },
   {
     "id": "v3_q20",
     "kategori": "doz_karaciger",
     "soru": "Child-Pugh A karaciğer yetmezliği olan hastada LİPİTOR dozu nasıl ayarlanmalı?",
-    "ground_truth": "Atorvastatin (LİPİTOR) aktif karaciğer hastalığı (Child-Pugh B ve C) olanlarda kontrendikedir. Child-Pugh A durumunda dikkatli kullanılmalı ve karaciğer fonksiyon testleri takip edilmelidir.",
+    "ground_truth": "Atorvastatin (LİPİTOR) aktif karaciğer hastalığında (Child-Pugh B ve C) kontrendikedir. Child-Pugh A ise kontrendikasyon kapsamında değildir; dikkatli kullanım önerilir. Karaciğer fonksiyon testleri yakın takip edilmelidir. ALT ve AST normalin 3 katını aşarsa tedavi kesilmelidir. Child-Pugh A hastalarda başlangıç dozu 10-20 mg/gün olarak değerlendirilebilir; ALT/AST değerlerine göre doz ayarlanmalıdır.",
     "hasta": {
       "yas": 58,
       "cinsiyet": "erkek",
@@ -495,7 +495,7 @@
     "id": "v3_q21",
     "kategori": "etkilesim_ciddi",
     "soru": "PROPYCIL kullanan hastaya AMİODARON (SANORONE) eklenirse ne olur?",
-    "ground_truth": "Propiltiourasil (PROPYCIL) ve amiodaron (SANORONE) birlikte kullanımında tiroid fonksiyonları yakından izlenmelidir. Amiodaron iyot içerdiği için tiroid fonksiyonlarını bozabilir.",
+    "ground_truth": "Propiltiourasil (PROPYCIL) ve amiodaron (SANORONE) kombinasyonunda dikkatli olunmalıdır. Amiodaron yüksek iyot içerir ve tiroid fonksiyonunu bozabilir; propiltiourasil ile birlikte hem hipotiroidizm hem hipertiroidizm riski değişebilir. Tiroid fonksiyon testleri yakın izlenmelidir.",
     "hasta": {
       "yas": 50,
       "cinsiyet": "kadın",
@@ -522,7 +522,7 @@
     "id": "v3_q22",
     "kategori": "doz_bobrek",
     "soru": "GFR 25 olan hastada JANUVIA'ya alternatif olarak AMARYL kullanılabilir mi?",
-    "ground_truth": "Glimepirid (AMARYL) şiddetli böbrek yetmezliğinde kontrendikedir. GFR 25 olan bu hastada hipoglisemi riski nedeniyle AMARYL kullanılmamalıdır.",
+    "ground_truth": "Glimepirid (AMARYL) ciddi böbrek yetmezliğinde KÜB Madde 4.3 kapsamında kontrendikedir; kullanılmamalıdır. Şiddetli böbrek yetmezliğinde (GFR <30) aktif metabolitler birikir ve ağır hipoglisemi riski oluşur. GFR 25 olan bu hastada AMARYL kullanılmamalıdır. Alternatif olarak böbrek fonksiyonuna göre doz ayarlanabilen sitagliptin (JANUVIA) devam edilebilir veya insülin değerlendirilebilir.",
     "hasta": {
       "yas": 70,
       "cinsiyet": "erkek",
@@ -548,7 +548,7 @@
     "id": "v3_q23",
     "kategori": "kontrendikasyon",
     "soru": "Miyastenia gravis hastasına AVELOX başlanabilir mi?",
-    "ground_truth": "Moksifloksasin (AVELOX) miyastenia gravis hastalarında nöromüsküler blokajı artırabileceğinden ve semptomları şiddetlendirebileceğinden dikkatle kullanılmalıdır.",
+    "ground_truth": "Moksifloksasin (AVELOX) miyastenia gravis hastalarında kontrendikedir veya dikkatle kullanılmalıdır. Florokinolonların nöromüsküler blokajı artırabileceği ve miyasteniya semptomlarını şiddetlendirebileceği bilinmektedir. KÜB belgesinde bu uyarı mevcuttur. Alternatif antibiyotik sınıfı (örn. beta-laktam) tercih edilmeli; zorunluysa solunum fonksiyonları ve nöromüsküler durum dikkatle takip edilmelidir.",
     "hasta": {
       "yas": 55,
       "cinsiyet": "kadın",
@@ -572,7 +572,7 @@
     "id": "v3_q24",
     "kategori": "etkilesim_doz",
     "soru": "TEGRETOL kullanan hastada LAMICTAL DC dozu neden artırılmalıdır?",
-    "ground_truth": "Karbamazepin (TEGRETOL), lamotrijinin (LAMICTAL DC) glukuronidasyonunu hızlandırarak plazma yarılanma ömrünü kısaltır. Birlikte kullanımda lamotrijin dozunun artırılması gerekebilir.",
+    "ground_truth": "Karbamazepin (TEGRETOL) güçlü CYP3A4 indükleyicisidir ve aynı zamanda lamotrijin glukuronidasyonunu hızlandırır. Lamotrijin (LAMICTAL DC) karbamazepin ile birlikte kullanıldığında plazma yarılanma ömrü yaklaşık yarıya iner. Bu nedenle lamotrijin dozu karbamazepin alan hastalarda belirgin şekilde artırılmalıdır. Karbamazepin ile birlikte lamotrijin dozu yaklaşık iki katına çıkarılabilir (200-400 mg/gün aralığı); doz titrasyonu ve klinik yanıt takip edilmelidir.",
     "hasta": {
       "yas": 35,
       "cinsiyet": "kadın",
@@ -590,7 +590,7 @@
       "lab_degerleri": {}
     },
     "hedef_ilaclar": [
-      "TEGRETOL 200 mg değiştirilmiş salımlı tablet",
+      "TEGRETOL® 200 mg değiştirilmiş salımlı tablet",
       "LAMICTAL DC 100 mg çözünür / çiğneme tableti"
     ]
   },
@@ -598,7 +598,7 @@
     "id": "v3_q25",
     "kategori": "yan_etki",
     "soru": "JARDIANCE başlanan hastada üriner enfeksiyon riski hakkında neler söylenebilir?",
-    "ground_truth": "Empagliflozin (JARDIANCE) üriner glukoz atılımını artırdığından genitoüriner enfeksiyon riskini yükseltir. KÜB belgesinde tekrarlayan üriner enfeksiyon öyküsü olan hastalarda dikkatli kullanım önerilmektedir.",
+    "ground_truth": "Empagliflozin (JARDIANCE) üriner glukoz atılımını artırdığından genitoüriner enfeksiyon riskini yükseltir. KÜB belgesinde tekrarlayan üriner enfeksiyon öyküsü olan hastalarda dikkatli kullanım önerilmektedir. Üriner enfeksiyon belirtileri yakın izlenmelidir.",
     "hasta": {
       "yas": 58,
       "cinsiyet": "kadın",
@@ -623,7 +623,7 @@
     "id": "v3_q26",
     "kategori": "kontrendikasyon",
     "soru": "Hiperpotasemi olan hastada CO-DIOVAN kullanılabilir mi?",
-    "ground_truth": "Valsartan/hidroklorotiyazid (CO-DIOVAN) kombinasyonunda valsartan potasyum düzeyini artırabilir. Hiperpotasemisi olan hastalarda dikkatle kullanılmalı ve serum potasyumu izlenmelidir.",
+    "ground_truth": "Valsartan/hidroklorotiyazid (CO-DIOVAN) kombinasyonunda valsartan bileşeni potasyum düzeyini artırabilir. Hiperpotasemisi olan hastalarda ARB içeren ilaçlar dikkatle kullanılmalıdır. Serum potasyum izlemi zorunludur; ciddi hiperpotasemi durumunda kontrendikedir. CO-DIOVAN kullanımından kaçınılmalı; antihipertansif tedavide potasyum düzeyi dikkat edilerek alternatif ilaç tercih edilmeli, serum potasyum izlenmelidir.",
     "hasta": {
       "yas": 63,
       "cinsiyet": "erkek",
@@ -641,14 +641,14 @@
       }
     },
     "hedef_ilaclar": [
-      "CO-DIOVAN 160 mg/12,5 mg film kaplı tablet"
+      "CO-DIOVAN® 160 mg/12,5 mg film kaplı tablet"
     ]
   },
   {
     "id": "v3_q27",
     "kategori": "doz_geriyatrik",
     "soru": "80 yaşındaki hastada RENITEC başlangıç dozu ne olmalı?",
-    "ground_truth": "Enalapril (RENITEC) geriyatrik hastalarda böbrek fonksiyonu azalmış olabileceğinden kreatinin klerensine göre doz ayarlanarak dikkatli başlanmalıdır.",
+    "ground_truth": "Enalapril (RENITEC) yaşlı hastalarda böbrek fonksiyonu azalmış olabileceğinden düşük başlangıç dozuyla başlanmalıdır. KÜB Madde 4.2 geriyatrik popülasyon için özel bir başlangıç dozu belirtmemektedir; 'doz yaşlı hastanın böbrek fonksiyonuna uygun olmalıdır' ifadesi kullanılmaktadır. Böbrek fonksiyon bozukluğu olan hastalarda enalapril dozu kreatinin klerensine göre ayarlanmalı ve tedaviye verilen yanıta göre titre edilmelidir.",
     "hasta": {
       "yas": 80,
       "cinsiyet": "kadın",
@@ -673,7 +673,7 @@
     "id": "v3_q28",
     "kategori": "etkilesim_ciddi",
     "soru": "İMURAN kullanan hastada ÜRİKOLİZ başlanırsa ne olur?",
-    "ground_truth": "Allopurinol (ÜRİKOLİZ) ksantin oksidaz inhibisyonu yaparak azatioprinin (İMURAN) metabolizmasını inhibe eder. Toksisite riski nedeniyle birlikte kullanımlarında azatioprin dozu önemli ölçüde azaltılmalıdır.",
+    "ground_truth": "Allopurinol (ÜRİKOLİZ) azatioprinin (İMURAN) metabolizmasını inhibe eder; ksantin oksidaz inhibisyonu nedeniyle azatioprin toksisite riski dramatik biçimde artar. Birlikte kullanımda azatioprin dozu dörtte birine indirilmelidir veya bu kombinasyondan kaçınılmalıdır. KÜB belgesinde bu etkileşim kontraendikasyon olarak belirtilmiştir.",
     "hasta": {
       "yas": 45,
       "cinsiyet": "erkek",
@@ -693,14 +693,14 @@
     },
     "hedef_ilaclar": [
       "İMURAN 50 mg film kaplı tablet",
-      "ÜRİKOLİZ 300 mg tablet"
+      "ÜRİKOLİZ® 300 mg tablet"
     ]
   },
   {
     "id": "v3_q29",
     "kategori": "kontrendikasyon",
     "soru": "Feokromasitoma hastasına NORODOL başlanabilir mi?",
-    "ground_truth": "Haloperidol (NORODOL) feokromasitoma hastalarında hipertansif kriz riski nedeniyle çok dikkatli kullanılmalıdır.",
+    "ground_truth": "Haloperidol (NORODOL) feokromasitomalu hastalarda çok dikkatli kullanılmalıdır. KÜB madde 4.4 özel kullanım uyarıları bölümünde feokromasitoma için dikkatli kullanım uyarısı mevcuttur; kontrendikasyon değildir. Bu hastalarda hipertansif kriz riski gözetilerek dikkatli klinik değerlendirme ve izlem yapılmalıdır. Antipsikotik ihtiyacı için psikiyatri konsültasyonu önerilir.",
     "hasta": {
       "yas": 40,
       "cinsiyet": "kadın",
@@ -717,14 +717,14 @@
       "lab_degerleri": {}
     },
     "hedef_ilaclar": [
-      "NORODOL 5 mg tablet"
+      "NORODOL® 5 mg tablet"
     ]
   },
   {
     "id": "v3_q30",
     "kategori": "doz_bobrek",
     "soru": "GFR 15 olan hastada METAFORMAL kullanılabilir mi?",
-    "ground_truth": "Metformin (METAFORMAL) GFR < 30 mL/dak olan şiddetli böbrek yetmezliğinde laktik asidoz riski nedeniyle kontrendikedir. Bu hastada kullanılmamalıdır.",
+    "ground_truth": "Metformin (METAFORMAL) GFR 30 mL/dak altında kontrendikedir. GFR 15 şiddetli böbrek yetmezliği olup laktik asidoz riski nedeniyle METAFORMAL bu hastada kesinlikle kullanılmamalıdır. METAFORMAL kesilmeli; diyabet kontrolü için insülin tercih edilmeli, böbrek fonksiyonu ve laktik asidoz belirtileri takip edilmelidir. Alternatif olarak insülin rejimi başlanmalı ve böbrek fonksiyonu izlenmelidir.",
     "hasta": {
       "yas": 65,
       "cinsiyet": "erkek",
@@ -749,7 +749,7 @@
     "id": "v3_q31",
     "kategori": "yan_etki",
     "soru": "Tip-2 diyabetli hastada JARDIANCE kullanımına bağlı gelişebilecek istenmeyen etkiler (madde 4.8) nelerdir?",
-    "ground_truth": "Empagliflozin (JARDIANCE) kullanımı vajinal moniliyazis, vulvovajinit, balanit, üriner sistem enfeksiyonu ve poliüri gibi istenmeyen etkilere (Madde 4.8) neden olabilir.",
+    "ground_truth": "Empagliflozin (JARDIANCE) KÜB madde 4.8 uyarınca yaygın görülen istenmeyen etkiler arasında vajinal moniliyazis, vulvovajinit, balanit ve diğer genital enfeksiyonlar, üriner sistem enfeksiyonu, pruritus (genel) ve poliüri yer almaktadır. Ayrıca nadir fakat ciddi olarak nekrotizan fasiit (Fournier gangreni) bildirilmiştir. Hasta bu istenmeyen etkiler konusunda bilgilendirilmeli; genital hijyen önerisi verilmeli, gerekirse antifungal tedavi için dikkatli takip planlanmalıdır.",
     "hasta": {
       "yas": 55,
       "cinsiyet": "kadın",
@@ -772,7 +772,7 @@
     "id": "v3_q32",
     "kategori": "cyp450_etkilesim",
     "soru": "PLAVIX kullanan hastada mantar enfeksiyonu için CANDİDİN başlanırsa ne tür bir etkileşim beklenir?",
-    "ground_truth": "Flukonazol (CANDİDİN) CYP2C19 inhibitörüdür. CYP2C19 üzerinden aktif metabolite dönüşen klopidogrelin (PLAVIX) antiplatelet etkinliğini azaltarak stent trombozu riskini artırabilir.",
+    "ground_truth": "Flukonazol (CANDİDİN) orta-güçlü bir CYP2C19 inhibitörüdür. Klopidogrel (PLAVIX) bir ön ilaçtır ve aktif metabolite dönüşümü için CYP2C19 enzimine ihtiyaç duyar. Flukonazol ile birlikte kullanımda klopidogrelin aktif metabolite dönüşümü azalır, bu da antiplatelet etkinin azalmasına ve stent trombozu/kardiyovasküler olay riskinin artmasına neden olabilir. Mümkünse CYP2C19 etkisi olmayan antifungal alternatif seçilmeli; zorunluysa kardiyak olaylar ve trombotik risk açısından dikkatli takip yapılmalıdır.",
     "hasta": {
       "yas": 60,
       "cinsiyet": "erkek",
@@ -799,7 +799,7 @@
     "id": "v3_q33",
     "kategori": "emzirme",
     "soru": "Emziren bir anne LUSTRAL 50 mg kullanabilir mi? Süte geçişi konusunda KÜB ne diyor?",
-    "ground_truth": "Sertralin (LUSTRAL) anne sütüne geçer. Emziren annelerde kullanımı ancak hekim kararıyla, beklenen yararın bebek üzerindeki riskten üstün olduğu durumlarda değerlendirilmelidir.",
+    "ground_truth": "Sertralin (LUSTRAL) anne sütüne geçer. KÜB madde 4.6'ya göre, emziren annelerde sertralin kullanımı, ancak anne için beklenen yararın bebek üzerindeki riskten daha üstün olduğu hekim kararıyla mümkündür. Klinik veriler sütteki sertralin miktarının az olduğunu gösterse de bebekler istenmeyen etkiler açısından yakından izlenmelidir. LUSTRAL 50 mg kullanımı sürerken bebek dikkatle izlenmelidir; kilo artışı, beslenme ve nöromotor gelişim takibi önerilir.",
     "hasta": {
       "yas": 30,
       "cinsiyet": "kadın",
@@ -815,32 +815,7 @@
       "lab_degerleri": {}
     },
     "hedef_ilaclar": [
-      "LUSTRAL 50 mg çentikli film kaplı tablet"
-    ]
-  },
-  {
-    "id": "v3_q34",
-    "kategori": "negatif_bilgi_yok",
-    "soru": "BRUFEN tedavisini dispepsi nedeniyle tolere edemeyen hastada alternatif olarak hangi COX-2 selektif NSAİİ önerilmektedir?",
-    "ground_truth": "[BİLGİ YOK: Bu konu incelenen KÜB belgelerinde yer almamaktadır.]",
-    "hasta": {
-      "yas": 45,
-      "cinsiyet": "erkek",
-      "gfr": 90.0,
-      "karaciger_skoru": null,
-      "mevcut_ilaclar": [
-        "BRUFEN 400 mg film tablet"
-      ],
-      "alerjiler": [],
-      "endikasyonlar": [
-        "osteoartrit"
-      ],
-      "gebelik": false,
-      "emzirme": false,
-      "lab_degerleri": {}
-    },
-    "hedef_ilaclar": [
-      "BRUFEN 400 mg film tablet"
+      "LUSTRAL® 50 mg çentikli film kaplı tablet"
     ]
   }
 ]
