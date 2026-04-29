@@ -12,20 +12,35 @@ User -> UI : Sorgu Gir (İlaçlar + Lab)
 UI -> Engine : run_rag(query, profile)
 
 activate Engine
-Engine -> Vector : Semantic Search (Bölüm 4.3, 4.5)
-Vector --> Engine : KÜB Chunks
 
-Engine -> Graph : Cypher Query (Interactions)
-Graph --> Engine : Relationship Data
+' --- Retrieval ---
+Engine -> Vector : Semantic Search\n(Bölüm 4.3, 4.4, 4.5, 4.8 — section-aware)
+Vector --> Engine : KÜB Chunks (11.843 chunk, 501 ilaç)
 
-Engine -> Engine : Deterministic Risk Analysis
-Engine -> Engine : CYP450 Mapping
+Engine -> Graph : Cypher Query (INTERACTS_WITH, CYP edges)
+Graph --> Engine : Relationship Data (4.021 IW, 891 CYP)
 
-Engine -> LLM : Generate Response (Context + Risks)
-LLM --> Engine : Clinical Answer
+Engine -> Engine : Kümülatif Risk Analizi (9 kategori)
+Engine -> Engine : CYP450 Enzim Mapping
 
-Engine -> Engine : validate_response()
-Engine --> UI : Final Answer + Citations
+' --- Pre-LLM: Answer Calibration ---
+Engine -> Engine : answer_calibration_label(chunks)\n[4.3→KONTREDİKE | 4.4→DİKKATLİ | 4.2→DOZ_AYARI]
+
+' --- LLM Call ---
+Engine -> LLM : Generate Response\n(Context + ClinicalLabel + SYSTEM_PROMPT)
+LLM --> Engine : Clinical Answer (ham)
+
+' --- Post-LLM: VALIDATE Pipeline (6 adım) ---
+group VALIDATE Pipeline
+  Engine -> Engine : 1. Güvenli/zararsız ifade → Dikkatli
+  Engine -> Engine : 2. Kontrendikasyon doğrula\n(4.3 chunk + sinonim eşleştirme)
+  Engine -> Engine : 3. Doğrulanamayan cümleler → [DOĞRULANAMADI]
+  Engine -> Engine : 4. Numerik değer + kaynak bazlı doğrula\n(cited section check)
+  Engine -> Engine : 5. CYP yön kontrolü\n(inhibitör↑ / indükleyici↓)
+  Engine -> Engine : 6. Verdict uyum denetimi\n([AŞIRI YORUM] varsa)
+end group
+
+Engine --> UI : Final Answer + Citations\n(full_answer w/ VALIDATE tags)
 deactivate Engine
 
 UI -> User : Raporu Göster

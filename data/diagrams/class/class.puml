@@ -54,10 +54,17 @@ package "src/agents" {
   class RAGEngine {
     +run_rag(soru, profil): RAGResponse
     -_retrieve_chunks(): list[RetrievedChunk]
+    -_answer_calibration_label(chunks): str
     -_build_user_prompt(): str
     -_call_claude(): str
     -_call_local_llm(): str
-    +validate_response(yanit, chunks): str
+    ' --- VALIDATE Pipeline (6 adım) ---
+    -_validate_guvenli(yanit): str
+    -_validate_kontraendikasyon(yanit, chunks, soru): str
+    -_tag_unverifiable_sentences(yanit, chunks): str
+    -_validate_numeric_claims(yanit, chunks): str
+    -_validate_cyp_direction(yanit, chunks): str
+    -_enforce_verdict_alignment(yanit, chunks, soru): str
   }
 }
 

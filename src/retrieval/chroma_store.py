@@ -190,7 +190,10 @@ def search(
 
     if filter_ilac and len(output) == 0:
         logger.warning(f"filter_ilac match başarısız: {filter_ilac}. Esnek arama yapılıyor...")
-        where_relaxed = _build_where(filter_madde, None, filter_patient_flags)
+        # Patient flags de kaldırılıyor: bazı ilaçların flag_renal/flag_geriatric=False olan
+        # bölümleri bu kombinasyonu geçemez. Sadece madde filtresi bırakılır; ilaç adı
+        # post-filtering ile uygulanır (aşağıdaki prefix kontrolü).
+        where_relaxed = _build_where(filter_madde, None, None)
         
         kwargs_no_ilac = dict(
             query_embeddings=[query_embedding],
@@ -268,20 +271,59 @@ def _get_drug_name_map() -> dict[str, str]:
 
 
 def _resolve_drug_names(names: list[str]) -> list[str]:
-    """İlaç adlarını canonical adlarla eşleştirir."""
+    """İlaç adlarını canonical adlarla eşleştirir.
+
+    Eşleştirme sırası:
+    1. Tam normalize eşleşme (hızlı yol)
+    2. Ondalık ayraç farkını görmezden gel ("0,5" vs "0.5")
+    3. Prefix / substring eşleşmesi
+    4. Kelime kümesi eşleşmesi — form tanımlamaları farklı olabilir
+       ("TABLET" ≡ "FILM KAPLI TABLET"); sorgu kelimeleri canonical'ın alt kümesiyse eşleş
+    5. Bulunamazsa orijinal adı kullan (fallback)
+    """
     mapping = _get_drug_name_map()
+
+    import re as _re
+
+    def _fuzzy(s: str) -> str:
+        """Fuzzy karşılaştırma için: ondalık ',' → '.', boşluklu tire ' -' / '- ' → '-' """
+        s = s.replace(",", ".")
+        s = _re.sub(r'\s*-\s*', '-', s)
+        return s
+
     resolved = []
     for name in names:
         norm = normalize_drug_name(name)
+        norm_f = _fuzzy(norm)
+
+        # 1. Tam eşleşme
         if norm in mapping:
             resolved.append(mapping[norm])
             continue
 
         prefix_hits = []
         for key, orig in mapping.items():
-            if key.startswith(norm) or norm in key:
+            key_f = _fuzzy(key)
+
+            # 2. Fuzzy eşleşme (ondalık + tire boşluğu farkını yoksay)
+            if key_f == norm_f:
+                prefix_hits = [orig]
+                break
+
+            # 3. Prefix / substring
+            if key_f.startswith(norm_f) or norm_f in key_f:
                 prefix_hits.append(orig)
-        
+
+        # 4. Kelime kümesi eşleşmesi (form tanımlamaları farklıysa:
+        #    "TABLET" ≡ "FILM KAPLI TABLET")
+        if not prefix_hits:
+            norm_words = set(norm_f.split())
+            for key, orig in mapping.items():
+                key_words = set(_fuzzy(key).split())
+                # Sorgu kelimeleri canonical'ın alt kümesiyse eşleş
+                if norm_words and norm_words.issubset(key_words):
+                    prefix_hits.append(orig)
+
         if prefix_hits:
             resolved.extend(list(dict.fromkeys(prefix_hits)))
             continue

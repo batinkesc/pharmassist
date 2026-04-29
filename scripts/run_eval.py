@@ -30,27 +30,49 @@ def load_test_questions(path: str) -> list[dict]:
         return json.load(f)
 
 
+_VALIDATE_TAG_RE = re.compile(
+    r'\s*\[DOĞRULANAMADI(?:-\w+)?\s*[^\]]*\]'        # [DOĞRULANAMADI], [DOĞRULANAMADI-CYP], [DOĞRULANAMADI-NUM]
+    r'|\s*\[AŞIRI\s+YORUM[^\]]*\]'                    # [AŞIRI YORUM: ...]
+    r'|\s*\[SİSTEM\s+DÜZELTMESİ[^\]]*\]'             # [SİSTEM DÜZELTMESİ: ...]
+    r'|\s*\[BİLGİ\s+YOK[^\]]*\]',                    # [BİLGİ YOK: ...]
+    re.IGNORECASE,
+)
+
+def _strip_validate_tags(text: str) -> str:
+    """VALIDATE sistem etiketlerini RAGAS metninden temizler.
+    Etiketler kullanıcıya gösterilen full_answer'da kalır;
+    RAGAS'a gönderilen ragas_answer'da kaldırılır — faithfulness false-negative önlenir.
+    """
+    return _VALIDATE_TAG_RE.sub("", text)
+
+
 def _extract_sonuc_for_ragas(yanit: str) -> str:
     """
-    RAGAS için yanıttan sadece ## SONUÇ bölümünü döner (Aksiyon 2).
+    RAGAS için yanıttan sadece ## SONUÇ bölümünü döner.
 
     ## KAYNAKLAR ve ## UYARI bölümlerini dışarıda bırakır:
     - KAYNAKLAR: metadata alıntıları — doğrulama amacı yok, RAGAS'ı yanıltır
     - UYARI: meta-ifadeler — klinik iddia sayılmaz
-    SONUÇ yoksa tüm yanıtı döner (güvenli fallback).
+
+    Ayrıca VALIDATE sistem etiketleri temizlenir:
+    - [DOĞRULANAMADI], [AŞIRI YORUM], [SİSTEM DÜZELTMESİ], [BİLGİ YOK]
+    Bu etiketler RAGAS'ın "claim in context?" kontrolünde false-negative yaratır.
     """
     if "## SONUÇ" not in yanit:
-        return yanit
+        cleaned = _strip_validate_tags(yanit)
+        return cleaned
     start = yanit.index("## SONUÇ")
     rest = yanit[start:]
     # Bir sonraki ## bölüm başlığında kes
     next_sec = re.search(r'\n##\s', rest[8:])  # "## SONUÇ" başlığının ötesini ara
     if next_sec:
-        return rest[:next_sec.start() + 8].strip()
-    return rest.strip()
+        sonuc = rest[:next_sec.start() + 8].strip()
+    else:
+        sonuc = rest.strip()
+    return _strip_validate_tags(sonuc)
 
 
-def run_rag_on_question(q: dict) -> dict:
+def run_rag_on_question(q: dict, model: str | None = None) -> dict:
     """Bir test sorusu için RAG pipeline'ını çalıştırır."""
     hasta_data = q.get("hasta", {})
     profil = PatientProfile(
@@ -69,7 +91,10 @@ def run_rag_on_question(q: dict) -> dict:
     # v2 sorularında hedef_ilaclar belirtilmişse kullan
     hedef_ilaclar = q.get("hedef_ilaclar")
 
-    response = run_rag(soru=q["soru"], profil=profil, hedef_ilaclar=hedef_ilaclar)
+    rag_kwargs = dict(soru=q["soru"], profil=profil, hedef_ilaclar=hedef_ilaclar)
+    if model:
+        rag_kwargs["model"] = model
+    response = run_rag(**rag_kwargs)
 
     # Ek kaynaklar (Neo4j, kümülatif risk, CYP450) ÖNCE ekleniyor.
     # _truncate_contexts _MAX_CONTEXTS ile baştaki öğeleri alır; ek
@@ -111,6 +136,9 @@ if __name__ == "__main__":
     parser.add_argument("--evaluator", default=None, choices=["haiku", "local"],
                         help="RAGAS evaluator: 'haiku' (Anthropic API) veya 'local' (LM Studio). "
                              "Varsayılan: RAGAS_PROVIDER env var")
+    parser.add_argument("--model", default=None,
+                        help="RAG answering LLM model ID (varsayilan: Haiku). "
+                             "Ornek: claude-sonnet-4-5-20251001")
     args = parser.parse_args()
 
     # Soru dosyasını belirle
@@ -148,7 +176,7 @@ if __name__ == "__main__":
         last_err = None
         for attempt in range(1, 4):  # 3 deneme
             try:
-                record = run_rag_on_question(q)
+                record = run_rag_on_question(q, model=args.model)
                 eval_records.append(record)
                 logger.info(f"  -> {len(record['contexts'])} chunk, {len(record['answer'])} karakter yanit")
                 last_err = None
@@ -165,7 +193,10 @@ if __name__ == "__main__":
 
     # 3. RAGAS değerlendirmesi
     try:
-        result = run_ragas_evaluation(eval_records, evaluator_provider=args.evaluator)
+        result = run_ragas_evaluation(
+            eval_records,
+            evaluator_provider=args.evaluator,
+        )
         scores = result["scores"]
         per_question = result["per_question"]
 

@@ -1,17 +1,22 @@
 """
-RAGAS değerlendirme pipeline'ı.
+RAGAS değerlendirme pipeline'ı — Final metrik seti (3'lü).
 
-Metrikler (LLM tabanlı — embedding gerektirmez):
-  - faithfulness:   Yanıt yalnızca context'teki bilgilere mi dayanıyor?
-  - context_recall: Ground truth'u karşılamak için yeterli chunk var mı?
+Standart (varsayılan — her değerlendirmede):
+  - faithfulness:        Cevap yalnızca context'e mi dayanıyor? Model uyduruyor mu?
+                         GT gerektirmez — (answer perspective, hallucination check)
+  - context_utilization: Getirilen chunk'lar cevap için gerçekten kullanıldı mı?
+                         GT gerektirmez — (retrieval→answer alignment, GT-free context_precision)
+  - context_recall:      Context, ground truth'u kapsıyor mu? Retrieval eksiksiz mi?
+                         GT gerektirir — (retrieval completeness, benchmark karşılaştırması)
+
+Devre dışı:
+  - coherence, clinical_safety: Binary (0/1) — çalışan sistemde hep 1.0, iyileştirme sinyali yok
+  - answer_relevancy, context_precision: Embedding modeli gerektirir
+  - nv_context_relevance, nv_response_groundedness: NV proprietary, test edilmedi
 
 Değerlendirici LLM:
-  - Varsayılan: LM Studio / Mistral (RAGAS_PROVIDER=local, API maliyeti sıfır)
-  - Alternatif: Claude Haiku (--evaluator haiku) — çok katı, production için önerilmez
-
-Not (v10 bulgusu): Turkish patch (Haiku için prompt öneki) Context Recall'u
-iyileştirmedi; kaldırıldı. Haiku'nun R=0.2 kalıcı sorunu prompt kaynaklı değil,
-değerlendirici semantik katılığından kaynaklanıyor.
+  - Varsayılan: RAGAS_MODEL env var (Together AI Qwen3-235B)
+  - Alternatif: Claude Haiku (--evaluator haiku)
 """
 
 import os
@@ -23,20 +28,32 @@ from src.core.content_policy import POLICY
 
 from datasets import Dataset
 from ragas import evaluate
-from ragas.metrics import faithfulness, context_recall
+import warnings
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", DeprecationWarning)
+    from ragas.metrics import (
+        faithfulness,
+        context_recall,
+    )
+    from ragas.metrics._context_precision import ContextUtilization
 from ragas.run_config import RunConfig
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 
 load_dotenv(override=True)
 
+# Standart 3'lü metrik seti — her değerlendirmede kullanılır
+# faithfulness + context_utilization: GT-free
+# context_recall: GT gerektirir (eval dosyalarında ground_truth şart)
+_METRICS_DEFAULT = [faithfulness, ContextUtilization(), context_recall]
+
+# ContentPolicy'den gelir — rag_engine ile aynı değerler → drift engeli
+_MAX_CONTEXTS    = POLICY.eval_max_contexts
+_MAX_CHUNK_CHARS = POLICY.eval_max_chunk_chars
 
 
 def _get_llm(provider: str | None = None):
-    """
-    RAGAS için değerlendirici LLM döner.
-    provider argümanı verilmezse env var'a bakar.
-    """
+    """RAGAS için değerlendirici LLM döner."""
     if provider is None:
         provider = os.environ.get("RAGAS_PROVIDER", "local")
 
@@ -46,25 +63,24 @@ def _get_llm(provider: str | None = None):
             model="claude-haiku-4-5-20251001",
             api_key=os.environ.get("ANTHROPIC_API_KEY"),
             temperature=0,
-            max_tokens=2048,
+            max_tokens=4096,
         )
 
     lm_studio_url = os.environ.get("LM_STUDIO_URL", "http://localhost:1234/v1")
-    model_name = os.environ.get("LOCAL_MODEL_NAME", "mistralai/mistral-7b-instruct-v0.3")
-    logger.info(f"Değerlendirici: {model_name} (LM Studio)")
+    model_name = (
+        os.environ.get("RAGAS_MODEL")
+        or os.environ.get("LOCAL_MODEL_NAME", "mistralai/Mistral-7B-Instruct-v0.3")
+    )
+    api_key = os.environ.get("LM_STUDIO_API_KEY") or "lm-studio"
+    logger.info(f"Değerlendirici: {model_name} @ {lm_studio_url}")
     return ChatOpenAI(
         base_url=lm_studio_url,
-        api_key="lm-studio",
+        api_key=api_key,
         model=model_name,
         temperature=0,
-        max_tokens=2048,
+        max_tokens=4096,
         timeout=600,
     )
-
-
-# ContentPolicy'den gelir — rag_engine ile aynı değerler → drift engeli
-_MAX_CONTEXTS    = POLICY.eval_max_contexts
-_MAX_CHUNK_CHARS = POLICY.eval_max_chunk_chars
 
 
 def _truncate_contexts(contexts: list[str]) -> list[str]:
@@ -75,56 +91,65 @@ def _truncate_contexts(contexts: list[str]) -> list[str]:
     return truncated
 
 
-def build_ragas_dataset(eval_records: list[dict]) -> Dataset:
+def build_ragas_dataset(eval_records: list[dict], include_gt: bool = False) -> Dataset:
     """
     RAGAS Dataset formatına çevirir.
 
-    Her kayıt:
-      question:    str
-      answer:      str   (RAG çıktısı)
-      contexts:    list[str]  (retrieved chunk içerikleri)
-      ground_truth: str  (beklenen doğru cevap)
+    include_gt=False (varsayılan): GT-free metrikler için — ground_truth alanı dahil edilmez.
+    include_gt=True: context_recall gibi GT gerektiren metrikler için.
     """
-    return Dataset.from_dict({
-        "question":    [r["question"] for r in eval_records],
-        "answer":      [r["answer"][:1500] for r in eval_records],  # yanıt da kırp (NaN prevention)
-        "contexts":    [_truncate_contexts(r["contexts"]) for r in eval_records],
-        "ground_truth": [r["ground_truth"] for r in eval_records],
-    })
+    data = {
+        "question": [r["question"] for r in eval_records],
+        "answer":   [r["answer"][:1500] for r in eval_records],
+        "contexts": [_truncate_contexts(r["contexts"]) for r in eval_records],
+    }
+    if include_gt:
+        data["ground_truth"] = [r.get("ground_truth", "") for r in eval_records]
+    return Dataset.from_dict(data)
 
 
-def run_ragas_evaluation(eval_records: list[dict], evaluator_provider: str | None = None) -> dict:
+def run_ragas_evaluation(
+    eval_records: list[dict],
+    evaluator_provider: str | None = None,
+) -> dict:
     """
-    RAGAS metrikleri hesaplar (LLM tabanlı).
+    RAGAS metrikleri hesaplar — faithfulness + context_utilization + context_recall.
 
     Args:
-        eval_records: [{"question", "answer", "contexts", "ground_truth"}, ...]
-        evaluator_provider: "haiku" (Anthropic API) veya "local" (LM Studio)
+        eval_records:       [{"question", "answer", "contexts", "ground_truth"}, ...]
+                            ground_truth context_recall için zorunlu.
+        evaluator_provider: "haiku" veya "local" (varsayılan: RAGAS_PROVIDER env)
 
     Returns:
         {
-            "scores": {"faithfulness": float, "context_recall": float},
-            "per_question": [{"question_id": int, "faithfulness": float, "context_recall": float, ...}, ...]
+            "scores":       {"faithfulness": float, "context_utilization": float,
+                             "context_recall": float},
+            "per_question": [{"question_id": int, "faithfulness": float,
+                              "context_utilization": float, "context_recall": float}, ...]
         }
     """
     logger.info(f"RAGAS değerlendirmesi başlıyor: {len(eval_records)} soru")
 
-    dataset = build_ragas_dataset(eval_records)
-    llm = _get_llm(evaluator_provider)
-    provider = evaluator_provider or os.environ.get("RAGAS_PROVIDER", "local")
-
-    if provider == "haiku":
-        logger.info("Değerlendirici LLM: claude-haiku-4-5-20251001 (Anthropic API)")
-    else:
-        logger.info(f"Değerlendirici LLM: {os.environ.get('LOCAL_MODEL_NAME', 'meta-llama-3.1-8b-instruct')} (LM Studio)")
+    metrics = list(_METRICS_DEFAULT)
+    dataset  = build_ragas_dataset(eval_records, include_gt=True)
+    llm      = _get_llm(evaluator_provider)
+    logger.info(f"Metrikler: {[m.name for m in metrics]}")
 
     result = evaluate(
         dataset=dataset,
-        metrics=[faithfulness, context_recall],
+        metrics=metrics,
         llm=llm,
-        run_config=RunConfig(max_workers=1, timeout=600),
+        run_config=RunConfig(
+            max_workers=3,
+            timeout=900,
+            max_retries=3,
+            seed=42,
+        ),
         raise_exceptions=False,
     )
+
+    # Metrik anahtarları
+    metric_keys = [m.name for m in metrics]
 
     def _mean(key: str) -> float:
         vals = result[key]
@@ -133,83 +158,87 @@ def run_ragas_evaluation(eval_records: list[dict], evaluator_provider: str | Non
             return float(np.mean(clean)) if clean else float("nan")
         return float(vals)
 
-    # Sorun #7: NaN olan soruları logla — kötü yanıtları maskelememek için
-    for metric_key in ("faithfulness", "context_recall"):
-        vals = result[metric_key]
+    def _clean(v):
+        if v is None or (isinstance(v, float) and np.isnan(v)):
+            return None
+        return round(float(v), 4)
+
+    # NaN log
+    for key in metric_keys:
+        vals = result[key]
         if isinstance(vals, list):
-            nan_indices = [
-                i for i, v in enumerate(vals)
-                if v is None or (isinstance(v, float) and np.isnan(v))
-            ]
-            if nan_indices:
-                nan_questions = [eval_records[i]["question"][:60] for i in nan_indices]
-                logger.warning(
-                    f"[NaN] {metric_key}: {len(nan_indices)} soru NaN "
-                    f"(indeksler: {nan_indices}). Sorular: {nan_questions}"
-                )
+            nan_idx = [i for i, v in enumerate(vals)
+                       if v is None or (isinstance(v, float) and np.isnan(v))]
+            if nan_idx:
+                nan_qs = [eval_records[i]["question"][:55] for i in nan_idx]
+                logger.warning(f"[NaN] {key}: {len(nan_idx)} soru — {nan_qs}")
 
-    scores = {
-        "faithfulness":  round(_mean("faithfulness"), 4),
-        "context_recall": round(_mean("context_recall"), 4),
-    }
+    scores = {k: round(_mean(k), 4) for k in metric_keys}
 
-    # Per-question detayları topla
+    # Per-question
     per_question = []
-    faith_vals = result["faithfulness"] if isinstance(result["faithfulness"], list) else [result["faithfulness"]]
-    recall_vals = result["context_recall"] if isinstance(result["context_recall"], list) else [result["context_recall"]]
+    raw_vals = {k: (result[k] if isinstance(result[k], list) else [result[k]])
+                for k in metric_keys}
 
     for i, record in enumerate(eval_records):
-        f_score = faith_vals[i] if i < len(faith_vals) else None
-        r_score = recall_vals[i] if i < len(recall_vals) else None
-
-        # NaN'ları float veya None'a dönüştür
-        if isinstance(f_score, float) and np.isnan(f_score):
-            f_score = None
-        if isinstance(r_score, float) and np.isnan(r_score):
-            r_score = None
-
-        per_question.append({
-            "question_id": i + 1,
-            "question": record["question"],
-            "faithfulness": round(f_score, 4) if f_score is not None else None,
-            "context_recall": round(r_score, 4) if r_score is not None else None,
-            "answer_length": len(record["answer"]),
-            "n_contexts": len(record["contexts"]),
-        })
+        entry = {
+            "question_id":    i + 1,
+            "question":       record["question"],
+            "answer_length":  len(record["answer"]),
+            "n_contexts":     len(record["contexts"]),
+        }
+        for k in metric_keys:
+            vals = raw_vals[k]
+            entry[k] = _clean(vals[i]) if i < len(vals) else None
+        per_question.append(entry)
 
     logger.info(f"RAGAS sonuçları: {scores}")
-    return {
-        "scores": scores,
-        "per_question": per_question,
-    }
+    return {"scores": scores, "per_question": per_question}
 
 
 def print_ragas_report(scores: dict, per_question: list[dict] | None = None) -> None:
     """Sonuçları formatlı olarak yazdırır."""
-    print("\n" + "="*60)
-    print("RAGAS DEĞERLENDİRME RAPORU")
-    print("="*60)
-    print(f"  Faithfulness   (sadakat) : {scores['faithfulness']:.4f} / 1.0")
-    print(f"  Context Recall (kapsam)  : {scores['context_recall']:.4f} / 1.0")
+    metric_labels = {
+        "faithfulness":        "Faithfulness       (sadakat)  ",
+        "context_utilization": "Context Utilization (kullanım)",
+        "context_recall":      "Context Recall     (kapsam)   ",
+    }
 
-    valid = [v for v in scores.values() if not (isinstance(v, float) and np.isnan(v))]
-    ortalama = sum(valid) / len(valid) if valid else float("nan")
-    print(f"\n  Genel Ortalama: {ortalama:.4f} / 1.0")
+    print("\n" + "=" * 60)
+    print("RAGAS DEĞERLENDİRME RAPORU")
+    print("=" * 60)
+
+    valid_vals = []
+    for k, label in metric_labels.items():
+        if k in scores:
+            v = scores[k]
+            v_str = f"{v:.4f}" if not (isinstance(v, float) and np.isnan(v)) else "  NaN "
+            print(f"  {label}: {v_str} / 1.0")
+            if not (isinstance(v, float) and np.isnan(v)):
+                valid_vals.append(v)
+
+    ortalama = sum(valid_vals) / len(valid_vals) if valid_vals else float("nan")
+    print(f"\n  Genel Ortalama : {ortalama:.4f} / 1.0")
 
     if not np.isnan(ortalama):
         if ortalama >= 0.75:
-            print("  Değerlendirme: KABUL EDILEBILIR (>=0.75)")
+            print("  Değerlendirme  : ✓ KABUL EDILEBILIR (>=0.75)")
         elif ortalama >= 0.60:
-            print("  Değerlendirme: GELISTIRILEBILIR (0.60-0.75)")
+            print("  Değerlendirme  : ~ GELIŞTIRILEBILİR (0.60-0.75)")
         else:
-            print("  Değerlendirme: YETERSIZ (<0.60)")
+            print("  Değerlendirme  : ✗ YETERSIZ (<0.60)")
 
     if per_question:
-        print("\n" + "-"*60)
-        print("SORU BAZLI SONUÇLAR:")
-        for i, q in enumerate(per_question, 1):
-            print(f"\n  Soru {i}: {q['question'][:60]}...")
-            for metric, val in q.get("scores", {}).items():
-                print(f"    {metric}: {val:.4f}")
+        metric_keys = [k for k in metric_labels if k in scores]
+        low = [q for q in per_question
+               if any(q.get(k) is not None and q[k] < 0.5 for k in metric_keys)]
+        if low:
+            print(f"\n  Düşük skorlu sorular ({len(low)}):")
+            for q in low:
+                scores_str = "  ".join(
+                    f"{k[:2].upper()}={q[k]:.2f}" if q.get(k) is not None else f"{k[:2].upper()}=NaN"
+                    for k in metric_keys
+                )
+                print(f"    [{scores_str}] {q['question'][:55]}")
 
-    print("="*60)
+    print("=" * 60)

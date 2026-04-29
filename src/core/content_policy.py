@@ -29,15 +29,16 @@ class ContentPolicy:
     # ------------------------------------------------------------------
     # LLM structured extraction (kub_extractor.py)
     # ------------------------------------------------------------------
-    extraction_section_43_chars: int = 1000   # prompt'a gönderilen 4.3 uzunluğu
-    extraction_section_45_chars: int = 2000   # prompt'a gönderilen 4.5 uzunluğu
-    extraction_max_tokens: int = 2000   # 768 → 2000: uzun etkileşim listelerinde JSON kesiliyor (insülin vb.)
+    extraction_section_43_chars: int = 1500   # prompt'a gönderilen 4.3 uzunluğu
+    extraction_section_45_chars: int = 4000   # prompt'a gönderilen 4.5 uzunluğu (tek pencere modunda)
+    extraction_max_tokens: int = 3000         # çıktı token limiti — 2000 yetmiyordu (PRADAXA 40+ etk.)
     extraction_timeout_sec: int = 180
     extraction_max_retries: int = 3           # bağlantı hatası retry
 
     # Sliding window — section 4.5 bu sınırı aşarsa pencere pencere işlenir
-    extraction_window_chars: int = 2000       # her pencere max uzunluğu (extraction_section_45_chars ile eşit)
-    extraction_window_overlap: int = 400      # pencereler arası overlap (cümle kesilmesini önler)
+    # 4000 char → ~750 input token/pencere → Qwen 5 req/min → ~3 saat rebuild
+    extraction_window_chars: int = 4000       # her pencere max uzunluğu
+    extraction_window_overlap: int = 500      # pencereler arası overlap
 
     # severity pencere taraması (kub_to_graph._extract_severity)
     severity_window_chars: int = 2000         # eski: 1500

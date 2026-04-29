@@ -1,8 +1,8 @@
 # PharmAssist — Proje Dokümantasyonu
 
-**Versiyon:** 1.5.1  
-**Son Güncelleme:** 2026-04-27  
-**Durum:** Sprint tamamlandı. Run 13 sonuçlandı: CR ↑ +1.2pp ✅, F ↓ −8.7pp ⚠️ (faithfulness regresyonu — kök neden analizi gerekiyor). **Aktif Baseline: Run 12** (F:0.7607 | CU:0.8028 | CR:0.7250 | Ort:0.7628). Run 13: F:0.6740 | CU:0.7829 | CR:0.7365 | Ort:0.7311. 81 test geçiyor.
+**Versiyon:** 1.6.0  
+**Son Güncelleme:** 2026-04-29  
+**Durum:** VALIDATE Pipeline v2 tamamlandı (6 adım). Run 17: F=0.7089 CU=0.7487 CR=0.7630 Ort=0.7402. **Aktif Baseline: Run 12** (F:0.7607 | CU:0.8028 | CR:0.7250 | Ort:0.7628 ✓). CR trendi: +3.8pp ↑ (R12→R17). F ~−5pp — CO-DİOVAN false positive başlıca neden. **95 test geçiyor.** Diyagramlar güncellendi.
 
 ---
 
@@ -384,9 +384,15 @@ Birden fazla ilacın aynı organ sistemini olumsuz etkilemesi durumunda kümüla
 **SYSTEM_PROMPT (MUTLAK KURAL):**
 > "Aşağıdaki BAĞLAM bölümünde yer almayan hiçbir bilgiyi, ilaç adını, etken maddeyi, dozu veya mekanizmayı yazma."
 
-**Yanıt doğrulama (`validate_response`):**
-- "güvenlidir", "zararsızdır" gibi mutlak ifadeler sistem uyarısıyla değiştirilir
-- Bağlam dışı ilaç benzeri token'lar `[VALIDATE]` log uyarısıyla raporlanır
+**VALIDATE Pipeline (6 adım — post-LLM guardrail):**
+1. "güvenlidir/zararsızdır" → "dikkatli kullanılmalıdır" (deterministik regex)
+2. Kontrendikasyon doğrulama: 4.3 chunk varlığı + sinonim eşleştirme; yok/uyuşmuyorsa → `[AŞIRI YORUM]`
+3. Doğrulanamayan cümleler → `[DOĞRULANAMADI]` etiketi
+4. Numerik değer doğrulama: kaynak varsa sadece cited section chunk'ına, yoksa tüm chunk'lara bak (citation-level)
+5. CYP yön kontrolü: inhibitör→düzey artmalı, indükleyici→düzey azalmalı; ters ise `[DOĞRULANAMADI-CYP]`
+6. Verdict uyum: model seviyesi > desteklenen seviye → `[AŞIRI YORUM: bağlam bu şiddet seviyesini desteklemiyor]`
+
+**RAGAS Tag Stripping:** `ragas_answer`'da VALIDATE etiketleri temizlenir (faithfulness false-negative önlenir). `full_answer`'da kullanıcı için korunur.
 
 **Kaynak formatı:** `[İlaç Adı | Madde 4.3 | Sayfa 12]`
 
@@ -441,12 +447,17 @@ Birden fazla ilacın aynı organ sistemini olumsuz etkilemesi durumunda kümüla
 | Run 11 | 2026-04-26 | Qwen3-235B | 33 | 0.7029 | ~0.75 | 0.7283 | Yeni evaluator; 3-metrik ilk kez |
 | **Run 12** | **2026-04-26** | **Qwen3-235B** | **32** | **0.7607** | **0.8028** | **0.7250** | **GT kalite fix (4 soru); Ort=0.7628 ✓ KABUL → AKTİF BASELINE** |
 | Run 13 | 2026-04-27 | Qwen3-235B | 32 | 0.6740 | 0.7829 | 0.7365 | Sprint v1.5.0 etki ölçümü; CR ↑ ✅; F ↓ ⚠️ (4 NaN); Ort=0.7311 |
+| Run 14 | 2026-04-28 | Qwen3-235B | 32 | 0.7153 | 0.7752 | 0.7571 | F kısmen toparlıyor; Ort=0.7492 |
+| Run 15 | 2026-04-28 | Qwen3-235B | 32 | 0.7244 | 0.7640 | 0.7577 | Yakın sonuç; Ort=0.7487 |
+| Run 16 | 2026-04-29 | Qwen3-235B | 32 | 0.7153 | 0.7530 | 0.7571 | VALIDATE 3-6 eklendi (tag stripping yok); Ort=0.7418 |
+| Run 17 | 2026-04-29 | Qwen3-235B | 32 | 0.7089 | 0.7487 | 0.7630 | Tag stripping eklendi; AMARYL NaN kalıcı; Ort=0.7402 |
 
 > **Not:** Run 1-2 Haiku eval (karşılaştırılamaz). Run 3-8 Mistral-7B. Run 9-10 qwen2.5:32b (daha strict). Run 11-13 Together AI Qwen3-235B (3-metrik standart: F+CU+CR).
 
 **Aktif Baseline (Qwen3-235B, 3-metrik):** F=0.7607 | CU=0.8028 | CR=0.7250 | **Ort=0.7628 ✓ KABUL** (Run 12)  
-**Run 13 Özeti:** CR ↑ +1.2pp (sub-chunk fix etkisi), F ↓ −8.7pp (Answer Calibration + CYP rule yan etki + 4 NaN) — regresyon analizi sonraki hedef  
-**Sonraki Hedef:** F regresyonunu kök neden analizi (Q26 RENITEC anomali, NaN soruları), HyDE implementasyonu
+**Run 17 Son Durum:** F=0.7089 CU=0.7487 CR=0.7630 Ort=0.7402 — CR ↑ +3.8pp (baseline'dan), F ~−5pp (CO-DİOVAN false positive başlıca neden)  
+**Gerçekçi Tavan:** ~0.75-0.76 (Haiku 4.5 + Together.ai evaluator instability)  
+**Sonraki Hedef:** CO-DİOVAN false positive fix → F regresyonunu giderme
 
 > **Detaylı kronoloji ve experimental run'lar:** `data/eval/RAGAS_RUN_HISTORY.md`
 
@@ -471,7 +482,8 @@ Corpus, pipeline ve graf verisi büyük sıçrama yaptı:
 - **CYP450:** 84 kayıt statik tablo + Neo4j CYP edge + LLM fallback extraction
 - Kümülatif risk: 9 kategori, deterministik
 - RAGAS benchmark: F=0.7607 | CU=0.8028 | CR=0.7250 | **Ort=0.7628 ✓ KABUL** (Run 12)
-- 81 pytest test geçiyor
+- VALIDATE Pipeline: 6 adım (citation-level + CYP yön + verdict alignment)
+- **95 pytest test geçiyor**
 
 ### Sprint 2026-04-26 — Model Davranış İyileştirmeleri ✅
 

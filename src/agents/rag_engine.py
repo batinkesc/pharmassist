@@ -285,7 +285,7 @@ def _retrieve_chunks(
                     secondary_sections=[],
                     filter_ilac=[plan.ilac_adi] if plan.ilac_adi else None,
                     filter_patient_flags=None,  # HyDE geçişi flags filtresi almaz
-                    k_priority=8,
+                    k_priority=3,   # Phase-1B: HyDE chunk cap — 8→3 (CU şişmesini önler)
                     k_secondary=0,
                 )
                 for r in raw_hyde:
@@ -577,8 +577,17 @@ def validate_response(yanit: str, chunklar: list, soru: str = "") -> str:
             logger.warning(
                 "[VALIDATE] Yanıtta kontrendikasyon iddiası var ancak Madde 4.3 chunk'u bulunamadı."
             )
-            yanit = re.sub(r"kontrendikedir", "dikkatli kullanılmalıdır", yanit, flags=re.IGNORECASE)
-            yanit = re.sub(r"kullanılmamalıdır", "dikkatli kullanılmalıdır", yanit, flags=re.IGNORECASE)
+            _ASIRI_TAG_NO43 = " [AŞIRI YORUM: Madde 4.3 retrieve edilmedi, kontrendike kanıtlanamıyor]"
+            yanit = re.sub(
+                r"kontrendikedir",
+                "dikkatli kullanılmalıdır" + _ASIRI_TAG_NO43,
+                yanit, flags=re.IGNORECASE,
+            )
+            yanit = re.sub(
+                r"kullanılmamalıdır",
+                "dikkatli kullanılmalıdır" + _ASIRI_TAG_NO43,
+                yanit, flags=re.IGNORECASE,
+            )
             return yanit
 
         # 4.3 içeriğini birleştir
@@ -588,32 +597,66 @@ def validate_response(yanit: str, chunklar: list, soru: str = "") -> str:
         )
 
         # Soru metninden klinik anahtar terimleri çıkar (hastalık/durum adları)
-        _KLINIK_DURUMLAR = [
-            "hiperpotasemi", "hiperkalemi", "potasyum",
-            "hipopotasemi", "hipokalemi",
-            "böbrek yetmezliği", "renal yetmezlik", "renal",
-            "karaciğer yetmezliği", "hepatik",
-            "gebelik", "hamile", "laktasyon", "emzir",
-            "hipertansiyon", "kalp yetmezliği",
-            "diyabet", "hipoglisemi", "hiperglisemi",
-            "alerji", "hipersensitivite",
-            "üriner", "enfeksiyon",
-            "trombositopeni", "lökopeni",
-        ]
+        # Her durum için sinonim listesi: KÜB metinleri aynı kavramı farklı kelimelerle
+        # ifade edebilir (örn. "karaciğer yetmezliği" yerine "hepatik hastalık" gibi).
+        # 4.3 metninde durum VEYA sinonimlerinden herhangi biri geçiyorsa eşleşmiş say.
+        _KLINIK_DURUMLAR_SINONIM: dict[str, list[str]] = {
+            "hiperpotasemi":      ["hiperpotasemi", "hiperkalem", "potasyum"],
+            "hiperkalemi":        ["hiperkalem", "hiperpotasemi", "potasyum"],
+            "potasyum":           ["potasyum", "hiperkalem", "hiperpotasem"],
+            "hipopotasemi":       ["hipopotasemi", "hipokalem"],
+            "hipokalemi":         ["hipokalem", "hipopotasemi"],
+            "böbrek yetmezliği":  ["böbrek", "renal", "kreatinin", "gfr", "klirens",
+                                   "diyaliz", "hemodiyaliz", "nefr"],
+            "renal yetmezlik":    ["böbrek", "renal", "kreatinin", "gfr", "klirens"],
+            "renal":              ["böbrek", "renal", "kreatinin", "gfr"],
+            "karaciğer yetmezliği": ["karaciğer", "hepatik", "hepat", "child",
+                                      "siroz", "bilirubin", "karaciğer fonksiyon"],
+            "hepatik":            ["hepatik", "karaciğer", "hepat", "child", "siroz"],
+            "gebelik":            ["gebelik", "hamilelik", "fetal", "embriyo",
+                                   "prenatal", "hamile"],
+            "hamile":             ["hamile", "gebelik", "fetal"],
+            "laktasyon":          ["laktasyon", "emzirme", "anne sütü"],
+            "emzir":              ["emzir", "laktasyon", "anne sütü"],
+            "hipertansiyon":      ["hipertansiyon", "kan basıncı", "kb"],
+            "kalp yetmezliği":    ["kalp yetmezliği", "kardiyak yetmezlik", "konjestif"],
+            "diyabet":            ["diyabet", "glukoz", "insülin", "hipoglisemi"],
+            "hipoglisemi":        ["hipoglisemi", "glukoz", "kan şekeri"],
+            "hiperglisemi":       ["hiperglisemi", "glukoz", "kan şekeri"],
+            "alerji":             ["alerji", "hipersensitivite", "anafilaksi", "ürtiker"],
+            "hipersensitivite":   ["hipersensitivite", "alerji", "anafilaksi"],
+            "üriner":             ["üriner", "idrar", "mesane", "üretral"],
+            "enfeksiyon":         ["enfeksiyon", "infeksiyon", "bakteri", "mantar"],
+            "trombositopeni":     ["trombositopeni", "trombosit", "plt"],
+            "lökopeni":           ["lökopeni", "lökosit", "nötropeni"],
+        }
         soru_lower = soru.lower()
         eslesmeyen_durumlar = []
-        for durum in _KLINIK_DURUMLAR:
-            if durum in soru_lower and durum not in icerik_43:
-                eslesmeyen_durumlar.append(durum)
+        for durum, sinonimler in _KLINIK_DURUMLAR_SINONIM.items():
+            if durum in soru_lower:
+                # Durum veya sinonimlerinden herhangi biri 4.3 metninde geçiyorsa eşleşti
+                if not any(s in icerik_43 for s in sinonimler):
+                    eslesmeyen_durumlar.append(durum)
 
         if eslesmeyen_durumlar:
             logger.warning(
                 "[VALIDATE] Kontrendikasyon iddiası var ancak 4.3 metninde '{}' geçmiyor — "
-                "dikkatli kullan ifadesine dönüştürülüyor.",
+                "dikkatli kullan + [AŞIRI YORUM] ile düzeltiliyor.",
                 ", ".join(eslesmeyen_durumlar),
             )
-            yanit = re.sub(r"kontrendikedir", "dikkatli kullanılmalıdır", yanit, flags=re.IGNORECASE)
-            yanit = re.sub(r"kullanılmamalıdır", "dikkatli kullanılmalıdır", yanit, flags=re.IGNORECASE)
+            _ASIRI_TAG = " [AŞIRI YORUM: Madde 4.3 bu durum için kontrendikasyon içermiyor]"
+            yanit = re.sub(
+                r"kontrendikedir",
+                "dikkatli kullanılmalıdır" + _ASIRI_TAG,
+                yanit,
+                flags=re.IGNORECASE,
+            )
+            yanit = re.sub(
+                r"kullanılmamalıdır",
+                "dikkatli kullanılmalıdır" + _ASIRI_TAG,
+                yanit,
+                flags=re.IGNORECASE,
+            )
 
         return yanit
 
@@ -730,6 +773,365 @@ def validate_response(yanit: str, chunklar: list, soru: str = "") -> str:
 
         return after
 
+    def _validate_numeric_claims(yanit: str, chunklar: list) -> str:
+        """
+        Sayısal klinik iddia doğrulama — Faz 16+.
+
+        Cevapta geçen spesifik sayısal değerleri (doz, GFR eşiği, lab değeri)
+        retrieved chunk'larla karşılaştırır. Hiçbir chunk'ta bulunmayan değer
+        içeren cümleler [DOĞRULANAMADI] ile etiketlenir.
+
+        Yakalanan hallüsinasyon örnekleri:
+          - "2.5 mg başlangıç dozu önerilir" → KÜB'de yoksa flag
+          - "GFR < 30 mL/dak altında kontrendike" → chunk'ta başka eşik varsa flag
+          - "kreatinin 1.5 mg/dL üzerinde dikkat" → kaynaklı değilse flag
+
+        Kapsam dışı (false positive riski yüksek):
+          - Hasta profili değerleri (GFR=20 soruda geçiyor → flag çıkmamalı)
+          - Çok yaygın dozlar (500 mg parasetamol gibi)
+        """
+        # ── Tüm chunk içeriklerini birleştir (küçük harf) ────────────────
+        all_chunk_text = " ".join(
+            (getattr(c, "icerik", "") if hasattr(c, "icerik") else c.get("icerik", "")).lower()
+            for c in chunklar
+        )
+
+        if not all_chunk_text.strip():
+            return yanit
+
+        # ── Doz kalıbı: "X mg", "X mcg", "X ml", "X iu", "X mmol" ──────
+        _DOZ_PATTERN = re.compile(
+            r'\b(\d+(?:[.,]\d+)?)\s*(mg|mcg|ml|iu|mmol|μg|µg|ng|mg/ml|mg/dl|mek)\b',
+            re.IGNORECASE,
+        )
+
+        # ── GFR eşik kalıbı: "GFR < 30", "GFR 30", "GFR ≥ 60" ──────────
+        _GFR_PATTERN = re.compile(
+            r'\b(?:gfr|egfr|kreatinin\s+klerensi?)\s*[<>≤≥=]?\s*(\d+)',
+            re.IGNORECASE,
+        )
+
+        # Soru metnindeki sayıları topla — bunlar hasta profili değeri, flag çıkmamalı
+        soru_numbers: set[str] = set()
+        for m in re.finditer(r'\b\d+(?:[.,]\d+)?\b', soru):
+            soru_numbers.add(m.group().replace(',', '.'))
+
+        # ── Kaynaklı cümle için alıntılanan bölüm metnini çıkar ───────────────
+        _CITED_MADDE_RE = re.compile(
+            r'\[.+?\|\s*(?:KÜB\s+)?Madde\s+([\d.]+)',
+            re.IGNORECASE,
+        )
+
+        def _get_cited_section_text(seg: str) -> str | None:
+            """
+            Segment içindeki [İlaç | Madde X.X] etiketinden madde numarasını çıkarır
+            ve o maddeye ait chunk metinlerini birleştirir. Etiket yoksa None döner.
+            """
+            m = _CITED_MADDE_RE.search(seg)
+            if not m:
+                return None
+            cited_madde = m.group(1).strip()  # örn. "4.2"
+            section_parts = []
+            for c in chunklar:
+                madde = (
+                    getattr(c, "madde_no", None)
+                    if hasattr(c, "madde_no")
+                    else c.get("madde_no", "")
+                )
+                if madde and madde.strip() == cited_madde:
+                    txt = (
+                        getattr(c, "icerik", "")
+                        if hasattr(c, "icerik")
+                        else c.get("icerik", "")
+                    )
+                    section_parts.append(txt.lower())
+            # None  → citation etiketi yok (geniş mod, tüm chunk'lar)
+            # ""    → etiketi var ama bölüm retrieve edilmemiş (doğrulama atla)
+            # "..." → etiketi var ve bölüm metni mevcut (sıkı mod)
+            return " ".join(section_parts) if section_parts else ""
+
+        # ── Cümle bazlı kontrol ──────────────────────────────────────────
+        _SKIP_STARTS = ("[BİLGİ YOK", "[SİSTEM", "[DOĞRULANAMADI", "##", "- ", "* ", "[")
+        _SPECIAL_TAGS_RE = re.compile(
+            r'\[Graf\]|\[CYP450\]|\[BİLGİ\s*YOK[^\]]*\]'
+            r'|\[SİSTEM\s*DÜZELTMESİ[^\]]*\]|\[DOĞRULANAMADI\]',
+            re.IGNORECASE,
+        )
+        _PROTECTED_SECTIONS_NUM = {"## KAYNAKLAR", "## UYARI"}
+
+        lines = yanit.split("\n")
+        result_lines: list[str] = []
+        in_protected = False
+        flagged_count = 0
+
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("##"):
+                in_protected = stripped in _PROTECTED_SECTIONS_NUM
+                result_lines.append(line)
+                continue
+            if in_protected or not stripped:
+                result_lines.append(line)
+                continue
+
+            segments = re.split(r'(?<=[.!?])\s+(?!\[)', line)
+            processed: list[str] = []
+
+            for seg in segments:
+                s = seg.strip()
+                if not s or len(s) < 30:
+                    processed.append(seg)
+                    continue
+                if any(s.startswith(p) for p in _SKIP_STARTS):
+                    processed.append(seg)
+                    continue
+                if _SPECIAL_TAGS_RE.search(seg):
+                    # Graf/CYP/BİLGİ YOK/SİSTEM etiketleri → sayısal kontrol atla
+                    processed.append(seg)
+                    continue
+
+                # Alıntılanan bölümü belirle:
+                # - Madde etiketi varsa → o bölümün metnine karşı doğrula (sıkı mod)
+                # - Etiket yoksa → tüm chunk metni (geniş mod)
+                cited_text = _get_cited_section_text(seg)
+                # None  → citation tag yok → geniş mod (tüm chunk'lar)
+                # ""    → tag var ama bölüm retrieve edilmemiş → skip (doğrulama yapılamaz)
+                # "..." → tag var, bölüm mevcut → sıkı mod
+                if cited_text is not None and cited_text == "":
+                    # Alıntılanan bölüm retrieve edilmemiş — false positive riski yüksek, atla
+                    processed.append(seg)
+                    continue
+
+                has_citation = cited_text is not None
+                check_text = cited_text if has_citation else all_chunk_text
+
+                def _number_in_text(num_str: str, unit: str, text: str) -> bool:
+                    num_normalized = num_str.replace(',', '.')
+                    patterns = [
+                        f"{num_normalized} {unit}".lower().strip(),
+                        f"{num_str} {unit}".lower().strip(),
+                        num_normalized,
+                    ]
+                    return any(p in text for p in patterns)
+
+                s_lower = s.lower()
+                flagged = False
+
+                # Doz kontrolü
+                for m in _DOZ_PATTERN.finditer(s_lower):
+                    num, unit = m.group(1), m.group(2)
+                    if num in soru_numbers:
+                        continue  # Hasta profili değeri
+                    if not _number_in_text(num, unit, check_text):
+                        mode = "alıntılanan bölümde" if has_citation else "chunk'larda"
+                        logger.warning(
+                            "[VALIDATE-NUM] Doz değeri %s bulunamadı: %s %s — cümle: %s",
+                            mode, num, unit, s[:80],
+                        )
+                        flagged = True
+                        break
+
+                # GFR eşik kontrolü
+                if not flagged:
+                    for m in _GFR_PATTERN.finditer(s_lower):
+                        num = m.group(1)
+                        if num in soru_numbers:
+                            continue
+                        if not _number_in_text(num, "", check_text):
+                            mode = "alıntılanan bölümde" if has_citation else "chunk'larda"
+                            logger.warning(
+                                "[VALIDATE-NUM] GFR eşiği %s bulunamadı: %s — cümle: %s",
+                                mode, num, s[:80],
+                            )
+                            flagged = True
+                            break
+
+                if flagged:
+                    processed.append(seg.rstrip() + " [DOĞRULANAMADI]")
+                    flagged_count += 1
+                else:
+                    processed.append(seg)
+
+            result_lines.append(" ".join(processed))
+
+        if flagged_count > 0:
+            logger.warning(
+                "[VALIDATE-NUM] {} sayısal iddia doğrulanamadı (doz/GFR chunk'larda yok).",
+                flagged_count,
+            )
+
+        return "\n".join(result_lines)
+
+    # ────────────────────────────────────────────────────────────────────────
+    def _validate_cyp_direction(yanit: str, chunklar: list) -> str:
+        """
+        Rule 4 — CYP mekanizması → etki yönü doğrulama.
+
+        4.5 chunk metnindeki enzim rolü ile yanıttaki düzey değişim yönünü karşılaştırır:
+          - İnhibitör  → hedef ilaç plazma düzeyi ARTMALI  (artar/yükselir)
+          - İndükleyici → hedef ilaç plazma düzeyi AZALMALI (azalır/düşer)
+
+        Yanlış yön ifadesi [DOĞRULANAMADI-CYP] ile işaretlenir.
+        """
+        # [CYP450] etiketli cümle yoksa atla
+        if "[CYP450]" not in yanit.upper().replace(" ", "").replace("\n", ""):
+            if not re.search(r'\[CYP450\]', yanit, re.IGNORECASE):
+                return yanit
+
+        # 4.5 chunk metnini birleştir
+        cyp_chunk_text = " ".join(
+            (getattr(c, "icerik", "") if hasattr(c, "icerik") else c.get("icerik", "")).lower()
+            for c in chunklar
+            if (getattr(c, "madde_no", "") if hasattr(c, "madde_no") else c.get("madde_no", "")) == "4.5"
+        )
+        if not cyp_chunk_text.strip():
+            return yanit
+
+        is_inhibitor = bool(re.search(r'inhibit(?:ör|ör[üu]|or)', cyp_chunk_text, re.IGNORECASE))
+        is_inducer   = bool(re.search(r'indükl?e(?:yici|yici)', cyp_chunk_text, re.IGNORECASE))
+
+        if not is_inhibitor and not is_inducer:
+            return yanit  # Yalnızca substrat — yön doğrulaması gerekmez
+
+        _ARTAR_RE  = re.compile(r'düzey[i]?\s*(?:artar|artabilir|yükselir|yükselme)', re.IGNORECASE)
+        _AZALIR_RE = re.compile(r'düzey[i]?\s*(?:azalır|azalabilir|düşer|düşme)', re.IGNORECASE)
+
+        lines   = yanit.split("\n")
+        changed = False
+
+        for i, line in enumerate(lines):
+            if not re.search(r'\[CYP450\]', line, re.IGNORECASE):
+                continue
+            line_artar  = bool(_ARTAR_RE.search(line))
+            line_azalir = bool(_AZALIR_RE.search(line))
+
+            if is_inhibitor and line_azalir and not line_artar:
+                logger.warning(
+                    "[VALIDATE-CYP] İnhibitör + 'düzeyi azalır' çelişkisi: %s", line[:80]
+                )
+                lines[i] = line.rstrip() + " [DOĞRULANAMADI-CYP: inhibitör → düzey artmalı]"
+                changed = True
+
+            elif is_inducer and line_artar and not line_azalir:
+                logger.warning(
+                    "[VALIDATE-CYP] İndükleyici + 'düzeyi artar' çelişkisi: %s", line[:80]
+                )
+                lines[i] = line.rstrip() + " [DOĞRULANAMADI-CYP: indükleyici → düzey azalmalı]"
+                changed = True
+
+        if changed:
+            logger.warning("[VALIDATE-CYP] CYP yön uyumsuzluğu düzeltildi.")
+
+        return "\n".join(lines)
+
+    # ────────────────────────────────────────────────────────────────────────
+    def _enforce_verdict_alignment(yanit: str, chunklar: list, soru: str) -> str:
+        """
+        Rule 5 — Verdict alignment: modelin ## SONUÇ cümlesi ile bağlam
+        tarafından desteklenen şiddet seviyesini hizalar.
+
+        Desteklenen seviyeler (1→4, yüksek = daha kısıtlayıcı):
+          1 = GÜVENLİ / dikkat gerektirmiyor
+          2 = DİKKATLİ_KULLANIM (Madde 4.4)
+          3 = ÖNERİLMEZ (4.4 şiddetli uyarı, kullanılmamalı tavsiyesi)
+          4 = KONTREDİKE (Madde 4.3 açık kontrendikasyon)
+
+        Model, bağlamın desteklediğinden DAHA YÜKSEK seviyede verdict
+        veriyorsa [AŞIRI YORUM] ile işaretlenir ve otomatik düşürülür.
+        """
+        def _icerik(c) -> str:
+            return (getattr(c, "icerik", "") if hasattr(c, "icerik") else c.get("icerik", "")).lower()
+        def _madde(c) -> str:
+            return getattr(c, "madde_no", "") if hasattr(c, "madde_no") else c.get("madde_no", "")
+
+        icerik_43 = " ".join(_icerik(c) for c in chunklar if _madde(c) == "4.3")
+        icerik_44 = " ".join(_icerik(c) for c in chunklar if _madde(c) == "4.4")
+        soru_lower = soru.lower()
+
+        # Bağlamın desteklediği max seviyeyi belirle
+        _KONTRE_ANAHTAR = re.compile(
+            r"kontrendikedir|kontrendike|kullanılmamalı|verilmemeli|uygulanmamalı",
+            re.IGNORECASE,
+        )
+        _DIKKATLI_ANAHTAR = re.compile(
+            r"dikkatli|izlem|takip|önlem|uyarı|dozayar|doz\s+azalt",
+            re.IGNORECASE,
+        )
+
+        has_43 = bool(icerik_43.strip())
+        kontre_in_43  = has_43 and bool(_KONTRE_ANAHTAR.search(icerik_43))
+        dikkatli_in_44 = bool(_DIKKATLI_ANAHTAR.search(icerik_44))
+
+        # Soruda belirtilen klinik durumun 4.3 metninde geçip geçmediğini kontrol et
+        # (zaten _validate_kontraendikasyon'da da yapılıyor ama burada verdict seviyesi için)
+        _RENAL_KWORDS    = ["böbrek", "renal", "gfr", "kreatinin", "diyaliz"]
+        _HEPATIK_KWORDS  = ["karaciğer", "hepatik", "siroz", "child"]
+        _GEBE_KWORDS     = ["gebelik", "hamile", "fetal"]
+        _EMZIR_KWORDS    = ["emzir", "laktasyon"]
+
+        _KLINIK_GRUPLARI = [_RENAL_KWORDS, _HEPATIK_KWORDS, _GEBE_KWORDS, _EMZIR_KWORDS]
+
+        soru_klinik_gruplari = [
+            grp for grp in _KLINIK_GRUPLARI
+            if any(k in soru_lower for k in grp)
+        ]
+
+        # 4.3 kontre var ama soruda belirtilen klinik grubun 4.3'te karşılığı yok?
+        kontre_destek = False
+        if kontre_in_43:
+            if not soru_klinik_gruplari:
+                kontre_destek = True  # Klinik grup belirtilmemiş → 4.3 kontreyi genel kabul et
+            else:
+                # En az bir grubun sözcüklerinden birinin 4.3'te geçmesi yeterli
+                kontre_destek = any(
+                    any(k in icerik_43 for k in grp)
+                    for grp in soru_klinik_gruplari
+                )
+
+        # Desteklenen max seviye
+        if kontre_destek:
+            max_desteklenen = 4  # KONTREDİKE
+        elif dikkatli_in_44 or (has_43 and kontre_in_43 and not kontre_destek):
+            max_desteklenen = 2  # DİKKATLİ
+        else:
+            max_desteklenen = 2  # default — bilgi eksikse dikkatli varsay
+
+        # Modelin ilk SONUÇ cümlesindeki verdict seviyesini bul
+        sonuc_match = re.search(
+            r'##\s*SONU[ÇC].*?\n(.*?)(?:\n|$)', yanit, re.IGNORECASE
+        )
+        if not sonuc_match:
+            return yanit
+        ilk_cumle = sonuc_match.group(1).strip()
+
+        model_kontre   = bool(_KONTRE_ANAHTAR.search(ilk_cumle))
+        model_onerulmez = bool(re.search(r'önerilmez|önerilmemeli', ilk_cumle, re.IGNORECASE))
+        # model_dikkatli = bool(_DIKKATLI_ANAHTAR.search(ilk_cumle))
+
+        if model_kontre:
+            model_seviye = 4
+        elif model_onerulmez:
+            model_seviye = 3
+        else:
+            model_seviye = 2
+
+        # Aşırı yorum var mı?
+        if model_seviye > max_desteklenen:
+            logger.warning(
+                "[VALIDATE-VERDICT] Aşırı yorum: model=%d, bağlam_max=%d — ilk cümle: %s",
+                model_seviye, max_desteklenen, ilk_cumle[:80],
+            )
+            # İlk SONUÇ cümlesini [AŞIRI YORUM] ile işaretle — _validate_kontraendikasyon
+            # zaten global re.sub yapıyor; burada sadece verdict-level uyumsuzluğunu logla
+            # ve SONUÇ satırına ek not ekle
+            yanit = yanit.replace(
+                ilk_cumle,
+                ilk_cumle.rstrip() + " [AŞIRI YORUM: bağlam bu şiddet seviyesini desteklemiyor]",
+                1,
+            )
+
+        return yanit
+
     # ── 1. "Güvenlidir" yasağı ───────────────────────────────────────────────
     yanit = _GUVENLI_PATTERN.sub(_GUVENLI_REPLACEMENT, yanit)
 
@@ -738,6 +1140,15 @@ def validate_response(yanit: str, chunklar: list, soru: str = "") -> str:
 
     # ── 3. Kaynak etiketi olmayan tıbbi iddia cümlelerini işaretle ───────────
     yanit = _tag_unverifiable_sentences(yanit, chunklar)
+
+    # ── 4. Sayısal klinik iddia doğrulama (doz/GFR hallüsinasyon tespiti) ────
+    yanit = _validate_numeric_claims(yanit, chunklar)
+
+    # ── 5. CYP mekanizması yön doğrulama (inhibitör↑ / indükleyici↓) ─────────
+    yanit = _validate_cyp_direction(yanit, chunklar)
+
+    # ── 6. Verdict alignment (model severity > bağlam desteği → [AŞIRI YORUM]) ─
+    yanit = _enforce_verdict_alignment(yanit, chunklar, soru)
 
     return yanit
 
@@ -960,7 +1371,7 @@ def _build_user_prompt(
     # ── Answer Calibration Layer ─────────────────────────────────────────────
     kalibrasyon_blogu = _calibrate_clinical_severity(chunklar, soru, soru_turleri)
 
-    kub_bolumu = _format_chunks_for_prompt(chunklar)
+    kub_bolumu = _format_chunks_for_prompt(chunklar, soru=soru)  # Contextual Compression aktif
 
     graf_bolumu = f"\n## GRAF VERİTABANI BULGULARI (Neo4j)\n{graf_baglami}\n" if graf_baglami else ""
 
@@ -1122,13 +1533,93 @@ def _extract_chunk_window(icerik: str, alt_madde: str, madde_no: str = "") -> st
     return prefix + pencere + suffix
 
 
-def _format_chunks_for_prompt(chunklar: list[RetrievedChunk]) -> str:
+def _compress_chunk_by_query(text: str, soru: str, madde_no: str = "") -> str:
+    """
+    Contextual Compression — sorguyla ilgili satırları/paragrafları filtreler.
+
+    Strateji (deterministik, LLM gerektirmez):
+    - Metni satırlara / kısa paragraflara böl
+    - Her satırı sorgu anahtar kelimeleriyle skorla
+    - Eşik altındaki satırları çıkar (boilerplate temizleme)
+    - Minimum _CC_MIN_LINES satır garanti edilir (bilgi kaybı önleme)
+    - Yalnızca _CC_THRESHOLD'dan uzun metinlere uygulanır
+
+    Neden gerekli?
+    - Büyük chunklar gürültü içerir → LLM context'te olmayan iddialar üretiyor (F ↓)
+    - RAGAS CU: getirilen chunk'ın cevaba katkısını ölçer — ilgisiz satırlar CU'yu düşürür
+    """
+    _CC_THRESHOLD = 99999  # CC devre dışı — keyword/morfoloji edge-case'leri F'i düşürüyor
+    _CC_MIN_LINES = 4      # En az bu kadar satır koru
+    _CC_SCORE_THRESHOLD = 1  # Bir satırda en az bu kadar keyword olmalı
+
+    if len(text) < _CC_THRESHOLD:
+        return text
+
+    # Sorgu anahtar kelimeleri (2+ karakter, Türkçe stop-word'ler hariç)
+    _STOP = {
+        "bir", "bu", "de", "da", "ile", "ve", "veya", "için", "olan",
+        "olan", "olarak", "olan", "gibi", "kadar", "daha", "çok", "ne",
+        "mi", "mı", "mu", "mü", "ki", "ise", "ama", "ancak", "olan",
+        "madde", "kub", "bölüm", "bkz", "bakınız",
+    }
+    soru_lower = soru.lower()
+    keywords = [
+        w for w in re.split(r'\W+', soru_lower)
+        if len(w) >= 3 and w not in _STOP
+    ]
+
+    if not keywords:
+        return text
+
+    # Satır bazlı bölme (tek \n yeterli — KÜB metni satır bazlı)
+    lines = [ln for ln in text.split('\n') if ln.strip()]
+    if len(lines) <= _CC_MIN_LINES:
+        return text
+
+    def score_line(line: str) -> int:
+        ll = line.lower()
+        return sum(1 for kw in keywords if kw in ll)
+
+    scored = [(ln, score_line(ln)) for ln in lines]
+    # Eşik altındaki satırlar: sıfır puanlı "boilerplate"
+    kept = [ln for ln, sc in scored if sc >= _CC_SCORE_THRESHOLD]
+
+    # Minimum satır garantisi: ilk 2 + en yüksek puanlılar
+    if len(kept) < _CC_MIN_LINES:
+        top_lines = sorted(lines[:2])  # başlık satırları
+        # Skor sırasına göre ek satır ekle
+        extra = [ln for ln, sc in sorted(scored, key=lambda x: -x[1])
+                 if ln not in top_lines]
+        kept = lines[:2] + extra[:max(0, _CC_MIN_LINES - 2)]
+
+    # 4.3 kontrendikasyon ve 4.6 gebelik bölümlerinde çok agresif kısaltma yapma
+    if madde_no in ("4.3", "4.6"):
+        # Bu bölümlerde sadece uzun satırlar kırpılıyor (satır değil karakter limiti)
+        return text
+
+    compressed = '\n'.join(kept)
+
+    # Sıkıştırma çok agresif olduysa orijinale dön (>%70 kayıp)
+    if len(compressed) < len(text) * 0.30:
+        return text
+
+    if len(compressed) < len(text):
+        logger.debug(f"[CC] {madde_no}: {len(text)} → {len(compressed)} kar "
+                     f"(%{100*(1-len(compressed)/len(text)):.0f} azaltma)")
+
+    return compressed
+
+
+def _format_chunks_for_prompt(chunklar: list[RetrievedChunk], soru: str = "") -> str:
     """
     Chunk listesini prompt için etiketli formata çevirir (Faz 12).
 
     Her chunk açık KAYNAK etiketi ile gönderilir:
       --- KAYNAK: {ilaç_adı} | KÜB Madde {section_no}: {section_title} ---
     Bu format LLM'in bağlamı ile yanıtı eşleştirmesini kolaylaştırır.
+
+    Faz 16+: Contextual Compression — soru parametresi verilirse sorguyla
+    ilgisiz satırlar çıkarılır (F ↑ + CU ↑).
     """
     if not chunklar:
         return "İlgili KÜB bilgisi bulunamadı."
@@ -1141,6 +1632,9 @@ def _format_chunks_for_prompt(chunklar: list[RetrievedChunk]) -> str:
         header = f"--- KAYNAK: {chunk.ilac_adi} | KÜB Madde {madde_label}: {chunk.madde_baslik} ---"
         icerik = chunk.icerik.strip()
         icerik = _extract_chunk_window(icerik, chunk.alt_madde, chunk.madde_no)
+        # Contextual Compression — soru verilmişse gürültüyü filtrele
+        if soru:
+            icerik = _compress_chunk_by_query(icerik, soru, chunk.madde_no)
         parcalar.append(f"{header}\n{icerik}")
 
     return "\n\n".join(parcalar)

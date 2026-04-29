@@ -1,0 +1,127 @@
+[
+  {
+    "id": "v3_q15",
+    "kategori": "etkilesim_doz",
+    "soru": "ALDACTONE kullanan hastada PLASORİN dozu neden değişebilir?",
+    "ground_truth": "Spironolakton (ALDACTONE) varfarin (PLASORİN) metabolizmasını etkileyebilir; birlikte kullanımda INR değerinin değişebileceği bildirilmiştir. Varfarin dozu ayarlaması gerekebilir; INR yakın izlenmelidir. Varfarin dozu INR değerine göre bireyselleştirilmeli; INR hedefi 2-3 için haftalık takip önerilir. Varfarin başlangıç dozu genellikle 2-5 mg/gün olup INR yanıtına göre titre edilir.",
+    "hasta": {
+      "yas": 67, "cinsiyet": "kadın", "gfr": 55.0, "karaciger_skoru": null,
+      "mevcut_ilaclar": ["PLASORİN 5 mg", "ALDACTONE 25 mg"],
+      "alerjiler": [], "endikasyonlar": ["kalp yetmezliği", "atriyal fibrilasyon"],
+      "gebelik": false, "emzirme": false, "lab_degerleri": {"inr": 2.1}
+    },
+    "hedef_ilaclar": ["PLASORİN 5 mg tablet", "ALDACTONE®-A 25 mg tablet"],
+    "_not": "Haiku F=0.308 — en kötü faithfulness (Run 14)"
+  },
+  {
+    "id": "v3_q27",
+    "kategori": "doz_geriyatrik",
+    "soru": "80 yaşındaki hastada RENITEC başlangıç dozu ne olmalı?",
+    "ground_truth": "Enalapril (RENITEC) yaşlı hastalarda böbrek fonksiyonu azalmış olabileceğinden düşük başlangıç dozuyla başlanmalıdır. Geriyatrik hastalarda 2.5 mg başlangıç dozu önerilir, böbrek fonksiyonu ve kan basıncı yanıtına göre titre edilir.",
+    "hasta": {
+      "yas": 80, "cinsiyet": "kadın", "gfr": 55.0, "karaciger_skoru": null,
+      "mevcut_ilaclar": [], "alerjiler": [], "endikasyonlar": ["hipertansiyon"],
+      "gebelik": false, "emzirme": false, "lab_degerleri": {"kreatinin": 1.3}
+    },
+    "hedef_ilaclar": ["RENITEC 5 mg tablet"],
+    "_not": "Haiku F=0.400 — doz geriyatrik regresyonu"
+  },
+  {
+    "id": "v3_q19",
+    "kategori": "etkilesim_farmakodinamik",
+    "soru": "CLEXANE kullanan hastaya PLAVIX eklenmesi kanama riskini nasıl etkiler?",
+    "ground_truth": "Enoksaparin (CLEXANE) ve klopidogrel (PLAVIX) kombinasyonu kanama riskini artırır. Her ikisi de antitrombotik etki gösterir; birlikte kullanımda majör kanama ve gastrointestinal kanama riski yükselir. Klinik fayda-risk dengesi değerlendirilerek kullanılmalı, kanama belirtileri yakın izlenmelidir. Kanama belirtileri için hasta dikkatle izlenmeli; mümkünse tek ajan kullanılmalı veya kombine kullanım en kısa süreye indirilmelidir.",
+    "hasta": {
+      "yas": 68, "cinsiyet": "erkek", "gfr": 60.0, "karaciger_skoru": null,
+      "mevcut_ilaclar": ["CLEXANE 4000 anti-Xa"],
+      "alerjiler": [], "endikasyonlar": ["akut koroner sendrom"],
+      "gebelik": false, "emzirme": false, "lab_degerleri": {"trombosit": 180}
+    },
+    "hedef_ilaclar": [
+      "CLEXANE 4000 anti-Xa IU/0,4 mL enjeksiyonluk çözelti içeren kullanıma hazır enjektör",
+      "PLAVIX® 75 mg film kaplı tablet"
+    ],
+    "_not": "Haiku F=0.545 — etkileşim/kanama sorusu regresyonu"
+  },
+  {
+    "id": "v3_q10",
+    "kategori": "cyp450_etkilesim",
+    "soru": "PLAVIX kullanan hastaya CANDİDİN başlanırsa antiplatelet etki nasıl değişir?",
+    "ground_truth": "Flukonazol (CANDİDİN) güçlü CYP2C19 inhibitörüdür. Klopidogrel (PLAVIX) CYP2C19 üzerinden aktif metabolite dönüştürülür. Flukonazol bu dönüşümü inhibe ederek klopidogrelin antiplatelet etkisini önemli ölçüde azaltır. Stent olan hastalarda bu kombinasyondan kaçınılmalıdır. CYP2C19 etkisi olmayan antifungal (örn. terbinafin) alternatif olarak tercih edilmeli; zorunluysa antiplatelet etki ve trombotik risk dikkatle takip edilmelidir.",
+    "hasta": {
+      "yas": 61, "cinsiyet": "erkek", "gfr": 70.0, "karaciger_skoru": null,
+      "mevcut_ilaclar": ["PLAVIX 75 mg"],
+      "alerjiler": [], "endikasyonlar": ["kardiyak stent", "kandida enfeksiyonu"],
+      "gebelik": false, "emzirme": false, "lab_degerleri": {}
+    },
+    "hedef_ilaclar": ["PLAVIX® 75 mg film kaplı tablet", "CANDİDİN 150 mg kapsül"],
+    "_not": "Haiku F=0.588 — CYP2C19 etkileşim (Run 12'de F=1.0 idi, büyük regresyon)"
+  },
+  {
+    "id": "v3_q17",
+    "kategori": "cyp450_etkilesim",
+    "soru": "CYMBALTA kullanan hastada ALTİZEM SR eklenirse ne olur?",
+    "ground_truth": "Duloksetin (CYMBALTA) CYP1A2 ve CYP2D6 substratıdır. Diltiazem (ALTİZEM SR) orta düzey CYP3A4 inhibitörüdür. Duloksetin metabolizması üzerinde belirgin etkisi sınırlıdır ancak birlikte kullanımda duloksetin plazma düzeyi izlenmeli ve yan etkiler takip edilmelidir.",
+    "hasta": {
+      "yas": 54, "cinsiyet": "kadın", "gfr": null, "karaciger_skoru": null,
+      "mevcut_ilaclar": ["CYMBALTA 60 mg"],
+      "alerjiler": [], "endikasyonlar": ["depresyon", "hipertansiyon"],
+      "gebelik": false, "emzirme": false, "lab_degerleri": {}
+    },
+    "hedef_ilaclar": ["CYMBALTA® 60 mg kapsül", "ALTİZEM SR 120 mg Mikropellet Kapsül"],
+    "_not": "Haiku F=0.524 — CYP etkileşim regresyonu"
+  },
+  {
+    "id": "v3_q05",
+    "kategori": "kontrendikasyon_karaciger",
+    "soru": "Child-Pugh C karaciğer yetmezliği olan hastada ONAXAN kullanılabilir mi?",
+    "ground_truth": "Rivaroksaban (ONAXAN) Child-Pugh B ve C karaciğer hastalığında kontrendikedir. Karaciğer yetmezliği koagülopati ile ilişkili olduğundan ve rivaroksaban hepatik metabolizma ile atılımına bağlı olduğundan, bu hastalarda kullanılmamalıdır. Alternatif antikoagülan olarak düşük molekül ağırlıklı heparin (DMAH) değerlendirilebilir; karaciğer fonksiyonu ve kanama riski takip edilmelidir.",
+    "hasta": {
+      "yas": 55, "cinsiyet": "erkek", "gfr": null, "karaciger_skoru": "C",
+      "mevcut_ilaclar": [], "alerjiler": [], "endikasyonlar": ["derin ven trombozu"],
+      "gebelik": false, "emzirme": false, "lab_degerleri": {"alt": 180, "bilirubin": 3.2}
+    },
+    "hedef_ilaclar": ["ONAXAN® 20 mg film kaplı tablet"],
+    "_not": "Haiku CR=0.333 — filter_ilac match sorunu + düşük recall"
+  },
+  {
+    "id": "v3_q02",
+    "kategori": "doz_bobrek",
+    "soru": "GFR 20 olan hastada PRADAXA dozu nasıl ayarlanmalı?",
+    "ground_truth": "Dabigatran (PRADAXA) GFR 30 mL/dak altında kontrendikedir. GFR 20 olan bu hastada PRADAXA kullanılmamalıdır. Böbrek fonksiyonu ve kanama riski takip edilmeli; antikoagülan tedavi gerekliyse GFR'ye göre doz ayarlanabilen alternatifler değerlendirilmelidir.",
+    "hasta": {
+      "yas": 72, "cinsiyet": "erkek", "gfr": 20.0, "karaciger_skoru": null,
+      "mevcut_ilaclar": [], "alerjiler": [], "endikasyonlar": ["atriyal fibrilasyon"],
+      "gebelik": false, "emzirme": false, "lab_degerleri": {"kreatinin": 3.1}
+    },
+    "hedef_ilaclar": ["PRADAXA® 150 mg sert kapsül"],
+    "_not": "Haiku F=0.500 CR=0.667 — filter_ilac match başarısız"
+  },
+  {
+    "id": "v3_q18",
+    "kategori": "kontrendikasyon",
+    "soru": "Gebelikte COZAAR kullanılabilir mi?",
+    "ground_truth": "Losartan (COZAAR) gebelikte kontrendikedir. Gebelik kategorisi D olup özellikle 2. ve 3. trimesterde fetüste böbrek hasarı, oligohidramniyos ve ölüm riskiyle ilişkilidir. KÜB belgesinde gebelik mutlak kontrendikasyon olarak belirtilmiştir. Losartan derhal kesilmeli; antihipertansif tedavi için alternatif olarak metildopa veya labetalol tercih edilmeli, fetal izlem yapılmalıdır.",
+    "hasta": {
+      "yas": 32, "cinsiyet": "kadın", "gfr": 80.0, "karaciger_skoru": null,
+      "mevcut_ilaclar": ["COZAAR 50 mg"],
+      "alerjiler": [], "endikasyonlar": ["hipertansiyon"],
+      "gebelik": true, "emzirme": false, "lab_degerleri": {}
+    },
+    "hedef_ilaclar": ["COZAAR 50 mg film kaplı tablet"],
+    "_not": "KONTROL — Haiku F=1.0 CU=0.771 CR=0.750 (stabil iyi soru)"
+  },
+  {
+    "id": "v3_q22",
+    "kategori": "doz_bobrek",
+    "soru": "GFR 25 olan hastada JANUVIA'ya alternatif olarak AMARYL kullanılabilir mi?",
+    "ground_truth": "Glimepirid (AMARYL) ciddi böbrek yetmezliğinde KÜB Madde 4.3 kapsamında kontrendikedir; kullanılmamalıdır. Şiddetli böbrek yetmezliğinde (GFR <30) aktif metabolitler birikir ve ağır hipoglisemi riski oluşur. GFR 25 olan bu hastada AMARYL kullanılmamalıdır. Alternatif olarak böbrek fonksiyonuna göre doz ayarlanabilen sitagliptin (JANUVIA) devam edilebilir veya insülin değerlendirilebilir.",
+    "hasta": {
+      "yas": 70, "cinsiyet": "erkek", "gfr": 25.0, "karaciger_skoru": null,
+      "mevcut_ilaclar": [], "alerjiler": [], "endikasyonlar": ["tip-2-diyabet"],
+      "gebelik": false, "emzirme": false, "lab_degerleri": {"kreatinin": 2.9, "hba1c": 8.5}
+    },
+    "hedef_ilaclar": ["AMARYL 2 mg tablet"],
+    "_not": "GT revizyon — önceki GT 'kontrendike değil' diyordu ama KÜB 4.3 kontrendikasyon, model doğru F=0.375 alıyordu"
+  }
+]

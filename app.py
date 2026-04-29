@@ -19,7 +19,7 @@ load_dotenv()
 from src.agents.patient_profile import PatientProfile, _lab_durumu
 from src.agents.rag_engine import run_rag
 from src.agents.profile_extractor import extract_context, ExtractedContext
-from src.ingestion.lab_parser import parse_lab_file
+from src.ingestion.lab_report_parser import parse_lab_report, LabReportResult
 
 # ─── Sayfa Ayarları ─────────────────────────────────────────────────────────
 
@@ -81,7 +81,7 @@ section[data-testid="stSidebar"] { display: none; }
 }
 .pcard-row:last-child { border-bottom: none; }
 .pcard-lbl { color: #94a3b8; font-size: 0.82rem; }
-.pcard-val { font-weight: 500; }
+.pcard-val { font-weight: 500; color: #0f172a; }
 .pcard-empty { color: #cbd5e1; font-size: 0.84rem; font-style: italic; }
 
 /* ── Karşılama ekranı ── */
@@ -216,18 +216,14 @@ section[data-testid="stSidebar"] { display: none; }
     font-size: 0.83rem;
 }
 
-/* ── Popover trigger butonu (📎 Lab) ── */
-[data-testid="stPopover"] button,
-[data-testid="stPopover"] button:link,
-[data-testid="stPopover"] button:visited,
-[data-testid="stPopover"] button:hover,
-[data-testid="stPopover"] button:active,
-[data-testid="stPopover"] button:focus {
+/* ── Popover trigger butonu (🧪 Lab) ── */
+[data-testid="stPopover"] button {
     background-color: #f1f5f9 !important;
     color: #1e3a5f !important;
     border: 1.5px solid #cbd5e1 !important;
     border-radius: 8px !important;
     font-weight: 500 !important;
+    font-size: 0.82rem !important;
 }
 [data-testid="stPopover"] button:hover {
     background-color: #e2e8f0 !important;
@@ -236,34 +232,76 @@ section[data-testid="stSidebar"] { display: none; }
 [data-testid="stPopover"] button p,
 [data-testid="stPopover"] button span {
     color: #1e3a5f !important;
+    font-size: 0.82rem !important;
 }
 
-/* ── Popover kutusu (açılır panel) ── */
-[data-testid="stPopoverBody"],
-[data-testid="stPopoverBody"] > div {
+/* ── Popover kutusu — sıfır padding, duvara dayalı ── */
+[data-testid="stPopoverBody"] {
     background-color: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
-    border-radius: 12px !important;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.10) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.09) !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+[data-testid="stPopoverBody"] > div {
+    background-color: #ffffff !important;
+    padding: 10px 12px !important;
 }
 
-/* Popover içindeki tüm metin */
+/* Popover metin renkleri */
 [data-testid="stPopoverBody"] p,
 [data-testid="stPopoverBody"] span,
 [data-testid="stPopoverBody"] label,
 [data-testid="stPopoverBody"] small,
 [data-testid="stPopoverBody"] div {
     color: #0f172a !important;
+    font-size: 0.82rem !important;
 }
 
-/* Popover içindeki file uploader alanı */
+/* File uploader — drop alanı tam genişlik, minimal */
 [data-testid="stPopoverBody"] [data-testid="stFileUploaderDropzone"] {
     background: #f8fafc !important;
     border: 1.5px dashed #cbd5e1 !important;
-    border-radius: 8px !important;
+    border-radius: 6px !important;
+    padding: 6px 8px !important;
+    margin: 0 !important;
 }
 [data-testid="stPopoverBody"] [data-testid="stFileUploaderDropzone"] * {
     color: #64748b !important;
+    font-size: 0.78rem !important;
+}
+/* Yüklenen dosya kartı — açık arka plan */
+[data-testid="stPopoverBody"] [data-testid="stFileUploaderFile"] {
+    background: #f1f5f9 !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 6px !important;
+    padding: 4px 8px !important;
+}
+[data-testid="stPopoverBody"] [data-testid="stFileUploaderFile"] * {
+    color: #334155 !important;
+    font-size: 0.78rem !important;
+}
+/* Drop zone içindeki büyük SVG ikon ve "Drag and drop" metni gizle */
+[data-testid="stPopoverBody"] [data-testid="stFileUploaderDropzoneInstructions"] svg,
+[data-testid="stPopoverBody"] [data-testid="stFileUploaderDropzoneInstructions"] span:first-child {
+    display: none !important;
+}
+[data-testid="stPopoverBody"] [data-testid="stFileUploaderDropzoneInstructions"] {
+    padding: 2px 0 !important;
+    gap: 0 !important;
+}
+/* "Browse files" butonu — tam genişlik */
+[data-testid="stPopoverBody"] [data-testid="stBaseButton-secondary"] {
+    width: 100% !important;
+    font-size: 0.78rem !important;
+    padding: 4px !important;
+}
+/* Yüklenen dosyanın dark arka planını kaldır */
+[data-testid="stPopoverBody"] [data-testid="stFileUploaderDropzone"] > div:has(button) {
+    background: #f1f5f9 !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 6px !important;
 }
 
 /* Popover içindeki butonlar */
@@ -271,9 +309,17 @@ section[data-testid="stSidebar"] { display: none; }
     background: #f1f5f9 !important;
     color: #1e3a5f !important;
     border: 1px solid #cbd5e1 !important;
+    font-size: 0.8rem !important;
+    padding: 2px 8px !important;
 }
 [data-testid="stPopoverBody"] .stButton > button:hover {
     background: #e2e8f0 !important;
+}
+
+/* ── Lab sil satırı butonları — küçük, hafif ── */
+[data-testid="stMainBlockContainer"] .lab-del-btn > button {
+    font-size: 0.78rem !important;
+    padding: 2px 8px !important;
 }
 
 /* ── Genel metin rengi düzeltmeleri ── */
@@ -343,9 +389,6 @@ if "ctx" not in st.session_state:
 
 if "preview_ctx" not in st.session_state:
     st.session_state.preview_ctx = ExtractedContext()
-
-if "pending_lab" not in st.session_state:
-    st.session_state.pending_lab = {}       # parse edilmiş ama onaylanmamış lab
 
 if "lab_dosya_adi" not in st.session_state:
     st.session_state.lab_dosya_adi = ""
@@ -423,14 +466,53 @@ def _profil_paneli(ctx: ExtractedContext):
         klin_rows += '<div class="pcard-row"><span class="pcard-lbl">Özel Durum</span><span class="pcard-val">🤰 Gebe</span></div>'
     if ctx.emzirme:
         klin_rows += '<div class="pcard-row"><span class="pcard-lbl">Özel Durum</span><span class="pcard-val">Emziriyor</span></div>'
-    for param, val in ctx.lab_degerleri.items():
-        klin_rows += f'<div class="pcard-row"><span class="pcard-lbl">{param}</span><span class="pcard-val">{val}</span></div>'
     if ctx.endikasyonlar:
         for e in ctx.endikasyonlar[:3]:
             klin_rows += f'<div class="pcard-row"><span class="pcard-lbl">Tanı</span><span class="pcard-val">{e}</span></div>'
     if klin_rows:
         st.markdown(f'<div class="pcard"><div class="pcard-title">🩺 Klinik Durum</div>{klin_rows}</div>',
                     unsafe_allow_html=True)
+
+    # ── Lab Değerleri (kompakt grid + sil) ──
+    if ctx.lab_degerleri:
+        items = list(ctx.lab_degerleri.items())
+        cells = ""
+        for param, val in items:
+            try:
+                durum = _lab_durumu(param, val)
+            except Exception:
+                durum = "bilinmiyor"
+            vc = "#dc2626" if "kritik" in durum else "#d97706" if durum in ("yüksek", "düşük") else "#475569"
+            cells += (
+                f'<div style="display:flex;justify-content:space-between;align-items:center;'
+                f'padding:2px 4px;border-bottom:1px solid #f8fafc;min-width:0;gap:4px">'
+                f'<span style="color:#94a3b8;font-size:0.72rem;white-space:nowrap;'
+                f'overflow:hidden;text-overflow:ellipsis;max-width:58%">{param}</span>'
+                f'<span style="color:{vc};font-weight:500;font-size:0.74rem;'
+                f'white-space:nowrap;flex-shrink:0">{val}</span>'
+                f'</div>'
+            )
+        st.markdown(
+            f'<div class="pcard">'
+            f'<div class="pcard-title">🔬 Lab Değerleri'
+            f'<span style="font-weight:400;color:#cbd5e1;margin-left:6px">({len(items)})</span>'
+            f'</div>'
+            f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 8px">{cells}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        # Sil satırı
+        c_sel, c_del = st.columns([5, 2])
+        secilen = c_sel.selectbox(
+            "lab_del",
+            options=["— değer seç"] + [p for p in ctx.lab_degerleri],
+            label_visibility="collapsed",
+            key="lab_del_select",
+        )
+        if c_del.button("× Kaldır", key="lab_del_btn", use_container_width=True):
+            if secilen != "— değer seç" and secilen in st.session_state.ctx.lab_degerleri:
+                del st.session_state.ctx.lab_degerleri[secilen]
+                st.rerun()
 
     # ── Mevcut İlaçlar ──
     if ctx.mevcut_ilaclar:
@@ -627,9 +709,14 @@ with col_chat:
     btn_lab, btn_bosluk, btn_gonder = st.columns([1, 2, 1])
 
     with btn_lab:
-        with st.popover("📎 Lab", use_container_width=True):
-            st.markdown("**Lab Raporu Yükle**")
-            st.caption("PDF, PNG veya JPG — otomatik analiz edilir")
+        with st.popover("🧪 Lab", use_container_width=True):
+            st.markdown(
+                '<p style="font-size:0.8rem;font-weight:600;color:#1e3a5f;margin:0 0 4px 0">'
+                'Lab Raporu Yükle</p>'
+                '<p style="font-size:0.73rem;color:#94a3b8;margin:0 0 8px 0">'
+                'PDF, PNG veya JPG</p>',
+                unsafe_allow_html=True,
+            )
             lab_dosya = st.file_uploader(
                 "Dosya seç",
                 type=["pdf", "png", "jpg", "jpeg"],
@@ -639,64 +726,41 @@ with col_chat:
             if lab_dosya and lab_dosya.name != st.session_state.lab_dosya_adi:
                 with st.spinner("Analiz ediliyor..."):
                     try:
-                        parsed = parse_lab_file(lab_dosya.read(), lab_dosya.name)
-                        st.session_state.pending_lab = parsed
-                        st.session_state.lab_dosya_adi = lab_dosya.name
-                        if not parsed:
+                        result = parse_lab_report(lab_dosya.read(), lab_dosya.name)
+                        if not result.profile_values:
                             st.session_state.lab_parse_hata = "Lab değeri bulunamadı — PDF formatı tanınmadı."
                         else:
+                            st.session_state.ctx.lab_degerleri.update(
+                                {k: float(v) for k, v in result.profile_values.items()}
+                            )
+                            st.session_state.lab_dosya_adi = lab_dosya.name
                             st.session_state.lab_parse_hata = ""
                     except Exception as e:
                         st.session_state.lab_parse_hata = f"Parse hatası: {e}"
-                # Spinner bittikten SONRA rerun → popover kapansa bile
-                # aşağıdaki onay kutusu visible olacak
                 st.rerun()
 
-            # Popover içi: sadece mevcut lab özeti
-            if st.session_state.ctx.lab_degerleri and not st.session_state.pending_lab:
-                st.markdown("**Profildeki lab değerleri:**")
-                for p, v in st.session_state.ctx.lab_degerleri.items():
-                    st.markdown(f"- {p}: {v}")
-                if st.button("🗑️ Temizle", key="lab_temizle", use_container_width=True):
-                    st.session_state.ctx.lab_degerleri = {}
-                    st.rerun()
-            elif not st.session_state.ctx.lab_degerleri and not st.session_state.pending_lab:
-                st.caption("Henüz lab değeri eklenmedi.")
+            n_lab = len(st.session_state.ctx.lab_degerleri)
+            if n_lab:
+                st.markdown(
+                    f'<p style="font-size:0.73rem;color:#15803d;margin:6px 0 0 0">'
+                    f'✅ {n_lab} değer profilde aktif</p>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    '<p style="font-size:0.73rem;color:#94a3b8;margin:6px 0 0 0">'
+                    'Henüz değer eklenmedi</p>',
+                    unsafe_allow_html=True,
+                )
 
     with btn_gonder:
         gonder = st.button("Sorgula →", type="primary", use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # ── Lab Onay Kutusu — popover DIŞINDA, her zaman görünür ────────────────
+    # ── Parse Hata Mesajı ────────────────────────────────────────────────────
     if st.session_state.get("lab_parse_hata"):
         st.error(st.session_state.lab_parse_hata)
         st.session_state.lab_parse_hata = ""
-
-    if st.session_state.pending_lab:
-        n = len(st.session_state.pending_lab)
-        fname = st.session_state.lab_dosya_adi
-        with st.container(border=True):
-            st.markdown(f"📋 **{fname}** — **{n} lab değeri okundu**, profilinize eklensin mi?")
-            # Değerleri satır halinde göster
-            cols_vals = st.columns(min(n, 6))
-            for i, (param, val) in enumerate(st.session_state.pending_lab.items()):
-                with cols_vals[i % len(cols_vals)]:
-                    st.metric(label=param, value=val)
-            c_kab, c_iptal = st.columns([1, 1])
-            with c_kab:
-                if st.button("✅ Profilime Ekle", key="lab_kab", use_container_width=True, type="primary"):
-                    st.session_state.ctx.lab_degerleri.update(
-                        {k: float(v) for k, v in st.session_state.pending_lab.items()}
-                    )
-                    st.session_state.pending_lab = {}
-                    st.session_state.lab_dosya_adi = ""
-                    st.toast(f"✅ {n} lab değeri profile eklendi!", icon="✅")
-                    st.rerun()
-            with c_iptal:
-                if st.button("✖ İptal", key="lab_iptal", use_container_width=True):
-                    st.session_state.pending_lab = {}
-                    st.session_state.lab_dosya_adi = ""
-                    st.rerun()
 
 # ─── Sorgu İşleme ────────────────────────────────────────────────────────────
 

@@ -95,30 +95,47 @@ _NUMBER_RE = re.compile(r"(\d{1,4}[.,]\d{1,3}|\d{1,4})")
 # ---------------------------------------------------------------------------
 
 def _parse_text(text: str) -> dict[str, float]:
-    """Ham metinden lab değerlerini çıkarır. Döndürür: {param: value, ...}"""
+    """Ham metinden lab değerlerini çıkarır. Döndürür: {param: value, ...}
+
+    e-Nabız gibi tablo-bazlı PDF'lerde PyMuPDF parametre adını ve değerini
+    farklı satırlara bölüyor olabilir. Bu nedenle:
+    - Önce aynı satırda sayı aranır.
+    - Bulunamazsa sonraki 2 satır da kontrol edilir (lookahead).
+    - Tarihlerin (ör. 25.06.2025) yanlış eşleşmesini önlemek için
+      4+ basamaklı sayılar yıl kalıplarıyla elenir.
+    """
     results: dict[str, float] = {}
     lines = text.splitlines()
 
+    # Tarih/yıl sayılarını yanlışlıkla değer olarak almamak için
+    _DATE_YEAR_RE = re.compile(r"^\d{4}$|^20\d{2}$|^\d{1,2}\.\d{1,2}\.\d{4}$")
+
+    def _first_valid_number(search_lines: list[str]) -> float | None:
+        """Verilen satırlardan ilk geçerli sayıyı döner (tarih sayıları hariç)."""
+        for sl in search_lines:
+            nums = _NUMBER_RE.findall(sl)
+            for raw in nums:
+                if _DATE_YEAR_RE.match(raw.replace(",", ".")):
+                    continue
+                try:
+                    return float(raw.replace(",", "."))
+                except ValueError:
+                    continue
+        return None
+
     for param, patterns in _LAB_PATTERNS.items():
         for pattern in patterns:
-            for line in lines:
+            for i, line in enumerate(lines):
                 if re.search(pattern, line, re.IGNORECASE):
-                    nums = _NUMBER_RE.findall(line)
-                    if nums:
-                        # İlk sayı genellikle ölçüm değeridir.
-                        # Referans aralıkları genellikle tire-ayraçlı ikinci/üçüncü sayıdır.
-                        raw = nums[0].replace(",", ".")
-                        try:
-                            val = float(raw)
-                            # Makul aralık filtresi — çok büyük/küçük değerleri atla
-                            if _sanity_check(param, val):
-                                results[param] = val
-                                logger.debug(f"Lab parse: {param} = {val} ('{line.strip()}')")
-                        except ValueError:
-                            pass
-                        break  # Bu satırda bulundu, sonraki satıra geçme
+                    # 1) Aynı satırda ara, 2) bulamazsan sonraki 2 satırda ara
+                    candidate_lines = [line] + lines[i + 1: i + 3]
+                    val = _first_valid_number(candidate_lines)
+                    if val is not None and _sanity_check(param, val):
+                        results[param] = val
+                        logger.debug(f"Lab parse: {param} = {val} ('{line.strip()}')")
+                    break  # Pattern eşleşti, bir sonraki pattern'e geç
             if param in results:
-                break  # Bu pattern ile bulundu, sonraki pattern'e geçme
+                break  # Bu param bulundu, diğer pattern'lere bakma
 
     return results
 
@@ -147,17 +164,23 @@ def _sanity_check(param: str, val: float) -> bool:
 # ---------------------------------------------------------------------------
 
 def parse_lab_pdf(file_bytes: bytes) -> dict[str, float]:
-    """PDF byte'larından lab değerlerini çıkarır. PyMuPDF kullanır."""
+    """PDF byte'larından lab değerlerini çıkarır. PyMuPDF kullanır.
+
+    sort=True: Metin bloklarını koordinata göre sıralar — e-Nabız gibi
+    tablo PDF'lerinde sütunların karışmasını önler.
+    """
     import fitz  # PyMuPDF
 
     text_parts: list[str] = []
     doc = fitz.open(stream=file_bytes, filetype="pdf")
     for page in doc:
-        text_parts.append(page.get_text())
+        text_parts.append(page.get_text("text", sort=True))
     doc.close()
 
     full_text = "\n".join(text_parts)
     logger.debug(f"Lab PDF parse: {len(full_text)} karakter çıkarıldı")
+    if len(full_text.strip()) < 50:
+        logger.warning("Lab PDF: çok az metin çıkarıldı — taranmış (image-based) PDF olabilir")
     return _parse_text(full_text)
 
 

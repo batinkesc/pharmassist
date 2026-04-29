@@ -30,7 +30,7 @@
     "id": "v3_q02",
     "kategori": "doz_bobrek",
     "soru": "GFR 20 olan hastada PRADAXA dozu nasıl ayarlanmalı?",
-    "ground_truth": "Dabigatran (PRADAXA) GFR 30 mL/dak altında kontrendikedir. GFR 20 olan hastada PRADAXA kullanılmamalıdır. Alternatif antikoagülan olarak apiksaban veya düşük molekül ağırlıklı heparin (DMAH) değerlendirilebilir; böbrek fonksiyonu ve kanama riski takip edilmelidir. Apiksaban 5 mg 2x1 veya enoksaparin 1 mg/kg 2x1 tercih edilebilir.",
+    "ground_truth": "Dabigatran (PRADAXA) GFR 30 mL/dak altında kontrendikedir. GFR 20 olan bu hastada PRADAXA kullanılmamalıdır. Böbrek fonksiyonu ve kanama riski takip edilmeli; antikoagülan tedavi gerekliyse GFR'ye göre doz ayarlanabilen alternatifler değerlendirilmelidir.",
     "hasta": {
       "yas": 72,
       "cinsiyet": "erkek",
@@ -182,7 +182,7 @@
     "id": "v3_q08",
     "kategori": "doz_bobrek",
     "soru": "GFR 35 olan hastada LAMICTAL DC dozu nasıl ayarlanmalı?",
-    "ground_truth": "Lamotrijin (LAMICTAL DC) böbrek yetmezliğinde dikkatli kullanılmalıdır. Şiddetli böbrek yetmezliğinde başlangıç ve idame dozlarının azaltılması gerekebilir. GFR 35 orta-şiddetli böbrek bozukluğu kategorisindedir; klinik yanıt ve tolerabiliteye göre doz titre edilmelidir. Başlangıç dozu 25 mg/gün olarak değerlendirilebilir; klinik yanıt ve yan etkiler dikkatle izlenmelidir.",
+    "ground_truth": "Lamotrijin (LAMICTAL DC) böbrek yetmezliğinde dikkatli kullanılmalıdır. GFR 35, orta dereceli böbrek bozukluğu kategorisindedir (GFR 30-60). Bu hasta grubunda başlangıç ve idame dozlarının azaltılması gerekebilir; klinik yanıt ve tolerabiliteye göre doz titre edilmelidir. Başlangıç dozu 25 mg/gün olarak değerlendirilebilir; klinik yanıt ve yan etkiler dikkatle izlenmelidir.",
     "hasta": {
       "yas": 45,
       "cinsiyet": "kadın",
@@ -253,29 +253,6 @@
     "hedef_ilaclar": [
       "PLAVIX® 75 mg film kaplı tablet",
       "CANDİDİN 150 mg kapsül"
-    ]
-  },
-  {
-    "id": "v3_q11",
-    "kategori": "laktasyon",
-    "soru": "Emziren annede LUSTRAL kullanımı güvenli midir?",
-    "ground_truth": "Sertralin (LUSTRAL) anne sütüne geçer. Emzirme döneminde kullanımı önerilmez; ancak klinik gereklilik varsa bebek yakından izlenmelidir. KÜB belgesinde emzirme döneminde kullanılmaması tavsiye edilmektedir. Emzirme boyunca bebek dikkatli izlem altında tutulmalı; kilo artışı ve davranış değişiklikleri takip edilmelidir.",
-    "hasta": {
-      "yas": 30,
-      "cinsiyet": "kadın",
-      "gfr": null,
-      "karaciger_skoru": null,
-      "mevcut_ilaclar": [],
-      "alerjiler": [],
-      "endikasyonlar": [
-        "postpartum depresyon"
-      ],
-      "gebelik": false,
-      "emzirme": true,
-      "lab_degerleri": {}
-    },
-    "hedef_ilaclar": [
-      "LUSTRAL® 50 mg çentikli film kaplı tablet"
     ]
   },
   {
@@ -491,7 +468,7 @@
     "id": "v3_q20",
     "kategori": "doz_karaciger",
     "soru": "Child-Pugh A karaciğer yetmezliği olan hastada LİPİTOR dozu nasıl ayarlanmalı?",
-    "ground_truth": "Atorvastatin (LİPİTOR) aktif karaciğer hastalığında kontrendikedir. Child-Pugh A hastalarda dikkatli kullanım önerilir; karaciğer fonksiyon testleri yakın takip edilmelidir. ALT ve AST normalin 3 katını aşarsa tedavi kesilmelidir. Child-Pugh A hastalarda atorvastatin 10-20 mg/gün ile başlanabilir; ALT/AST değerleri takip edilerek doz ayarlanmalıdır. Karaciğer yükü daha az alternatif olarak pravastatin değerlendirilebilir.",
+    "ground_truth": "Atorvastatin (LİPİTOR) aktif karaciğer hastalığında (Child-Pugh B ve C) kontrendikedir. Child-Pugh A ise kontrendikasyon kapsamında değildir; dikkatli kullanım önerilir. Karaciğer fonksiyon testleri yakın takip edilmelidir. ALT ve AST normalin 3 katını aşarsa tedavi kesilmelidir. Child-Pugh A hastalarda başlangıç dozu 10-20 mg/gün olarak değerlendirilebilir; ALT/AST değerlerine göre doz ayarlanmalıdır.",
     "hasta": {
       "yas": 58,
       "cinsiyet": "erkek",
@@ -545,7 +522,7 @@
     "id": "v3_q22",
     "kategori": "doz_bobrek",
     "soru": "GFR 25 olan hastada JANUVIA'ya alternatif olarak AMARYL kullanılabilir mi?",
-    "ground_truth": "Glimepirid (AMARYL) böbrek yetmezliğinde hipoglisemi riski nedeniyle dikkatli kullanılmalıdır. Şiddetli böbrek yetmezliğinde (GFR <30) kullanımından kaçınılması önerilir çünkü aktif metabolitler birikebilir. GFR 25 için AMARYL kontrendike değil ama yüksek hipoglisemi riski taşır.",
+    "ground_truth": "Glimepirid (AMARYL) ciddi böbrek yetmezliğinde KÜB Madde 4.3 kapsamında kontrendikedir; kullanılmamalıdır. Şiddetli böbrek yetmezliğinde (GFR <30) aktif metabolitler birikir ve ağır hipoglisemi riski oluşur. GFR 25 olan bu hastada AMARYL kullanılmamalıdır. Alternatif olarak böbrek fonksiyonuna göre doz ayarlanabilen sitagliptin (JANUVIA) devam edilebilir veya insülin değerlendirilebilir.",
     "hasta": {
       "yas": 70,
       "cinsiyet": "erkek",
@@ -671,7 +648,7 @@
     "id": "v3_q27",
     "kategori": "doz_geriyatrik",
     "soru": "80 yaşındaki hastada RENITEC başlangıç dozu ne olmalı?",
-    "ground_truth": "Enalapril (RENITEC) yaşlı hastalarda böbrek fonksiyonu azalmış olabileceğinden düşük başlangıç dozuyla başlanmalıdır. Geriyatrik hastalarda 2.5 mg başlangıç dozu önerilir, böbrek fonksiyonu ve kan basıncı yanıtına göre titre edilir.",
+    "ground_truth": "Enalapril (RENITEC) yaşlı hastalarda böbrek fonksiyonu azalmış olabileceğinden düşük başlangıç dozuyla başlanmalıdır. KÜB Madde 4.2 geriyatrik popülasyon için özel bir başlangıç dozu belirtmemektedir; 'doz yaşlı hastanın böbrek fonksiyonuna uygun olmalıdır' ifadesi kullanılmaktadır. Böbrek fonksiyon bozukluğu olan hastalarda enalapril dozu kreatinin klerensine göre ayarlanmalı ve tedaviye verilen yanıta göre titre edilmelidir.",
     "hasta": {
       "yas": 80,
       "cinsiyet": "kadın",
@@ -723,7 +700,7 @@
     "id": "v3_q29",
     "kategori": "kontrendikasyon",
     "soru": "Feokromasitoma hastasına NORODOL başlanabilir mi?",
-    "ground_truth": "Haloperidol (NORODOL) feokromasitomada kontrendikedir. Dopamin reseptör blokajı nedeniyle hipertansif kriz tetiklenebilir. KÜB belgesinde feokromasitoma kontrendikasyon olarak yer almaktadır. NORODOL başlanmamalı; feokromositoma yönetiminde dikkatli klinik yaklaşım ve hasta izlemi gereklidir. Alternatif antipsikotik ihtiyacı için psikiyatri konsültasyonu önerilir.",
+    "ground_truth": "Haloperidol (NORODOL) feokromasitomalu hastalarda çok dikkatli kullanılmalıdır. KÜB madde 4.4 özel kullanım uyarıları bölümünde feokromasitoma için dikkatli kullanım uyarısı mevcuttur; kontrendikasyon değildir. Bu hastalarda hipertansif kriz riski gözetilerek dikkatli klinik değerlendirme ve izlem yapılmalıdır. Antipsikotik ihtiyacı için psikiyatri konsültasyonu önerilir.",
     "hasta": {
       "yas": 40,
       "cinsiyet": "kadın",

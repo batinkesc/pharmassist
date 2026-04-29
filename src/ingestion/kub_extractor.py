@@ -291,6 +291,14 @@ def _get_lm_api_key() -> str | None:
 
 _DEFAULT_MODEL = os.getenv("LM_STUDIO_MODEL", "llama-3.3-70b-versatile")
 
+# Rate limiter — sağlayıcıya göre env ile ayarlanır
+# Groq free: LLM_MIN_INTERVAL_SEC=2.1  (30 req/min)
+# Cerebras Qwen-3-235b: LLM_MIN_INTERVAL_SEC=13.0  (5 req/min)
+# Cerebras llama3.1-8b: LLM_MIN_INTERVAL_SEC=2.1   (30 req/min)
+# Yerel LM Studio: LLM_MIN_INTERVAL_SEC=0
+_last_call_time: float = 0.0
+_MIN_INTERVAL_SEC: float = float(os.getenv("LLM_MIN_INTERVAL_SEC", "2.1"))
+
 
 def _call_lm_studio(
     system: str,
@@ -320,6 +328,14 @@ def _call_lm_studio(
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
     url = _get_lm_url()
+    # Rate limiting — Groq ve benzeri bulut servisler için
+    global _last_call_time
+    elapsed = time.time() - _last_call_time
+    wait_needed = _MIN_INTERVAL_SEC - elapsed
+    if wait_needed > 0:
+        time.sleep(wait_needed)
+    _last_call_time = time.time()
+
     logger.debug(f"LLM istek URL: {url} | key: {'set' if api_key else 'NONE'}")
     req = urllib.request.Request(
         url,
@@ -514,18 +530,24 @@ class KUBExtractor:
     def _call_with_retry(
         self, user_prompt: str, system: str = _SYSTEM_PROMPT
     ) -> Optional[str]:
-        """max_retries kadar tekrar dener (bağlantı hatası için)."""
-        for attempt in range(1, POLICY.extraction_max_retries + 1):
+        """İlk deneme + max_retries kadar tekrar dener (bağlantı hatası için).
+        extraction_max_retries=0 → tek deneme (retry yok).
+        extraction_max_retries=N → 1 ilk deneme + N retry = toplam N+1 deneme.
+        """
+        max_attempts = POLICY.extraction_max_retries + 1  # en az 1 deneme
+        for attempt in range(1, max_attempts + 1):
             result = _call_lm_studio(
                 system=system,
                 user=user_prompt,
                 model=self.model,
+                max_tokens=POLICY.extraction_max_tokens,   # call-time oku (sweep monkey-patch için)
+                timeout=POLICY.extraction_timeout_sec,
             )
             if result is not None:
                 return result
-            if attempt < POLICY.extraction_max_retries:
+            if attempt < max_attempts:
                 wait = 2 ** attempt
-                logger.debug(f"KUBExtractor retry {attempt}/{POLICY.extraction_max_retries} — {wait}s bekleniyor")
+                logger.debug(f"KUBExtractor retry {attempt}/{max_attempts-1} — {wait}s bekleniyor")
                 time.sleep(wait)
         return None
 

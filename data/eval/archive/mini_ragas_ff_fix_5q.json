@@ -1,0 +1,133 @@
+[
+  {
+    "id": "v3_q07",
+    "kategori": "etkilesim_farmakodinamik",
+    "soru": "İSOPTİN kullanan hastaya CONCOR eklenirse ne olur?",
+    "ground_truth": "Verapamil (İSOPTİN) ve bisoprolol (CONCOR) kombinasyonu AV blok ve bradikardi riskini artırır. Her ikisi de kalp hızını yavaşlattığından bu kombinasyondan kaçınılmalı veya çok yakın kardiyak izlem altında kullanılmalıdır. KÜB'de bu kombinasyon için özel uyarı mevcuttur.",
+    "hasta": {
+      "yas": 66,
+      "cinsiyet": "erkek",
+      "gfr": 65.0,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": [
+        "İSOPTİN SR 240 mg"
+      ],
+      "alerjiler": [],
+      "endikasyonlar": [
+        "hipertansiyon",
+        "supraventriküler taşikardi"
+      ],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {}
+    },
+    "hedef_ilaclar": [
+      "İSOPTİN® SR 240 mg Film Tablet",
+      "CONCOR® 10 mg film kaplı tablet"
+    ]
+  },
+  {
+    "id": "v3_q10",
+    "kategori": "cyp450_etkilesim",
+    "soru": "PLAVIX kullanan hastaya CANDİDİN başlanırsa antiplatelet etki nasıl değişir?",
+    "ground_truth": "Flukonazol (CANDİDİN) güçlü CYP2C19 inhibitörüdür. Klopidogrel (PLAVIX) CYP2C19 üzerinden aktif metabolite dönüştürülür. Flukonazol bu dönüşümü inhibe ederek klopidogrelin antiplatelet etkisini önemli ölçüde azaltır. Stent olan hastalarda bu kombinasyondan kaçınılmalıdır. CYP2C19 etkisi olmayan antifungal (örn. terbinafin) alternatif olarak tercih edilmeli; zorunluysa antiplatelet etki ve trombotik risk dikkatle takip edilmelidir.",
+    "hasta": {
+      "yas": 61,
+      "cinsiyet": "erkek",
+      "gfr": 70.0,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": [
+        "PLAVIX 75 mg"
+      ],
+      "alerjiler": [],
+      "endikasyonlar": [
+        "kardiyak stent",
+        "kandida enfeksiyonu"
+      ],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {}
+    },
+    "hedef_ilaclar": [
+      "PLAVIX® 75 mg film kaplı tablet",
+      "CANDİDİN 150 mg kapsül"
+    ]
+  },
+  {
+    "id": "v3_q16",
+    "kategori": "doz_bobrek",
+    "soru": "GFR 40 olan hastada COLCHICUM DISPERT dozu nasıl ayarlanmalı?",
+    "ground_truth": "Kolşisin (COLCHICUM DISPERT) böbrek yetmezliğinde dikkatli kullanılmalıdır. Orta dereceli böbrek yetmezliğinde (GFR 30-60) doz azaltılmalı ve tedavi süresi kısaltılmalıdır. Nöromiyopati ve miyelosüpresyon riski artar. GFR 30-60 aralığında kolşisin 0,5 mg/gün sınırı aşılmamalı; nöromiyopati ve kan sayımı açısından dikkatli izlem gereklidir.",
+    "hasta": {
+      "yas": 62,
+      "cinsiyet": "erkek",
+      "gfr": 40.0,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": [],
+      "alerjiler": [],
+      "endikasyonlar": [
+        "gut atağı"
+      ],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {
+        "kreatinin": 1.7
+      }
+    },
+    "hedef_ilaclar": [
+      "COLCHICUM DISPERT® 0,5 mg Film Kaplı Tablet"
+    ]
+  },
+  {
+    "id": "v3_q17",
+    "kategori": "cyp450_etkilesim",
+    "soru": "CYMBALTA kullanan hastada ALTİZEM SR eklenirse ne olur?",
+    "ground_truth": "Duloksetin (CYMBALTA) CYP1A2 ve CYP2D6 substratıdır. Diltiazem (ALTİZEM SR) orta düzey CYP3A4 inhibitörüdür. Duloksetin metabolizması üzerinde belirgin etkisi sınırlıdır ancak birlikte kullanımda duloksetin plazma düzeyi izlenmeli ve yan etkiler takip edilmelidir.",
+    "hasta": {
+      "yas": 54,
+      "cinsiyet": "kadın",
+      "gfr": null,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": [
+        "CYMBALTA 60 mg"
+      ],
+      "alerjiler": [],
+      "endikasyonlar": [
+        "depresyon",
+        "hipertansiyon"
+      ],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {}
+    },
+    "hedef_ilaclar": [
+      "CYMBALTA® 60 mg kapsül",
+      "ALTİZEM SR 120 mg Mikropellet Kapsül"
+    ]
+  },
+  {
+    "id": "v3_q27",
+    "kategori": "doz_geriyatrik",
+    "soru": "80 yaşındaki hastada RENITEC başlangıç dozu ne olmalı?",
+    "ground_truth": "Enalapril (RENITEC) yaşlı hastalarda böbrek fonksiyonu azalmış olabileceğinden düşük başlangıç dozuyla başlanmalıdır. Geriyatrik hastalarda 2.5 mg başlangıç dozu önerilir, böbrek fonksiyonu ve kan basıncı yanıtına göre titre edilir.",
+    "hasta": {
+      "yas": 80,
+      "cinsiyet": "kadın",
+      "gfr": 55.0,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": [],
+      "alerjiler": [],
+      "endikasyonlar": [
+        "hipertansiyon"
+      ],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {
+        "kreatinin": 1.3
+      }
+    },
+    "hedef_ilaclar": [
+      "RENITEC 5 mg tablet"
+    ]
+  }
+]

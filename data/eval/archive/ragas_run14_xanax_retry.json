@@ -1,0 +1,21 @@
+[
+  {
+    "id": "v3_q13",
+    "kategori": "doz_geriyatrik",
+    "soru": "85 yaşındaki hastada XANAX başlangıç dozu ne olmalı?",
+    "ground_truth": "Alprazolam (XANAX) geriyatrik hastalarda en düşük etkin dozda başlanmalıdır. KÜB belgesine göre yaşlı hastalarda başlangıç dozu 0.25 mg günde 2-3 kez olarak önerilir. Sedatif etkiye karşı duyarlılık artar, düşme ve konfüzyon riski gözetilmelidir.",
+    "hasta": {
+      "yas": 85,
+      "cinsiyet": "kadın",
+      "gfr": 50.0,
+      "karaciger_skoru": null,
+      "mevcut_ilaclar": [],
+      "alerjiler": [],
+      "endikasyonlar": ["anksiyete bozukluğu"],
+      "gebelik": false,
+      "emzirme": false,
+      "lab_degerleri": {}
+    },
+    "hedef_ilaclar": ["XANAX® 0.5 mg tablet"]
+  }
+]

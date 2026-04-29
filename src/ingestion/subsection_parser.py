@@ -312,3 +312,109 @@ def extract_44_subchunks(base_chunk: dict) -> list[dict]:
         logger.info(f"{drug_name}: 4.4 bölündü → {len(sub_chunks)} sub-chunk "
                     f"(orijinal: {len(text)} karakter)")
     return sub_chunks
+
+
+# ---------------------------------------------------------------------------
+# 4.8 Sub-chunking — paragraf tabanlı bölme (istenmeyen etkiler)
+# ---------------------------------------------------------------------------
+
+_48_SPLIT_THRESHOLD = 2500
+_48_MAX_SUB_CHARS   = 2200
+_48_INTRO_CHARS     = 280
+
+
+def _make_48_chunk_id(drug_name: str, part_idx: int, source_file: str) -> str:
+    raw = f"{drug_name}_4.8_part{part_idx}_{source_file}"
+    h = hashlib.md5(raw.encode()).hexdigest()[:10]
+    slug = re.sub(r"[^A-Z0-9]", "_", drug_name.upper())[:25]
+    return f"{slug}_4_8_part{part_idx}_{h}"
+
+
+def extract_48_subchunks(base_chunk: dict) -> list[dict]:
+    """
+    4.8 İstenmeyen etkiler bölümü için paragraf-tabanlı sub-chunk üretici.
+
+    4.8 bölümleri genellikle 5K–50K karakter arası monolitik chunk olarak parse edilir.
+    Bu durum spesifik yan etkilerin embedding'de gömülmesine yol açar → CU ve CR düşer.
+    """
+    from datetime import datetime
+
+    text = base_chunk.get("icerik", "")
+    drug_name = base_chunk.get("ilac_adi", "")
+    source_file = base_chunk.get("kaynak_dosya", "")
+    base_page = base_chunk.get("sayfa", 0)
+    madde_baslik = base_chunk.get("madde_baslik", "İstenmeyen etkiler")
+    toplam_sayfa = base_chunk.get("toplam_sayfa", 0)
+    parse_tarihi = base_chunk.get("parse_tarihi", datetime.now().isoformat())
+    base_chunk_id = base_chunk.get("chunk_id", "")
+
+    if len(text) <= _48_SPLIT_THRESHOLD:
+        logger.debug(f"{drug_name}: 4.8 kısa ({len(text)} karakter) — bölme atlandı.")
+        return []
+
+    paragraphs = [p.strip() for p in re.split(r"\n{2,}", text) if p.strip()]
+    if not paragraphs:
+        return []
+
+    intro_text = paragraphs[0][:_48_INTRO_CHARS]
+    content_paragraphs = paragraphs[1:] if len(paragraphs) > 1 else paragraphs
+
+    groups: list[list[str]] = []
+    current: list[str] = []
+    current_size = 0
+
+    for para in content_paragraphs:
+        para_len = len(para)
+        if current_size + para_len > _48_MAX_SUB_CHARS and current:
+            groups.append(current)
+            current = [para]
+            current_size = para_len
+        else:
+            current.append(para)
+            current_size += para_len
+
+    if current:
+        groups.append(current)
+
+    if len(groups) <= 1:
+        logger.debug(f"{drug_name}: 4.8 bölme sonucu tek grup — atlandı.")
+        return []
+
+    sub_chunks: list[dict] = []
+    total = len(groups)
+
+    for idx, group in enumerate(groups, 1):
+        content = "\n\n".join(group).strip()
+        if len(content) < 50:
+            continue
+
+        full_content = (
+            f"[{madde_baslik} — Bölüm {idx}/{total}]\n\n"
+            f"[Bağlam — Madde 4.8 girişi]: {intro_text}\n\n"
+            f"--- Devam (Bölüm {idx}/{total}) ---\n"
+            f"{content}"
+        )
+
+        chunk = {
+            "chunk_id":          _make_48_chunk_id(drug_name, idx, source_file),
+            "ilac_adi":          drug_name,
+            "madde_no":          "4.8",
+            "alt_madde":         f"part{idx}",
+            "alt_madde_etiketi": f"İstenmeyen Etkiler — Bölüm {idx}/{total}",
+            "madde_baslik":      f"{madde_baslik} — Bölüm {idx}/{total}",
+            "patient_flags":     [],
+            "icerik":            full_content,
+            "sayfa":             base_page,
+            "kaynak_dosya":      source_file,
+            "risk_seviyesi":     "info",
+            "oncelik":           "standard",
+            "toplam_sayfa":      toplam_sayfa,
+            "parse_tarihi":      parse_tarihi,
+            "ust_chunk_id":      base_chunk_id,
+        }
+        sub_chunks.append(chunk)
+
+    if sub_chunks:
+        logger.info(f"{drug_name}: 4.8 bölündü → {len(sub_chunks)} sub-chunk "
+                    f"(orijinal: {len(text)} karakter)")
+    return sub_chunks

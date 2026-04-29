@@ -1,6 +1,6 @@
 # RAGAS Run History — Kronolojik Sıra
 
-**Son Güncelleme:** 2026-04-27
+**Son Güncelleme:** 2026-04-29
 
 ---
 
@@ -23,17 +23,24 @@ Bu çalıştırmalar sistemin gerçek performansını ölçmek için yapıldı.
 | **Run 11** | `ragas_v7_qwen3_results.json` | 2026-04-26 | 33 | Together AI Qwen3-235B | 0.7029 | 0.7283 | Yeni evaluator (Together API); 3-metrik seti ilk kez: F+CU+CR; **CU=0.7xxx** (yeni metrik) |
 | **Run 12** | `ragas_v8_gt_fixed_results.json` | 2026-04-26 | 32 | Together AI Qwen3-235B | **0.7607** | **0.7250** | GT kalite düzeltmesi (Q02/Q08/Q20/Q29) + Q11 kaldırıldı; CU=0.8028; Genel ort=0.7628 ✓ KABUL; 2 NaN (Q14,Q23) |
 | **Mini-13** | `mini_ragas_run13.json` | 2026-04-26 | 5 | Together AI Qwen3-235B | 0.6989 | **0.8167** | Sprint fix doğrulama (5 zor soru); Q29 feokromasitoma: CR 0.0→0.75 ✅; CU=0.6605; Ort=0.7254 |
-| **Run 13** | `ragas_v9_run13_results.json` | 2026-04-27 | 32 | Together AI Qwen3-235B | 0.6740 | 0.7365 | Sprint v1.5.0 etki ölçümü; CU=0.7829; Genel ort=0.7311; CR ↑ +1.2pp ✅; F ↓ −8.7pp ⚠️; 4 NaN F; **Run 12 baseline korunuyor** |
+| **Run 13** | `archive/ragas_v9_run13_results.json` | 2026-04-27 | 32 | Together AI Qwen3-235B | 0.6740 | 0.7365 | Sprint v1.5.0 etki ölçümü; CU=0.7829; Genel ort=0.7311; CR ↑ +1.2pp ✅; F ↓ −8.7pp ⚠️; 4 NaN F; **Run 12 baseline korunuyor** |
+| **Run 14** | `archive/ragas_v9_run14_merged.json` | 2026-04-28 | 32 | Together AI Qwen3-235B | 0.7153 | 0.7571 | CU=0.7752; Ort=0.7492; F kısmen toparlıyor |
+| **Run 15** | `archive/ragas_run15_merged.json` | 2026-04-28 | 32 | Together AI Qwen3-235B | 0.7244 | 0.7577 | CU=0.7640; Ort=0.7487 |
+| **Run 16** | `ragas_run16_merged.json` | 2026-04-29 | 32 | Together AI Qwen3-235B | 0.7153 | 0.7571 | CU=0.7530; Ort=0.7418; VALIDATE 3-6 eklendi (tag stripping yok) |
+| **Run 17** | `ragas_run17_merged.json` | 2026-04-29 | 32 | Together AI Qwen3-235B | 0.7089 | 0.7630 | CU=0.7487; Ort=0.7402; Tag stripping eklendi; AMARYL NaN kalıcı; CR +3.8pp vs baseline |
 
 ### Özet Trend
 
 ```
-Faithfulness:    0.40 → 0.78 → 0.76 → 0.70 → 0.68 → 0.72 → 0.70 → 0.55 → 0.66 → 0.68 → 0.70 → 0.76 → 0.67
-Context Recall:  0.74 → 0.89 → 0.74 → 0.76 → 0.86 → 0.81 → 0.81 → 0.89 → 0.66 → 0.67 → 0.73 → 0.73 → 0.74
+Faithfulness:    0.40 → 0.78 → 0.76 → 0.70 → 0.68 → 0.72 → 0.70 → 0.55 → 0.66 → 0.68 → 0.70 → 0.76 → 0.67 → 0.72 → 0.72 → 0.72 → 0.71
+Context Recall:  0.74 → 0.89 → 0.74 → 0.76 → 0.86 → 0.81 → 0.81 → 0.89 → 0.66 → 0.67 → 0.73 → 0.73 → 0.74 → 0.76 → 0.76 → 0.76 → 0.76
 ```
 Run 2'nin Haiku eval skoru direkt karşılaştırılamaz.  
 Run 3-8: Mistral local evaluator. Run 9-10: qwen2.5:32b evaluator (daha strict → CR düşük görünür).  
-Run 11-13: Together AI Qwen3-235B evaluator; 3-metrik standard (F+CU+CR) devrede.  
+Run 11-17: Together AI Qwen3-235B evaluator; 3-metrik standard (F+CU+CR) devrede.
+
+**CR Trendi (Run 12→17):** 0.7250 → 0.7630 → +3.8pp ↑ (sub-chunking etkisi kalıcı)  
+**F Trendi:** Baseline ~0.76, mevcut ~0.71 (−5pp). Başlıca neden: CO-DİOVAN false positive.  
 
 **Yeni Metrik — Context Utilization (CU):** Run 11'den itibaren standart. "Getirilen chunk'lar cevap için gerçekten kullanıldı mı?" sorusunu ölçer. GT gerektirmez (GT-free). Run 12: CU=0.8028.
 
