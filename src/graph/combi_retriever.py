@@ -7,6 +7,7 @@ Hasta profilindeki mevcut ilaçlar ve sorgu edilen ilaçlar için:
   3. ChromaDB chunk'larıyla birleştirir
 """
 
+import re
 from dataclasses import dataclass
 from loguru import logger
 
@@ -32,18 +33,93 @@ class GraphContext:
     ozet_metin: str                       # prompt'a eklenecek formatlı metin
 
 
+def _filter_contraindications_by_profile(
+    kontrendikasyonlar: list[dict],
+    hasta_kosullar: list[str],
+    hasta_yas: int | None = None,
+    hasta_endikasyonlar: list[str] | None = None,
+    max_count: int = 10,
+) -> list[dict]:
+    """
+    Kontrendikasyonları hasta profiline göre filtreler ve önceliklendirir.
+
+    Strateji:
+      1. Pediyatrik kontrendikasyonları yetişkin hastadan kesin hariç tut (yaş ≥18)
+      2. Hasta koşulu/tanısıyla örtüşen kontrendikasyonları önceliklendir
+      3. Diğerlerini de dahil et ama max_count ile sınırla
+
+    Bu sayede LLM'e gönderilen kontrendikasyon sayısı düşer ve
+    hastaya uymayan uyarılar false positive üretmez.
+    """
+    if not kontrendikasyonlar:
+        return []
+
+    yetiskin = hasta_yas is not None and hasta_yas >= 18
+
+    # Pediyatrik/çocuk-özel kontrendikasyon tespiti
+    _PEDIATRIK_RE = re.compile(
+        r"çocuk|pediatr|pediyatr|\d+\s*yaş\s*alt[ıi]|bebek|yenidoğan|neonatal",
+        re.IGNORECASE,
+    )
+
+    # Hasta bağlamı için anahtar kelime seti
+    hasta_anahtar: set[str] = set()
+    for k in (hasta_kosullar or []):
+        hasta_anahtar.update(k.lower().replace("-", " ").split())
+    for e in (hasta_endikasyonlar or []):
+        hasta_anahtar.update(e.lower().replace("-", " ").split())
+    # Kısa stopword'leri çıkar
+    _STOP = {"ve", "ile", "için", "olan", "olan", "bir", "da", "de", "ki"}
+    hasta_anahtar -= _STOP
+
+    kesinlikle_disla: list[dict] = []
+    oncelikli: list[dict] = []
+    diger: list[dict] = []
+
+    for row in kontrendikasyonlar:
+        kosul_text = (row.get("kosul") or "").lower()
+        neden_text = (row.get("neden") or "").lower()
+        combined = kosul_text + " " + neden_text
+
+        # Kural 1: Pediyatrik kontrendikasyonu yetişkin hastadan hariç tut
+        if yetiskin and _PEDIATRIK_RE.search(combined):
+            kesinlikle_disla.append(row)
+            continue
+
+        # Kural 2: Hasta profiliyle örtüşen kontrendikasyonları önceliklendir
+        if hasta_anahtar and any(kw in combined for kw in hasta_anahtar):
+            oncelikli.append(row)
+        else:
+            diger.append(row)
+
+    disla_sayisi = len(kesinlikle_disla)
+    if disla_sayisi > 0:
+        logger.debug(
+            f"Kontrendikasyon filtresi: {disla_sayisi} pediyatrik/profil-dışı kayıt dışlandı, "
+            f"{len(oncelikli)} öncelikli + {len(diger)} diğer kaldı"
+        )
+
+    # Önce profil-eşleşen, sonra diğerleri; toplamda max_count
+    sonuc = oncelikli + diger
+    return sonuc[:max_count]
+
+
 def build_graph_context(
     sorgu_ilaclar: list[str],
     hasta_ilaclar: list[str],
     hasta_kosullar: list[str],
+    hasta_yas: int | None = None,
+    hasta_endikasyonlar: list[str] | None = None,
 ) -> GraphContext:
     """
     Sorgu ve hasta profili için Neo4j bağlamını oluşturur.
 
     Args:
-        sorgu_ilaclar:  Sorguda geçen ilaç adları (Neo4j'deki tam adlarla eşleşmeli)
-        hasta_ilaclar:  Hastanın mevcut ilaçları
-        hasta_kosullar: Hasta koşulları (böbrek yetmezliği, gebelik vb.)
+        sorgu_ilaclar:       Sorguda geçen ilaç adları (Neo4j'deki tam adlarla eşleşmeli)
+        hasta_ilaclar:       Hastanın mevcut ilaçları
+        hasta_kosullar:      Hasta koşulları (böbrek yetmezliği, gebelik vb.)
+        hasta_yas:           Hastanın yaşı (pediyatrik kontrendikasyon filtresi için)
+        hasta_endikasyonlar: Hastanın tanı/endikasyonları (kontrendikasyon önceliklendirme için)
     """
     kontrendikasyonlar = []
     etkilesimler = []
@@ -57,7 +133,7 @@ def build_graph_context(
             for row in ki:
                 row["ilac"] = ilac
             kontrendikasyonlar.extend(ki)
-            logger.debug(f"  {ilac}: {len(ki)} kontrendikasyon")
+            logger.debug(f"  {ilac}: {len(ki)} kontrendikasyon (ham)")
 
         ei = drug_interactions(ilac)
         if ei:
@@ -86,6 +162,22 @@ def build_graph_context(
         for row in rows:
             if row not in kontrendikasyonlar:
                 kontrendikasyonlar.append(row)
+
+    # Fix #4: Kontrendikasyonları hasta profiline göre filtrele ve önceliklendir
+    # → Pediyatrik kontrendikasyonlar yetişkin hastadan dışlanır
+    # → Hasta koşuluyla örtüşenler önce gelir; toplamda max 10 ile sınırlanır
+    ham_sayisi = len(kontrendikasyonlar)
+    kontrendikasyonlar = _filter_contraindications_by_profile(
+        kontrendikasyonlar,
+        hasta_kosullar=hasta_kosullar,
+        hasta_yas=hasta_yas,
+        hasta_endikasyonlar=hasta_endikasyonlar,
+        max_count=10,
+    )
+    logger.info(
+        f"Kontrendikasyon filtresi: {ham_sayisi} ham → {len(kontrendikasyonlar)} "
+        f"(hasta_yas={hasta_yas})"
+    )
 
     # Hasta'nın mevcut ilaçları arasındaki Neo4j etkileşimleri
     tum_ilaclar = list(set(sorgu_ilaclar + hasta_ilaclar))

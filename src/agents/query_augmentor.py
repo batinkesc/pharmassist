@@ -638,21 +638,28 @@ def _enrich_query(soru: str, profil: PatientProfile, soru_turleri: list[str]) ->
         condition_term = special_match.group(0)
         parcalar.append(f"özel kullanım uyarısı {condition_term} dikkatli kullanım")
 
-    # Anormal lab değerlerini klinik terime çevir
-    for anormal in profil.anormal_lab_degerleri:
-        param = anormal["param"]
-        durum = anormal["durum"]
-        if param in ("ALT", "AST", "Bilirubin") and "yüksek" in durum:
-            parcalar.append("karaciğer enzim yüksekliği hepatotoksisite")
-        elif param == "Kreatinin" and "yüksek" in durum:
-            parcalar.append("böbrek fonksiyon bozukluğu kreatinin yüksek")
-        elif param == "K" and "yüksek" in durum:
-            parcalar.append("hiperkalemi potasyum yüksek")
-        elif param == "K" and "kritik_düşük" in durum:
-            parcalar.append("hipokalemi potasyum düşük")
-        elif param == "INR" and "yüksek" in durum:
-            parcalar.append("antikoagülan INR yüksek kanama riski")
-        elif param == "HbA1c" and "yüksek" in durum:
-            parcalar.append("diyabet glisemik kontrol bozuk")
+    # Fix #5: Anormal lab değerlerini sorguya ekle — YALNIZCA doz/kontrendikasyon
+    # soru türlerinde ve en fazla 1 klinik terim. Diğer soru türlerinde lab
+    # değerleri prompt context'ine (hasta profili özetine) bırakılır, sorguya eklenmez.
+    # Aksi hâlde alakasız chunk'lar retrieve edilerek LLM bağlamı kirlenir.
+    if any(t in soru_turleri for t in ("doz", "kontrendikasyon")):
+        # Öncelik sırası: böbrek → karaciğer → elektrolit → INR → HbA1c
+        _ONCELIK = [
+            (("Kreatinin",), "yüksek",       "böbrek fonksiyon bozukluğu kreatinin yüksek"),
+            (("ALT", "AST"), "yüksek",       "karaciğer enzim yüksekliği hepatotoksisite"),
+            (("Bilirubin",), "yüksek",       "karaciğer enzim yüksekliği bilirubin"),
+            (("K",),         "yüksek",       "hiperkalemi potasyum yüksek"),
+            (("K",),         "kritik_düşük", "hipokalemi potasyum düşük"),
+            (("INR",),       "yüksek",       "antikoagülan INR yüksek kanama riski"),
+            (("HbA1c",),     "yüksek",       "diyabet glisemik kontrol bozuk"),
+        ]
+        for params, durum_prefix, terim in _ONCELIK:
+            for anormal in profil.anormal_lab_degerleri:
+                if anormal["param"] in params and durum_prefix in anormal["durum"]:
+                    parcalar.append(terim)
+                    break  # Sadece en öncelikli lab bulgusunu ekle
+            else:
+                continue
+            break  # İlk eşleşme bulundu — daha fazla ekleme
 
     return " ".join(parcalar)
