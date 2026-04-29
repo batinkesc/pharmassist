@@ -43,9 +43,54 @@ from src.data.normalization import normalize_drug_name
 
 DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 DEFAULT_LOCAL_MODEL = "local-model"        # LM Studio'da yüklü model adı
-DEFAULT_MAX_TOKENS = 1400
+DEFAULT_MAX_TOKENS = 1400                  # Geriye-dönük uyumluluk için; run_rag None geçilirse dinamik hesaplanır
 MAX_CHUNKS_PER_QUERY  = POLICY.max_chunks_per_query
 MIN_SCORE_THRESHOLD   = POLICY.min_score_threshold
+
+# ---------------------------------------------------------------------------
+# Dinamik token bütçesi — soru türüne göre LLM'e verilen max_tokens
+# Kısa/odaklı soru türleri → daha az token → faithfulness artar (uzun cevap = daha fazla
+# doğrulanamaz claim). Yan etki listeleri ve gebelik bölümleri meşru olarak uzun olabilir.
+# ---------------------------------------------------------------------------
+_SORU_TURU_BUTCE: dict[str, int] = {
+    "negatif_bilgi_yok": 150,   # "[BİLGİ YOK: ...]" — 1 cümle yeterli
+    "kontrendikasyon":   500,   # net karar + 1-2 koşul cümlesi
+    "doz":               600,   # eşik + formül + 1 uyarı cümlesi
+    "doz_bobrek":        600,
+    "doz_karaciger":     600,
+    "doz_geriyatrik":    550,
+    "doz_pediyatrik":    600,
+    "gebelik_laktasyon": 700,   # 4.6 bölümü uzun olabilir
+    "etkilesim":         700,   # 2 ilaç + mekanizma özeti
+    "cyp450_etkilesim":  750,   # CYP yönü + klinik etki
+    "yan_etki":         1000,   # 4.8 listeleri meşru olarak uzundur (q31 gibi)
+}
+_DEFAULT_TUR_BUTCE = 600
+
+
+def _dynamic_max_tokens(
+    soru_turleri: list[str],
+    hedef_ilaclar: list[str],
+    cyp_var: bool = False,
+) -> int:
+    """Soru türü + ilaç sayısına göre LLM max_tokens bütçesi hesaplar.
+
+    Mantık:
+    - Her soru türünün bir tavan bütçesi var (kısa/odaklı türler düşük)
+    - Birden fazla soru türü varsa en yüksek bütçeyi al
+    - Ek ilaç başına +100 (2. ilaçtan itibaren, max 2 ilaç ek)
+    - CYP mekanizması aktifse +100
+    - Hard cap: 1200 (q31 gibi çok uzun yan etki listeleri için bile)
+    """
+    base = max(
+        (_SORU_TURU_BUTCE.get(t, _DEFAULT_TUR_BUTCE) for t in soru_turleri),
+        default=_DEFAULT_TUR_BUTCE,
+    )
+    extra_drugs = min(max(len(hedef_ilaclar) - 1, 0), 2)
+    base += extra_drugs * 100
+    if cyp_var:
+        base += 100
+    return min(base, 1200)
 
 
 # ---------------------------------------------------------------------------
@@ -366,11 +411,9 @@ Madde 4.2'de doz azaltımı veya 4.4'te "dikkatli kullanılmalıdır" yazıyorsa
 
 YANIT TAMAMLIĞI KURALI:
 Kontrendikasyon veya kısıtlama bildirirken YALNIZCA "kontrendikedir" demek YETERSİZDİR.
-Bağlamda bilgi varsa şunları mutlaka ekle:
-1. EŞİK/KOŞUL: Hangi GFR değerinde, hangi Child-Pugh sınıfında, hangi dozda kontrendike?
-   Örn: "GFR <30 mL/dak altında" veya "Child-Pugh B/C'de" gibi spesifik değer.
-2. TİP: MUTLAK mı (Madde 4.3 — hiçbir koşulda) yoksa GÖRECELI mi (Madde 4.4 — dikkatli kullan)?
-   Madde 4.2/4.4 bilgisi varsa doz ayarı, izlem sıklığı, uygulama koşullarını da ver.
+Bağlamda açıkça yazıyorsa şunları ekle (bağlamda yoksa EKLEME):
+1. EŞİK/KOŞUL: GFR değeri, Child-Pugh sınıfı gibi spesifik eşikler — YALNIZCA bağlamda yazıyorsa.
+2. TİP: MUTLAK mı (Madde 4.3) yoksa GÖRECELI mi (Madde 4.4)? — Bağlamdan net anlaşılıyorsa belirt.
 3. KLİNİK YOL: Bağlamda bir ilaç adı AÇIKÇA yazıyorsa onu aktar. Bağlamda ilaç adı geçmiyorsa
    HİÇBİR spesifik ilaç adı, ilaç sınıfı veya doz önerisi yazma — sadece ilacın kullanılmaması
    gerektiğini belirt. "DMAH", "metildopa", "heparin" vb. bağlamda yoksa YASAKTIR.
@@ -396,6 +439,8 @@ MUTLAK KURALLAR:
    EKLEME. CYP450 bilgisi her zaman [CYP450] etiketi ile işaretlenmeli.
 8. BİLGİ YOK KURALI: İlgili KÜB bölümü bağlamda yoksa veya soruyla ilgili spesifik bilgi
    içermiyorsa, ilgili cümle yerine "[BİLGİ YOK: ...]" yaz. Yorum veya tahminde bulunma.
+   BİLGİ YOK senaryosunda yanıt maksimum 2 cümle olmalı — "[BİLGİ YOK: ...]" ifadesinin
+   ardından açıklama, mekanizma veya genel bilgi EKLEME.
 
 YANIT FORMATI (ZORUNLU — YALNIZCA BU İKİ BÖLÜM):
 ## SONUÇ
@@ -1713,7 +1758,7 @@ def run_rag(
     hedef_ilaclar: list[str] | None = None,
     n_results: int = 5,
     model: str = DEFAULT_MODEL,
-    max_tokens: int = DEFAULT_MAX_TOKENS,
+    max_tokens: int | None = None,
 ) -> RAGResponse:
     """
     Tam RAG pipeline'ını çalıştırır.
@@ -1723,7 +1768,7 @@ def run_rag(
         profil:        Hasta profili
         hedef_ilaclar: Sorgunun odaklandığı ilaçlar (None ise genel)
         model:         Claude model ID
-        max_tokens:    Maksimum yanıt token sayısı
+        max_tokens:    Maksimum yanıt token sayısı (None = soru türüne göre otomatik)
 
     Returns:
         RAGResponse — yanıt + kaynaklar + metadata
@@ -1840,6 +1885,15 @@ def run_rag(
             logger.info(f"CYP450: {len(cyp_sonuc.etkilesimler)} etkileşim tespit edildi")
     except Exception as e:
         logger.warning(f"CYP450 analizi atlandı: {e}")
+
+    # 3d. Dinamik token bütçesi — soru türü + ilaç sayısına göre
+    if max_tokens is None:
+        max_tokens = _dynamic_max_tokens(
+            soru_turleri=augmented.soru_turleri,
+            hedef_ilaclar=hedef_ilaclar or [],
+            cyp_var=bool(cyp_metin),
+        )
+        logger.info(f"Dinamik max_tokens: {max_tokens} (türler: {augmented.soru_turleri}, ilaç: {len(hedef_ilaclar or [])})")
 
     # 4. Bölüm kapsama kontrolü — eksik KÜB bölümleri için LLM uyarısı (Aksiyon 5)
     _SORU_TURU_GEREKLI_BOLUM: dict[str, str] = {
