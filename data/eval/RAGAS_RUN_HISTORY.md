@@ -1,6 +1,6 @@
 # RAGAS Run History — Kronolojik Sıra
 
-**Son Güncelleme:** 2026-04-29
+**Son Güncelleme:** 2026-04-29 (Run 18)
 
 ---
 
@@ -28,19 +28,27 @@ Bu çalıştırmalar sistemin gerçek performansını ölçmek için yapıldı.
 | **Run 15** | `archive/ragas_run15_merged.json` | 2026-04-28 | 32 | Together AI Qwen3-235B | 0.7244 | 0.7577 | CU=0.7640; Ort=0.7487 |
 | **Run 16** | `ragas_run16_merged.json` | 2026-04-29 | 32 | Together AI Qwen3-235B | 0.7153 | 0.7571 | CU=0.7530; Ort=0.7418; VALIDATE 3-6 eklendi (tag stripping yok) |
 | **Run 17** | `ragas_run17_merged.json` | 2026-04-29 | 32 | Together AI Qwen3-235B | 0.7089 | 0.7630 | CU=0.7487; Ort=0.7402; Tag stripping eklendi; AMARYL NaN kalıcı; CR +3.8pp vs baseline |
+| **Run 18** | `ragas_run18_results.json` | 2026-04-29 | 33 | Together AI Qwen3-235B | **0.7127** | **0.9343** | CU=0.7516; **Ort=0.7995**; Fix #4+#5 + Gemini GT revizyonu (kısa GT, ® temizliği, +q34); CR +20.9pp ↑↑; ⚠️ GT seti değişti — Run 12 ile direkt karşılaştırılamaz; **YENİ BASELINE (yeni GT seti)** |
 
 ### Özet Trend
 
 ```
-Faithfulness:    0.40 → 0.78 → 0.76 → 0.70 → 0.68 → 0.72 → 0.70 → 0.55 → 0.66 → 0.68 → 0.70 → 0.76 → 0.67 → 0.72 → 0.72 → 0.72 → 0.71
-Context Recall:  0.74 → 0.89 → 0.74 → 0.76 → 0.86 → 0.81 → 0.81 → 0.89 → 0.66 → 0.67 → 0.73 → 0.73 → 0.74 → 0.76 → 0.76 → 0.76 → 0.76
+Faithfulness:    0.40 → 0.78 → 0.76 → 0.70 → 0.68 → 0.72 → 0.70 → 0.55 → 0.66 → 0.68 → 0.70 → 0.76 → 0.67 → 0.72 → 0.72 → 0.72 → 0.71 → [0.71*]
+Context Recall:  0.74 → 0.89 → 0.74 → 0.76 → 0.86 → 0.81 → 0.81 → 0.89 → 0.66 → 0.67 → 0.73 → 0.73 → 0.74 → 0.76 → 0.76 → 0.76 → 0.76 → [0.93*]
 ```
+*Run 18: yeni GT seti (Gemini revizyonu, 33 soru) — önceki runlarla karşılaştırılamaz.
+
 Run 2'nin Haiku eval skoru direkt karşılaştırılamaz.  
 Run 3-8: Mistral local evaluator. Run 9-10: qwen2.5:32b evaluator (daha strict → CR düşük görünür).  
-Run 11-17: Together AI Qwen3-235B evaluator; 3-metrik standard (F+CU+CR) devrede.
+Run 11-17: Together AI Qwen3-235B evaluator; 3-metrik standard (F+CU+CR) devrede.  
+Run 18: Together AI Qwen3-235B; **yeni GT seti** (Gemini revizyonu — GT'ler ~%55 kısaltıldı, 33 soru).
 
-**CR Trendi (Run 12→17):** 0.7250 → 0.7630 → +3.8pp ↑ (sub-chunking etkisi kalıcı)  
-**F Trendi:** Baseline ~0.76, mevcut ~0.71 (−5pp). Başlıca neden: CO-DİOVAN false positive.  
+**CR Trendi (Run 12→17→18):** 0.7250 → 0.7630 → **0.9343** ↑↑ (kısa GT etkisi + pipeline fix #4+#5)  
+**F Trendi (yeni GT):** Run 18 F=0.7127 (yeni baseline); 1 NaN (v3_q16).  
+
+**Baseline Geçmişi:**
+- Run 12 baseline (eski GT seti): F:0.7607 CU:0.8028 CR:0.7250 Ort:0.7628
+- **Run 18 baseline (yeni GT seti): F:0.7127 CU:0.7516 CR:0.9343 Ort:0.7995** ← AKTİF
 
 **Yeni Metrik — Context Utilization (CU):** Run 11'den itibaren standart. "Getirilen chunk'lar cevap için gerçekten kullanıldı mı?" sorusunu ölçer. GT gerektirmez (GT-free). Run 12: CU=0.8028.
 
@@ -128,7 +136,8 @@ Bu çalıştırmalar evaluator seçimi, NaN sorunu ve Turkish patch gibi konular
 |-------|--------|------------------|
 | `archive/v1/test_questions.json` | 8 soru — Dalga 1 temel | Run 1 |
 | `archive/v2/ragas_v2_questions.json` | 25 soru — Dalga 2 | Run 2, Exp-v4 through v8 |
-| `ragas_v3_questions.json` | 33 soru — Dalga 3 (mevcut) | Run 3 (30), Run 4-5 (33), Run 11 (33), Run 12 (32, Q11 kaldırıldı, 4 GT fix) |
+| `ragas_v3_questions.json` | 33 soru — Dalga 3 v2 (Gemini revizyonu: kısa GT, ® temizliği, +q34) | Run 18+ |
+| `ragas_v3_questions_backup_pre_gemini.json` | 32 soru — Dalga 3 v1 (orijinal) | Run 3 (30), Run 4-5 (33), Run 11 (33), Run 12 (32, Q11 kaldırıldı, 4 GT fix), Run 13-17 |
 | `archive/v10/ragas_v10_clean_questions.json` | 5 soru — Turkish patch | Exp-v9, Exp-v10 |
 
 ---

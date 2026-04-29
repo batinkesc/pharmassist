@@ -906,11 +906,17 @@ def validate_response(yanit: str, chunklar: list, soru: str = "") -> str:
                 check_text = cited_text if has_citation else all_chunk_text
 
                 def _number_in_text(num_str: str, unit: str, text: str) -> bool:
-                    num_normalized = num_str.replace(',', '.')
-                    patterns = [
-                        f"{num_normalized} {unit}".lower().strip(),
-                        f"{num_str} {unit}".lower().strip(),
-                        num_normalized,
+                    # Her iki ondalık notasyonu dene (KÜB Türkçe virgül, Haiku nokta kullanabilir)
+                    num_dot   = num_str.replace(',', '.')   # 7,5 → 7.5
+                    num_comma = num_str.replace('.', ',')   # 7.5 → 7,5
+                    unit_l    = unit.lower().strip()
+                    patterns  = [
+                        f"{num_dot} {unit_l}",    # "7.5 mg"
+                        f"{num_comma} {unit_l}",  # "7,5 mg"
+                        f"{num_dot}{unit_l}",     # "7.5mg" (boşluksuz)
+                        f"{num_comma}{unit_l}",   # "7,5mg"
+                        num_dot,                  # sadece sayı (geniş kontrol)
+                        num_comma,
                     ]
                     return any(p in text for p in patterns)
 
@@ -1232,15 +1238,19 @@ def _calibrate_clinical_severity(
     eslesen_durumlar = [d for d in _KLINIK_DURUMLAR_EXTENDED if d in soru_lower]
 
     # 1. 4.3 + kontrendike kelime + klinik durum eşleşmesi → KONTREDİKE
+    #    ÖNEMLİ: Durum soruda belirtilmemişse etiket basma — LLM kendi değerlendirsin.
+    #    "10 yaş altı kontrendike" gibi hastaya uygulanmayan kuralları yakalamayı önler.
     if chunks_43 and _KONTRENDIKE_RE.search(icerik_43):
-        if not eslesen_durumlar:
-            # Durum belirtilmemiş sorular için de kontrendike kabul et
+        if eslesen_durumlar and any(d in icerik_43 for d in eslesen_durumlar):
+            # Sorudaki klinik durum 4.3 metninde geçiyor → gerçek kontrendikasyon
             etiket = "KONTREDİKE"
-        elif any(d in icerik_43 for d in eslesen_durumlar):
-            etiket = "KONTREDİKE"
-        else:
-            # 4.3 var ama sorgunun klinik durumu 4.3'te eşleşmiyor
+        elif eslesen_durumlar:
+            # 4.3 var, kontrendike kelimesi var ama sorunun durumu 4.3'te yok
+            # → Başka bir grup için kontrendike; bu hasta için dikkatli kullanım
             etiket = "DİKKATLİ_KULLANIM"
+        else:
+            # Soruda klinik durum belirtilmemiş → LLM bağlamı okusun, biz etiket basma
+            etiket = ""
     # 2. 4.3 yok / eşleşme yok ama 4.4 dikkatli kullanım diyor → DİKKATLİ
     elif chunks_44 and _DIKKATLI_RE.search(icerik_44):
         if eslesen_durumlar and any(d in icerik_44 for d in eslesen_durumlar):
@@ -1548,7 +1558,7 @@ def _compress_chunk_by_query(text: str, soru: str, madde_no: str = "") -> str:
     - Büyük chunklar gürültü içerir → LLM context'te olmayan iddialar üretiyor (F ↓)
     - RAGAS CU: getirilen chunk'ın cevaba katkısını ölçer — ilgisiz satırlar CU'yu düşürür
     """
-    _CC_THRESHOLD = 99999  # CC devre dışı — keyword/morfoloji edge-case'leri F'i düşürüyor
+    _CC_THRESHOLD = 1200   # 1200+ karakter chunk'lara CC uygula (gürültü/uzun belgeler)
     _CC_MIN_LINES = 4      # En az bu kadar satır koru
     _CC_SCORE_THRESHOLD = 1  # Bir satırda en az bu kadar keyword olmalı
 
@@ -1766,6 +1776,8 @@ def run_rag(
             sorgu_ilaclar=hedef_ilaclar or [],
             hasta_ilaclar=profil.mevcut_ilaclar,
             hasta_kosullar=hasta_kosullar,
+            hasta_yas=profil.yas,
+            hasta_endikasyonlar=list(profil.endikasyonlar) if profil.endikasyonlar else [],
         )
         graf_baglami = gc.ozet_metin
         logger.info(f"Graf bağlamı hazır: {len(gc.kontrendikasyonlar)} kontrendikasyon, {len(gc.etkilesimler)} etkileşim")
