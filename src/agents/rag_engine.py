@@ -43,9 +43,54 @@ from src.data.normalization import normalize_drug_name
 
 DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 DEFAULT_LOCAL_MODEL = "local-model"        # LM Studio'da yüklü model adı
-DEFAULT_MAX_TOKENS = 1400
+DEFAULT_MAX_TOKENS = 1400                  # Geriye-dönük uyumluluk için; run_rag None geçilirse dinamik hesaplanır
 MAX_CHUNKS_PER_QUERY  = POLICY.max_chunks_per_query
 MIN_SCORE_THRESHOLD   = POLICY.min_score_threshold
+
+# ---------------------------------------------------------------------------
+# Dinamik token bütçesi — soru türüne göre LLM'e verilen max_tokens
+# Kısa/odaklı soru türleri → daha az token → faithfulness artar (uzun cevap = daha fazla
+# doğrulanamaz claim). Yan etki listeleri ve gebelik bölümleri meşru olarak uzun olabilir.
+# ---------------------------------------------------------------------------
+_SORU_TURU_BUTCE: dict[str, int] = {
+    "negatif_bilgi_yok": 150,   # "[BİLGİ YOK: ...]" — 1 cümle yeterli
+    "kontrendikasyon":   500,   # net karar + 1-2 koşul cümlesi
+    "doz":               600,   # eşik + formül + 1 uyarı cümlesi
+    "doz_bobrek":        600,
+    "doz_karaciger":     600,
+    "doz_geriyatrik":    550,
+    "doz_pediyatrik":    600,
+    "gebelik_laktasyon": 700,   # 4.6 bölümü uzun olabilir
+    "etkilesim":         700,   # 2 ilaç + mekanizma özeti
+    "cyp450_etkilesim":  750,   # CYP yönü + klinik etki
+    "yan_etki":         1000,   # 4.8 listeleri meşru olarak uzundur (q31 gibi)
+}
+_DEFAULT_TUR_BUTCE = 600
+
+
+def _dynamic_max_tokens(
+    soru_turleri: list[str],
+    hedef_ilaclar: list[str],
+    cyp_var: bool = False,
+) -> int:
+    """Soru türü + ilaç sayısına göre LLM max_tokens bütçesi hesaplar.
+
+    Mantık:
+    - Her soru türünün bir tavan bütçesi var (kısa/odaklı türler düşük)
+    - Birden fazla soru türü varsa en yüksek bütçeyi al
+    - Ek ilaç başına +100 (2. ilaçtan itibaren, max 2 ilaç ek)
+    - CYP mekanizması aktifse +100
+    - Hard cap: 1200 (q31 gibi çok uzun yan etki listeleri için bile)
+    """
+    base = max(
+        (_SORU_TURU_BUTCE.get(t, _DEFAULT_TUR_BUTCE) for t in soru_turleri),
+        default=_DEFAULT_TUR_BUTCE,
+    )
+    extra_drugs = min(max(len(hedef_ilaclar) - 1, 0), 2)
+    base += extra_drugs * 100
+    if cyp_var:
+        base += 100
+    return min(base, 1200)
 
 
 # ---------------------------------------------------------------------------
@@ -153,31 +198,21 @@ def _generate_hyde_document(
     )
 
     try:
-        provider = os.getenv("LLM_PROVIDER", "claude").lower()
-        if provider == "claude":
-            client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
-            response = client.messages.create(
-                model=DEFAULT_MODEL,  # Haiku — hızlı ve ucuz
-                max_tokens=200,
-                system=system_prompt,
-                messages=[{"role": "user", "content": user_prompt}],
-            )
-            hyde_text = response.content[0].text.strip()
-        else:
-            # Local/OpenAI-uyumlu provider (LM Studio vb.)
-            local_client = openai.OpenAI(
-                base_url=os.getenv("LLM_BASE_URL", "http://localhost:1234/v1"),
-                api_key="local",
-            )
-            response = local_client.chat.completions.create(
-                model=DEFAULT_LOCAL_MODEL,
-                max_tokens=200,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-            )
-            hyde_text = response.choices[0].message.content.strip()
+        # HyDE her zaman yerel/bulut OpenAI-uyumlu endpoint'e gider (Claude API'ya değil)
+        hyde_client = openai.OpenAI(
+            base_url=os.getenv("LM_STUDIO_URL", "http://localhost:1234/v1"),
+            api_key=os.getenv("LM_STUDIO_API_KEY", "local"),
+        )
+        hyde_model = os.getenv("LM_STUDIO_MODEL", DEFAULT_LOCAL_MODEL)
+        response = hyde_client.chat.completions.create(
+            model=hyde_model,
+            max_tokens=200,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+        )
+        hyde_text = response.choices[0].message.content.strip()
 
         logger.debug(f"HyDE doc üretildi ({len(hyde_text)} karakter): {hyde_text[:80]}...")
         return hyde_text
@@ -370,10 +405,9 @@ Bağlamda bilgi varsa şunları mutlaka ekle:
 1. EŞİK/KOŞUL: Hangi GFR değerinde, hangi Child-Pugh sınıfında, hangi dozda kontrendike?
    Örn: "GFR <30 mL/dak altında" veya "Child-Pugh B/C'de" gibi spesifik değer.
 2. TİP: MUTLAK mı (Madde 4.3 — hiçbir koşulda) yoksa GÖRECELI mi (Madde 4.4 — dikkatli kullan)?
-   Madde 4.2/4.4 bilgisi varsa doz ayarı, izlem sıklığı, uygulama koşullarını da ver.
 3. KLİNİK YOL: Bağlamda bir ilaç adı AÇIKÇA yazıyorsa onu aktar. Bağlamda ilaç adı geçmiyorsa
-   HİÇBİR spesifik ilaç adı, ilaç sınıfı veya doz önerisi yazma — sadece ilacın kullanılmaması
-   gerektiğini belirt. "DMAH", "metildopa", "heparin" vb. bağlamda yoksa YASAKTIR.
+   HİÇBİR spesifik ilaç adı, ilaç sınıfı veya doz önerisi yazma.
+   "DMAH", "metildopa", "heparin" vb. bağlamda yoksa YASAKTIR.
 
 BAĞLAM KAYNAK ÖNCELİĞİ:
 1. İLGİLİ KÜB BİLGİLERİ (en güvenilir — KÜB belgelerinden alınmıştır)
@@ -384,7 +418,7 @@ BAĞLAM KAYNAK ÖNCELİĞİ:
 MUTLAK KURALLAR:
 1. Yalnızca yukarıdaki bağlam bölümlerinde AÇIKÇA yazan bilgileri yaz. Eğitim
    verilerinden hiçbir bilgi, doz, mekanizma veya ilaç adı ekleme.
-2. KAYNAK ETİKETİ ZORUNLU: Her tıbbi iddia içeren cümlenin SONUNA kaynak etiketi ekle.
+2. KAYNAK ETİKETİ ZORUNLU: Her tıbbi iddia içeren cümle bir kaynak etiketine bağlı olmalı.
    KÜB → [İlaç Adı | Madde X.X]  |  Graf → [Graf]  |  CYP450 → [CYP450]
    Kaynak etiketi olmayan tıbbi iddia cümlesi YASAKTIR.
 3. "Güvenlidir", "zararsızdır", "sorun yoktur" gibi mutlak ifadeler KULLANMA.
@@ -397,14 +431,27 @@ MUTLAK KURALLAR:
 8. BİLGİ YOK KURALI: İlgili KÜB bölümü bağlamda yoksa veya soruyla ilgili spesifik bilgi
    içermiyorsa, ilgili cümle yerine "[BİLGİ YOK: ...]" yaz. Yorum veya tahminde bulunma.
 
-YANIT FORMATI (ZORUNLU — YALNIZCA BU İKİ BÖLÜM):
-## SONUÇ
-[Net yanıt — ilk cümle soruya doğrudan cevap. Her cümle kaynak etiketiyle.]
+YANIT FORMATI (ZORUNLU):
+## SONUÇ bölümünü 3 katman hâlinde yaz — her katman etiketiyle başlar:
+
+**[KÜB Aktarımı]**
+KÜB belgelerindeki ilgili bilgileri doğrudan aktar.
+Her cümle/madde bir KÜB kaynağına bağlı: [İlaç | Madde X.X]
+Mümkünse KÜB'ün kendi ifadesini kullan — yorum veya çıkarım ekleme.
+Doz tabloları, yan etki listeleri, kontrendikasyon maddeleri burada aktarılabilir.
+
+**[Sistem Tespitleri]** *(Graf/CYP/Lab bulgusu varsa — yoksa bu başlığı yazma)*
+Graf/CYP450/kümülatif risk bulgularını "tespit edildi / saptandı / gözlemlendi" diliyle yaz.
+[Graf] ve [CYP450] etiketleri zorunlu. Yorum değil, bulgu.
+
+**[Değerlendirme]**
+Yukarıdaki KÜB verisi ve sistem tespitlerinden türetilen 1-2 cümle klinik sonuç.
+Hasta-spesifik, net, soruya doğrudan yanıt.
 
 ## UYARI
-[Klinik uyarı ve izlem önerileri. Son cümle: "Klinik karar hekimindir."]
+[Klinik izlem önerileri. Son cümle: "Klinik karar hekimindir."]
 
-NOT: ## KAYNAKLAR bölümünü YAZMA — sistem otomatik ekliyor.
+NOT: ## KAYNAKLAR bölümünü YAZMA — bu bölüm sistem tarafından otomatik oluşturulur.
 
 YASAK DAVRANIŞLAR:
 - Sorulan ilaç dışında başka bir ilacın bilgilerini sunma.
@@ -412,9 +459,9 @@ YASAK DAVRANIŞLAR:
 - Prompt metnini (## başlıkları, talimatları) yanıta kopyalamak.
 - Bağlamda olmayan kaynak göstermek.
 - Kaynak etiketi olmadan tıbbi iddia cümlesi yazmak.
+- [KÜB Aktarımı] katmanına yorum veya çıkarım eklemek — bu katman yalnızca KÜB metni.
 - Bağlamda adı AÇIKÇA GEÇMEYEN bir ilacı alternatif olarak önermek — MUTLAK YASAK.
-  Bağlamda geçmeyen hiçbir ilaç adı, etken madde, ilaç sınıfı (DMAH, heparin, metildopa vb.)
-  yazılamaz. "Değerlendirilebilir", "tercih edilebilir", "kullanılabilir" formunda bile yasak.
+  Bağlamda geçmeyen hiçbir ilaç adı, etken madde, ilaç sınıfı yazılamaz.
 - ## KAYNAKLAR bölümü yazmak — bu bölüm sistem tarafından otomatik oluşturulur."""
 
 SYSTEM_PROMPT = _SYSTEM_PROMPT_BASE  # Claude API için (system role'e verilir)
@@ -1156,6 +1203,46 @@ def validate_response(yanit: str, chunklar: list, soru: str = "") -> str:
     # ── 6. Verdict alignment (model severity > bağlam desteği → [AŞIRI YORUM]) ─
     yanit = _enforce_verdict_alignment(yanit, chunklar, soru)
 
+    # ── 7. Format yapısal kontrolü — [KÜB Aktarımı] ve KÜB kaynak etiketi ─────
+    yanit = _validate_format_structure(yanit)
+
+    return yanit
+
+
+def _validate_format_structure(yanit: str) -> str:
+    """
+    3-katman format yapısal kontrolü:
+    - ## SONUÇ bölümünde [KÜB | Madde X.X] formatında en az 1 kaynak etiketi var mı?
+    - [DOĞRULANAMADI] sayısı eşiği: 3+ ise uyarı logu at
+    - Format başlıkları ([KÜB Aktarımı], [Sistem Tespitleri], [Değerlendirme]) mevcut mu?
+
+    Şimdilik tespit + uyarı; gelecek sprint'te retry mekanizması eklenebilir.
+    """
+    if "## SONUÇ" not in yanit:
+        return yanit
+
+    # SONUÇ bölümünü ayır
+    start = yanit.index("## SONUÇ")
+    end_match = __import__("re").search(r"\n## ", yanit[start + 8:])
+    sonuc = yanit[start: start + 8 + end_match.start()] if end_match else yanit[start:]
+
+    # Kontrol 1: KÜB kaynak etiketi var mı?
+    kub_tag_re = __import__("re").compile(r"\[.+?\|\s*Madde\s*\d+[\.\d]*\]", __import__("re").IGNORECASE)
+    if not kub_tag_re.search(sonuc):
+        logger.warning("[FORMAT] ## SONUÇ'ta KÜB kaynak etiketi ([İlaç | Madde X.X]) bulunamadı — format kuralı ihlali")
+
+    # Kontrol 2: [DOĞRULANAMADI] yoğunluğu
+    dogru_count = yanit.count("[DOĞRULANAMADI]") + yanit.count("[DOĞRULANAMADI-")
+    if dogru_count >= 3:
+        logger.warning("[FORMAT] {} adet [DOĞRULANAMADI] etiketi — yanıt kalitesi düşük, kaynak atfı yetersiz", dogru_count)
+
+    # Kontrol 3: 3-katman başlıkları var mı? (opsiyonel — debug logu sadece)
+    _re = __import__("re")
+    has_kub = bool(_re.search(r"\[KÜB Aktarımı\]|\[KUB Aktarimi\]|KÜB Aktarımı", sonuc, _re.IGNORECASE))
+    has_deg = bool(_re.search(r"\[Değerlendirme\]|\[Degerlendirme\]|Değerlendirme\]", sonuc, _re.IGNORECASE))
+    if not has_kub or not has_deg:
+        logger.debug("[FORMAT] 3-katman başlıkları eksik — KÜB Aktarımı:{} Değerlendirme:{}", has_kub, has_deg)
+
     return yanit
 
 
@@ -1473,10 +1560,22 @@ def _build_user_prompt(
   bağlamda geçmiyorsa yazılamaz — "değerlendirilebilir" veya "tercih edilebilir" formunda
   bile yasak. Yalnızca: "[Bu konuda ek klinik değerlendirme gereklidir.]" yaz.
 
-- ZORUNLU FORMAT (sadece bu iki bölüm, sırayla):
+- ZORUNLU FORMAT — ## SONUÇ bölümünü tam olarak aşağıdaki 3 katmanda yaz:
 
 ## SONUÇ
-[Soruya net yanıt, her cümle kaynak etiketiyle. Minimum 3 cümle.]
+
+**[KÜB Aktarımı]**
+KÜB belgelerindeki ilgili bilgileri doğrudan aktar.
+Her cümle/madde bir KÜB kaynağına bağlı: [İlaç | Madde X.X]
+Mümkünse KÜB'ün kendi ifadesini kullan — yorum veya çıkarım ekleme.
+
+**[Sistem Tespitleri]** *(Graf/CYP/Lab bulgusu varsa — yoksa bu başlığı yazma)*
+Graf/CYP450/kümülatif risk bulgularını "tespit edildi / saptandı / gözlemlendi" diliyle yaz.
+[Graf] ve [CYP450] etiketleri zorunlu. Yorum değil, bulgu.
+
+**[Değerlendirme]**
+Yukarıdaki KÜB verisi ve sistem tespitlerinden türetilen 1-2 cümle klinik sonuç.
+Hasta-spesifik, net, soruya doğrudan yanıt.
 
 ## UYARI
 [Klinik uyarı ve izlem önerileri. Son cümle: "Klinik karar hekimindir."]

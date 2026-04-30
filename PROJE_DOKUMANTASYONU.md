@@ -1,8 +1,8 @@
 # PharmAssist — Proje Dokümantasyonu
 
-**Versiyon:** 1.7.0  
-**Son Güncelleme:** 2026-04-29  
-**Durum:** VALIDATE Pipeline v2 tamamlandı (6 adım). Fix #4+#5 (graph kontrendikasyon filtreleme + lab sorgu izolasyonu) uygulandı. **AKTİF BASELINE: Run 18** (F:0.7127 | CU:0.7516 | CR:0.9343 | Ort:0.7995 ✓) — Gemini GT revizyonu (33 soru, kısa GT ~%55 kısalma). CR +20.9pp ↑↑ (0.7250→0.9343). **95 test geçiyor.** Eski baseline: Run 12 (F:0.7607 | CU:0.8028 | CR:0.7250).
+**Versiyon:** 1.8.0  
+**Son Güncelleme:** 2026-04-30  
+**Durum:** 3-katman yanıt formatı ([KÜB Aktarımı]/[Sistem Tespitleri]/[Değerlendirme]) uygulandı. VALIDATE step 7 eklendi. CYP extraction Neo4j'e taşındı (API maliyeti azaltıldı). **Run 20: F:0.7192 | CU:0.7823 | CR:0.9010 | Ort:0.8008** — baseline Run 18'e göre +0.1pp; CU +3.1pp ↑. **AKTİF BASELINE: Run 18** (F:0.7127 | CU:0.7516 | CR:0.9343 | Ort:0.7995 ✓). **95 test geçiyor.** Eski baseline: Run 12 (F:0.7607 | CU:0.8028 | CR:0.7250).
 
 ---
 
