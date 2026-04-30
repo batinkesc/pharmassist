@@ -411,12 +411,13 @@ Madde 4.2'de doz azaltımı veya 4.4'te "dikkatli kullanılmalıdır" yazıyorsa
 
 YANIT TAMAMLIĞI KURALI:
 Kontrendikasyon veya kısıtlama bildirirken YALNIZCA "kontrendikedir" demek YETERSİZDİR.
-Bağlamda açıkça yazıyorsa şunları ekle (bağlamda yoksa EKLEME):
-1. EŞİK/KOŞUL: GFR değeri, Child-Pugh sınıfı gibi spesifik eşikler — YALNIZCA bağlamda yazıyorsa.
-2. TİP: MUTLAK mı (Madde 4.3) yoksa GÖRECELI mi (Madde 4.4)? — Bağlamdan net anlaşılıyorsa belirt.
+Bağlamda bilgi varsa şunları mutlaka ekle:
+1. EŞİK/KOŞUL: Hangi GFR değerinde, hangi Child-Pugh sınıfında, hangi dozda kontrendike?
+   Örn: "GFR <30 mL/dak altında" veya "Child-Pugh B/C'de" gibi spesifik değer.
+2. TİP: MUTLAK mı (Madde 4.3 — hiçbir koşulda) yoksa GÖRECELI mi (Madde 4.4 — dikkatli kullan)?
 3. KLİNİK YOL: Bağlamda bir ilaç adı AÇIKÇA yazıyorsa onu aktar. Bağlamda ilaç adı geçmiyorsa
-   HİÇBİR spesifik ilaç adı, ilaç sınıfı veya doz önerisi yazma — sadece ilacın kullanılmaması
-   gerektiğini belirt. "DMAH", "metildopa", "heparin" vb. bağlamda yoksa YASAKTIR.
+   HİÇBİR spesifik ilaç adı, ilaç sınıfı veya doz önerisi yazma.
+   "DMAH", "metildopa", "heparin" vb. bağlamda yoksa YASAKTIR.
 
 BAĞLAM KAYNAK ÖNCELİĞİ:
 1. İLGİLİ KÜB BİLGİLERİ (en güvenilir — KÜB belgelerinden alınmıştır)
@@ -427,7 +428,7 @@ BAĞLAM KAYNAK ÖNCELİĞİ:
 MUTLAK KURALLAR:
 1. Yalnızca yukarıdaki bağlam bölümlerinde AÇIKÇA yazan bilgileri yaz. Eğitim
    verilerinden hiçbir bilgi, doz, mekanizma veya ilaç adı ekleme.
-2. KAYNAK ETİKETİ ZORUNLU: Her tıbbi iddia içeren cümlenin SONUNA kaynak etiketi ekle.
+2. KAYNAK ETİKETİ ZORUNLU: Her tıbbi iddia içeren cümle bir kaynak etiketine bağlı olmalı.
    KÜB → [İlaç Adı | Madde X.X]  |  Graf → [Graf]  |  CYP450 → [CYP450]
    Kaynak etiketi olmayan tıbbi iddia cümlesi YASAKTIR.
 3. "Güvenlidir", "zararsızdır", "sorun yoktur" gibi mutlak ifadeler KULLANMA.
@@ -439,17 +440,28 @@ MUTLAK KURALLAR:
    EKLEME. CYP450 bilgisi her zaman [CYP450] etiketi ile işaretlenmeli.
 8. BİLGİ YOK KURALI: İlgili KÜB bölümü bağlamda yoksa veya soruyla ilgili spesifik bilgi
    içermiyorsa, ilgili cümle yerine "[BİLGİ YOK: ...]" yaz. Yorum veya tahminde bulunma.
-   BİLGİ YOK senaryosunda yanıt maksimum 2 cümle olmalı — "[BİLGİ YOK: ...]" ifadesinin
-   ardından açıklama, mekanizma veya genel bilgi EKLEME.
 
-YANIT FORMATI (ZORUNLU — YALNIZCA BU İKİ BÖLÜM):
-## SONUÇ
-[Net yanıt — ilk cümle soruya doğrudan cevap. Her cümle kaynak etiketiyle.]
+YANIT FORMATI (ZORUNLU):
+## SONUÇ bölümünü 3 katman hâlinde yaz — her katman etiketiyle başlar:
+
+**[KÜB Aktarımı]**
+KÜB belgelerindeki ilgili bilgileri doğrudan aktar.
+Her cümle/madde bir KÜB kaynağına bağlı: [İlaç | Madde X.X]
+Mümkünse KÜB'ün kendi ifadesini kullan — yorum veya çıkarım ekleme.
+Doz tabloları, yan etki listeleri, kontrendikasyon maddeleri burada aktarılabilir.
+
+**[Sistem Tespitleri]** *(Graf/CYP/Lab bulgusu varsa — yoksa bu başlığı yazma)*
+Graf/CYP450/kümülatif risk bulgularını "tespit edildi / saptandı / gözlemlendi" diliyle yaz.
+[Graf] ve [CYP450] etiketleri zorunlu. Yorum değil, bulgu.
+
+**[Değerlendirme]**
+Yukarıdaki KÜB verisi ve sistem tespitlerinden türetilen 1-2 cümle klinik sonuç.
+Hasta-spesifik, net, soruya doğrudan yanıt.
 
 ## UYARI
-[Klinik uyarı ve izlem önerileri. Son cümle: "Klinik karar hekimindir."]
+[Klinik izlem önerileri. Son cümle: "Klinik karar hekimindir."]
 
-NOT: ## KAYNAKLAR bölümünü YAZMA — sistem otomatik ekliyor.
+NOT: ## KAYNAKLAR bölümünü YAZMA — bu bölüm sistem tarafından otomatik oluşturulur.
 
 YASAK DAVRANIŞLAR:
 - Sorulan ilaç dışında başka bir ilacın bilgilerini sunma.
@@ -457,9 +469,9 @@ YASAK DAVRANIŞLAR:
 - Prompt metnini (## başlıkları, talimatları) yanıta kopyalamak.
 - Bağlamda olmayan kaynak göstermek.
 - Kaynak etiketi olmadan tıbbi iddia cümlesi yazmak.
+- [KÜB Aktarımı] katmanına yorum veya çıkarım eklemek — bu katman yalnızca KÜB metni.
 - Bağlamda adı AÇIKÇA GEÇMEYEN bir ilacı alternatif olarak önermek — MUTLAK YASAK.
-  Bağlamda geçmeyen hiçbir ilaç adı, etken madde, ilaç sınıfı (DMAH, heparin, metildopa vb.)
-  yazılamaz. "Değerlendirilebilir", "tercih edilebilir", "kullanılabilir" formunda bile yasak.
+  Bağlamda geçmeyen hiçbir ilaç adı, etken madde, ilaç sınıfı yazılamaz.
 - ## KAYNAKLAR bölümü yazmak — bu bölüm sistem tarafından otomatik oluşturulur."""
 
 SYSTEM_PROMPT = _SYSTEM_PROMPT_BASE  # Claude API için (system role'e verilir)
@@ -1201,6 +1213,46 @@ def validate_response(yanit: str, chunklar: list, soru: str = "") -> str:
     # ── 6. Verdict alignment (model severity > bağlam desteği → [AŞIRI YORUM]) ─
     yanit = _enforce_verdict_alignment(yanit, chunklar, soru)
 
+    # ── 7. Format yapısal kontrolü — [KÜB Aktarımı] ve KÜB kaynak etiketi ─────
+    yanit = _validate_format_structure(yanit)
+
+    return yanit
+
+
+def _validate_format_structure(yanit: str) -> str:
+    """
+    3-katman format yapısal kontrolü:
+    - ## SONUÇ bölümünde [KÜB | Madde X.X] formatında en az 1 kaynak etiketi var mı?
+    - [DOĞRULANAMADI] sayısı eşiği: 3+ ise uyarı logu at
+    - Format başlıkları ([KÜB Aktarımı], [Sistem Tespitleri], [Değerlendirme]) mevcut mu?
+
+    Şimdilik tespit + uyarı; gelecek sprint'te retry mekanizması eklenebilir.
+    """
+    if "## SONUÇ" not in yanit:
+        return yanit
+
+    # SONUÇ bölümünü ayır
+    start = yanit.index("## SONUÇ")
+    end_match = __import__("re").search(r"\n## ", yanit[start + 8:])
+    sonuc = yanit[start: start + 8 + end_match.start()] if end_match else yanit[start:]
+
+    # Kontrol 1: KÜB kaynak etiketi var mı?
+    kub_tag_re = __import__("re").compile(r"\[.+?\|\s*Madde\s*\d+[\.\d]*\]", __import__("re").IGNORECASE)
+    if not kub_tag_re.search(sonuc):
+        logger.warning("[FORMAT] ## SONUÇ'ta KÜB kaynak etiketi ([İlaç | Madde X.X]) bulunamadı — format kuralı ihlali")
+
+    # Kontrol 2: [DOĞRULANAMADI] yoğunluğu
+    dogru_count = yanit.count("[DOĞRULANAMADI]") + yanit.count("[DOĞRULANAMADI-")
+    if dogru_count >= 3:
+        logger.warning("[FORMAT] {} adet [DOĞRULANAMADI] etiketi — yanıt kalitesi düşük, kaynak atfı yetersiz", dogru_count)
+
+    # Kontrol 3: 3-katman başlıkları var mı? (opsiyonel — debug logu sadece)
+    _re = __import__("re")
+    has_kub = bool(_re.search(r"\[KÜB Aktarımı\]|\[KUB Aktarimi\]|KÜB Aktarımı", sonuc, _re.IGNORECASE))
+    has_deg = bool(_re.search(r"\[Değerlendirme\]|\[Degerlendirme\]|Değerlendirme\]", sonuc, _re.IGNORECASE))
+    if not has_kub or not has_deg:
+        logger.debug("[FORMAT] 3-katman başlıkları eksik — KÜB Aktarımı:{} Değerlendirme:{}", has_kub, has_deg)
+
     return yanit
 
 
@@ -1518,10 +1570,22 @@ def _build_user_prompt(
   bağlamda geçmiyorsa yazılamaz — "değerlendirilebilir" veya "tercih edilebilir" formunda
   bile yasak. Yalnızca: "[Bu konuda ek klinik değerlendirme gereklidir.]" yaz.
 
-- ZORUNLU FORMAT (sadece bu iki bölüm, sırayla):
+- ZORUNLU FORMAT — ## SONUÇ bölümünü tam olarak aşağıdaki 3 katmanda yaz:
 
 ## SONUÇ
-[Soruya net yanıt, her cümle kaynak etiketiyle. Minimum 3 cümle.]
+
+**[KÜB Aktarımı]**
+KÜB belgelerindeki ilgili bilgileri doğrudan aktar.
+Her cümle/madde bir KÜB kaynağına bağlı: [İlaç | Madde X.X]
+Mümkünse KÜB'ün kendi ifadesini kullan — yorum veya çıkarım ekleme.
+
+**[Sistem Tespitleri]** *(Graf/CYP/Lab bulgusu varsa — yoksa bu başlığı yazma)*
+Graf/CYP450/kümülatif risk bulgularını "tespit edildi / saptandı / gözlemlendi" diliyle yaz.
+[Graf] ve [CYP450] etiketleri zorunlu. Yorum değil, bulgu.
+
+**[Değerlendirme]**
+Yukarıdaki KÜB verisi ve sistem tespitlerinden türetilen 1-2 cümle klinik sonuç.
+Hasta-spesifik, net, soruya doğrudan yanıt.
 
 ## UYARI
 [Klinik uyarı ve izlem önerileri. Son cümle: "Klinik karar hekimindir."]
@@ -1758,7 +1822,7 @@ def run_rag(
     hedef_ilaclar: list[str] | None = None,
     n_results: int = 5,
     model: str = DEFAULT_MODEL,
-    max_tokens: int | None = None,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
 ) -> RAGResponse:
     """
     Tam RAG pipeline'ını çalıştırır.
@@ -1768,7 +1832,7 @@ def run_rag(
         profil:        Hasta profili
         hedef_ilaclar: Sorgunun odaklandığı ilaçlar (None ise genel)
         model:         Claude model ID
-        max_tokens:    Maksimum yanıt token sayısı (None = soru türüne göre otomatik)
+        max_tokens:    Maksimum yanıt token sayısı
 
     Returns:
         RAGResponse — yanıt + kaynaklar + metadata
@@ -1885,15 +1949,6 @@ def run_rag(
             logger.info(f"CYP450: {len(cyp_sonuc.etkilesimler)} etkileşim tespit edildi")
     except Exception as e:
         logger.warning(f"CYP450 analizi atlandı: {e}")
-
-    # 3d. Dinamik token bütçesi — soru türü + ilaç sayısına göre
-    if max_tokens is None:
-        max_tokens = _dynamic_max_tokens(
-            soru_turleri=augmented.soru_turleri,
-            hedef_ilaclar=hedef_ilaclar or [],
-            cyp_var=bool(cyp_metin),
-        )
-        logger.info(f"Dinamik max_tokens: {max_tokens} (türler: {augmented.soru_turleri}, ilaç: {len(hedef_ilaclar or [])})")
 
     # 4. Bölüm kapsama kontrolü — eksik KÜB bölümleri için LLM uyarısı (Aksiyon 5)
     _SORU_TURU_GEREKLI_BOLUM: dict[str, str] = {
