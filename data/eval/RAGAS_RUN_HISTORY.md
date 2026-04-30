@@ -1,6 +1,6 @@
 # RAGAS Run History — Kronolojik Sıra
 
-**Son Güncelleme:** 2026-04-29 (Run 18)
+**Son Güncelleme:** 2026-04-30 (Run 20)
 
 ---
 
@@ -29,12 +29,14 @@ Bu çalıştırmalar sistemin gerçek performansını ölçmek için yapıldı.
 | **Run 16** | `ragas_run16_merged.json` | 2026-04-29 | 32 | Together AI Qwen3-235B | 0.7153 | 0.7571 | CU=0.7530; Ort=0.7418; VALIDATE 3-6 eklendi (tag stripping yok) |
 | **Run 17** | `ragas_run17_merged.json` | 2026-04-29 | 32 | Together AI Qwen3-235B | 0.7089 | 0.7630 | CU=0.7487; Ort=0.7402; Tag stripping eklendi; AMARYL NaN kalıcı; CR +3.8pp vs baseline |
 | **Run 18** | `ragas_run18_results.json` | 2026-04-29 | 33 | Together AI Qwen3-235B | **0.7127** | **0.9343** | CU=0.7516; **Ort=0.7995**; Fix #4+#5 + Gemini GT revizyonu (kısa GT, ® temizliği, +q34); CR +20.9pp ↑↑; ⚠️ GT seti değişti — Run 12 ile direkt karşılaştırılamaz; **YENİ BASELINE (yeni GT seti)** |
+| **Run 19** | `ragas_run19_results.json` | 2026-04-30 | 33 | Together AI Qwen3-235B | 0.7391 | 0.9040 | CU=0.7294; Ort=0.7908; dinamik max_tokens + YANIT TAMAMLIĞI yumuşatma; F +2.6pp ↑ ama CU/CR geriledi; net −0.9pp ⚠️ |
+| **Run 20** | `ragas_run20_results.json` | 2026-04-30 | 33 | Together AI Qwen3-235B | 0.7192 | 0.9010 | CU=0.7823; **Ort=0.8008**; 3-katman format ([KÜB Aktarımı]/[Sistem Tespitleri]/[Değerlendirme]) user prompt'a eklendi (Option B); CU +3.1pp ↑; CR −3.3pp; F +0.7pp vs baseline; 3 NaN F |
 
 ### Özet Trend
 
 ```
-Faithfulness:    0.40 → 0.78 → 0.76 → 0.70 → 0.68 → 0.72 → 0.70 → 0.55 → 0.66 → 0.68 → 0.70 → 0.76 → 0.67 → 0.72 → 0.72 → 0.72 → 0.71 → [0.71*]
-Context Recall:  0.74 → 0.89 → 0.74 → 0.76 → 0.86 → 0.81 → 0.81 → 0.89 → 0.66 → 0.67 → 0.73 → 0.73 → 0.74 → 0.76 → 0.76 → 0.76 → 0.76 → [0.93*]
+Faithfulness:    0.40 → 0.78 → 0.76 → 0.70 → 0.68 → 0.72 → 0.70 → 0.55 → 0.66 → 0.68 → 0.70 → 0.76 → 0.67 → 0.72 → 0.72 → 0.72 → 0.71 → [0.71*] → 0.74 → 0.72
+Context Recall:  0.74 → 0.89 → 0.74 → 0.76 → 0.86 → 0.81 → 0.81 → 0.89 → 0.66 → 0.67 → 0.73 → 0.73 → 0.74 → 0.76 → 0.76 → 0.76 → 0.76 → [0.93*] → 0.90 → 0.90
 ```
 *Run 18: yeni GT seti (Gemini revizyonu, 33 soru) — önceki runlarla karşılaştırılamaz.
 
@@ -49,6 +51,7 @@ Run 18: Together AI Qwen3-235B; **yeni GT seti** (Gemini revizyonu — GT'ler ~%
 **Baseline Geçmişi:**
 - Run 12 baseline (eski GT seti): F:0.7607 CU:0.8028 CR:0.7250 Ort:0.7628
 - **Run 18 baseline (yeni GT seti): F:0.7127 CU:0.7516 CR:0.9343 Ort:0.7995** ← AKTİF
+- Run 20 (3-katman format): F:0.7192 CU:0.7823 CR:0.9010 Ort:0.8008 — baseline'a +0.1pp; CU ↑ en belirgin iyileşme
 
 **Yeni Metrik — Context Utilization (CU):** Run 11'den itibaren standart. "Getirilen chunk'lar cevap için gerçekten kullanıldı mı?" sorusunu ölçer. GT gerektirmez (GT-free). Run 12: CU=0.8028.
 
