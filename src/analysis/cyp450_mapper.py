@@ -22,7 +22,32 @@ Roller:
 from __future__ import annotations
 import re
 from dataclasses import dataclass, field
-from src.analysis.cyp450_extractor import extract_cyp_profile_from_text
+
+
+def _neo4j_cyp_profili(ilac: str) -> dict:
+    """Neo4j'den ilaç CYP profilini okur (build-time'da yazılmış veri)."""
+    try:
+        from src.graph.neo4j_client import get_driver
+        driver = get_driver()
+        with driver.session() as s:
+            result = s.run(
+                "MATCH (d:Drug {name: $name})-[r]->(e:CYPEnzyme) "
+                "RETURN type(r) as rel, e.name as enzyme",
+                name=ilac,
+            )
+            profil: dict[str, list[str]] = {"substrat": [], "inhibitor": [], "induktor": []}
+            for rec in result:
+                rel = rec["rel"]
+                enz = rec["enzyme"]
+                if rel == "CYP_SUBSTRATE":
+                    profil["substrat"].append(enz)
+                elif rel == "CYP_INHIBITOR":
+                    profil["inhibitor"].append(enz)
+                elif rel == "CYP_INDUCER":
+                    profil["induktor"].append(enz)
+            return profil
+    except Exception:
+        return {"substrat": [], "inhibitor": [], "induktor": []}
 
 
 # ---------------------------------------------------------------------------
@@ -685,25 +710,24 @@ def analiz_et(
     # Kaynak takibi
     llm_used = False
     static_used = False
+    neo4j_used = False
 
-    # Profil bulma yardımcısı (Static + LLM Fallback)
+    # Profil bulma yardımcısı (Static → Neo4j — LLM yok)
     def _get_profil(ilac: str) -> dict:
-        nonlocal llm_used, static_used
-        # Önce statik liste (frozen)
+        nonlocal llm_used, static_used, neo4j_used
+        # 1. Statik liste (frozen)
         p = _ilac_cyp_profili_bul(ilac)
         if p.get("substrat") or p.get("inhibitor") or p.get("induktor"):
             static_used = True
             return p
 
-        # Statik listede yoksa LLM ile extract et
-        metin = ilac_45_metinleri.get(ilac, "")
-        if metin:
+        # 2. Neo4j — build-time'da extract edilmiş CYP kenarları (LLM API çağrısı yok)
+        neo = _neo4j_cyp_profili(ilac)
+        if neo.get("substrat") or neo.get("inhibitor") or neo.get("induktor"):
             from loguru import logger
-            logger.info(f"CYP450: {ilac} için otomatik extraction yapılıyor...")
-            extracted = extract_cyp_profile_from_text(metin, ilac)
-            if extracted.get("substrat") or extracted.get("inhibitor") or extracted.get("induktor"):
-                llm_used = True
-            return extracted
+            logger.debug(f"CYP450: {ilac} Neo4j'den okundu")
+            neo4j_used = True
+            return neo
 
         return p  # Boş döner
 
@@ -781,6 +805,8 @@ def analiz_et(
         source = "llm_extraction"
     elif static_used:
         source = "static_table"
+    elif neo4j_used:
+        source = "neo4j"
     else:
         source = "unavailable"
         tekil = []

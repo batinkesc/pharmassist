@@ -198,31 +198,21 @@ def _generate_hyde_document(
     )
 
     try:
-        provider = os.getenv("LLM_PROVIDER", "claude").lower()
-        if provider == "claude":
-            client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
-            response = client.messages.create(
-                model=DEFAULT_MODEL,  # Haiku — hızlı ve ucuz
-                max_tokens=200,
-                system=system_prompt,
-                messages=[{"role": "user", "content": user_prompt}],
-            )
-            hyde_text = response.content[0].text.strip()
-        else:
-            # Local/OpenAI-uyumlu provider (LM Studio vb.)
-            local_client = openai.OpenAI(
-                base_url=os.getenv("LLM_BASE_URL", "http://localhost:1234/v1"),
-                api_key="local",
-            )
-            response = local_client.chat.completions.create(
-                model=DEFAULT_LOCAL_MODEL,
-                max_tokens=200,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-            )
-            hyde_text = response.choices[0].message.content.strip()
+        # HyDE her zaman yerel/bulut OpenAI-uyumlu endpoint'e gider (Claude API'ya değil)
+        hyde_client = openai.OpenAI(
+            base_url=os.getenv("LM_STUDIO_URL", "http://localhost:1234/v1"),
+            api_key=os.getenv("LM_STUDIO_API_KEY", "local"),
+        )
+        hyde_model = os.getenv("LM_STUDIO_MODEL", DEFAULT_LOCAL_MODEL)
+        response = hyde_client.chat.completions.create(
+            model=hyde_model,
+            max_tokens=200,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+        )
+        hyde_text = response.choices[0].message.content.strip()
 
         logger.debug(f"HyDE doc üretildi ({len(hyde_text)} karakter): {hyde_text[:80]}...")
         return hyde_text
