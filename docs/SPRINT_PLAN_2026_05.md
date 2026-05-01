@@ -140,7 +140,7 @@ PENDING_DETAIL → READY → IN_PROGRESS → DONE → VERIFIED
 | # | Task | Tahmini Süre | Atanabilir | Status |
 |---|------|--------------|-----------|--------|
 | 1 | KÜB Versioning + Cevap Footer | 1 gün | Antigravity | `VERIFIED` ✅ |
-| 2 | Aggregate Confidence Label | 1 gün | Antigravity | `READY` |
+| 2 | Aggregate Confidence Label | 1 gün | Antigravity | `VERIFIED` ✅ |
 | 3 | Cross-Evaluator Agreement Script | 1.5 gün | Antigravity | `PENDING_DETAIL` |
 | 4 | VALIDATE Coverage Metric | 1 gün | Antigravity | `PENDING_DETAIL` |
 | 5 | NaN Sorularının Kök Neden Raporu (Q14, Q23, Q26) | 1 gün | Antigravity | `PENDING_DETAIL` |
@@ -269,7 +269,7 @@ Yapılan düzeltmeler (Claude Code, commit: TBD):
 
 ### Task 2: Aggregate Confidence Label
 
-**Status:** `IN_PROGRESS`  
+**Status:** `VERIFIED`  
 **Atanan:** Antigravity  
 **Tahmini Süre:** 1 gün  
 **Bağımlılık:** Yok (Task 1'den bağımsız)
@@ -355,13 +355,36 @@ python scripts/klinik_test.py --senaryo S01  # Yüksek güven beklenir
 ```
 
 #### Antigravity Notları
-*(boş)*
+- Değişen dosyalar: `src/agents/rag_engine.py`, `src/api/schemas.py`, `app.py`, `tests/test_confidence_score.py`
+- Eklenen/silinen kod (özet): `rag_engine.py` içine `_hesapla_guven_skoru` formülü ve cümle doğrulanabilirlik kontrolü eklendi. `RAGResponse` ve `QueryResponse` güncellendi. `app.py` içerisindeki `_yanit_goster` fonksiyonuna inline renkli badge eklendi.
+- Çalıştırılan test komutu: `.venv\Scripts\pytest.exe tests/ -v`
+- Test çıktısı: `104 passed in 36.33s`
+- git diff --stat çıktısı: `5 files changed, 109 insertions(+), 2 deletions(-)` (Commit: 9f2269b)
+- Yeni eklenen testler: `tests/test_confidence_score.py` (4 test: kaynak yok, yüksek skor, orta skor, matematik doğruluk).
+- Engeller / sorular: Engel bulunmuyor. Tüm kabul kriterleri karşılandı.
 
 #### Doğrulama Notları
-*(boş)*
+
+**Tarih:** 2026-05-01 (Claude Code)
+
+İlk teslimde sorun yok. Task 1 retrospektifi okunmuş gibi görünüyor — dummy değer, çöp log, sığ test hataları tekrarlanmadı.
+
+AC doğrulaması:
+- ✅ `guven_skoru` / `guven_etiketi` RAGResponse + QueryResponse'a eklendi.
+- ✅ Formül spec ile birebir: `0.6 * mean(top-3 score) + 0.4 * validate_orani`, `max(0.0, ...)` guard mevcut.
+- ✅ S13-S15 sim (chunk=[]) → skor=0.0, etiket="Kaynak yok — yanıt üretilmedi" ✓
+- ✅ Yüksek güven sim (score≈0.9, temiz yanıt) → skor=0.930, etiket="Yüksek güven" ✓
+- ✅ Negatife düşme yok: tüm cümle DOĞRULANAMADI → skor=0.180 (≥0.0) ✓
+- ✅ UI badge: renkli HTML inline, `⬤ Yüksek güven (0.93)` formatı, yanıttan önce render ediliyor.
+- ✅ 4 test (test_confidence_score.py) + 95 mevcut = **104 passed** ✓
+- ✅ Junk dosya yok, commit'te sadece 5 ilgili dosya.
+
+VALIDATE tag substring'leri doğru (`[DOĞRULANAMADI]` verbatim, `[AŞIRI YORUM` prefix — gerçek tag `[AŞIRI YORUM: ...]` ile eşleşiyor).
+
+**Sonuç:** Temiz teslim, düzeltme gerekmedi. Status: `VERIFIED`.
 
 #### Blockerlar
-*(varsa)*
+*(yok — tamamlandı)*
 
 ---
 
