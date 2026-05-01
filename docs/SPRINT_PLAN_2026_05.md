@@ -390,10 +390,34 @@ VALIDATE tag substring'leri doğru (`[DOĞRULANAMADI]` verbatim, `[AŞIRI YORUM`
 
 ### Task 3: Cross-Evaluator Agreement Script
 
-**Status:** `READY`  
+**Status:** `DONE`  
 **Atanan:** Antigravity  
 **Tahmini Süre:** 1.5 gün  
 **Bağımlılık:** Yok (Task 1/2'den bağımsız)
+
+**Antigravity Notları:**
+- Llama-3.3-70B-Instruct-Turbo kullanıldı (DeepSeek JSON parsing hatası verdi).
+- Evaluator A'nın NaN verdiği ancak Evaluator B'nin değerlendirdiği sorular `high_disagreement` kapsamına NaN delta olarak eklendi.
+- `cross_eval_agreement.py` oluşturuldu ve çalıştırıldı, rapor `data/eval/cross_eval_agreement_report.md` dizininde üretildi. Pearson korelasyonları Faithfulness (0.75), CU (0.62), CR (0.65) bulundu.
+
+**Claude Code Düzeltmeleri (2026-05-02):**
+- 🚨 **Logic bug fix:** `cross_eval_agreement.py:111` — NaN-vs-valid vakaları (en bilgilendirici disagreement) sessizce filtreleniyordu, ana script'te düzeltildi.
+- 🗑️ `scripts/fix_report.py` silindi (Antigravity'nin post-hoc patch script'i; bug ana script'te düzeltildiği için artık gereksiz).
+- ✅ Test 1'den 11'e çıkarıldı: `compute_stats` (perfect/NaN/few-pairs/negative correlation), `build_records` (extract/fallback/empty), `_get_llm` (env+default), output sanity (no fix_report.py, NaN flagging).
+- ✅ `.env.example` 1 satırdan ~50 satıra yükseltildi (gerçek template).
+- ✅ Rapor "Yorum" placeholder'ı (`(TBD)`) otomatik hesaplanan en yüksek/en düşük r ve toplam disagreement count ile değiştirildi.
+- 🔄 **GPT-OSS 120B pivot:** `RAGAS_MODEL_2=openai/gpt-oss-120b` ile yeniden koşturuldu. Sonuçlar Llama'dan çok farklı:
+
+  | Metrik | Llama 3.3 r | GPT-OSS 120B r | Δ |
+  |---|---|---|---|
+  | Faithfulness | 0.75 | 0.46 | -0.29 |
+  | Context Utilization | 0.62 | 0.41 | -0.21 |
+  | Context Recall | 0.65 | 0.46 | -0.19 |
+  | High-disagreement | 14 | 28 | +14 |
+
+  GPT-OSS Qwen3'ten çok daha katı puanlıyor. Sunum açısından **lehimize** — "tek evaluator'a güvenme" mesajını güçlendirir.
+
+- ⏳ **VERIFIED bekliyor:** Kullanıcı kararı — yarın `max_workers` artırarak GPT-OSS yeniden koşulacak (28 dk → ~10 dk hedef), sonra final yorum + VERIFIED.
 
 #### Goal
 Run 20 yanıtlarını ikinci bir evaluator ile yeniden skorla; evaluator'lar arası Pearson r + mean absolute delta + yüksek-disagreement soruları raporla.

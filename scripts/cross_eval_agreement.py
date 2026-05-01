@@ -101,14 +101,34 @@ def main():
         q_entry = {"soru_id": question_id}
         qa = pq_a[i] if i < len(pq_a) else {}
         qb = pq_b[i] if i < len(pq_b) else {}
-        
+
         for m in metrics:
             va = qa.get(m)
             vb = qb.get(m)
             q_entry[f"{m}_a"] = va
             q_entry[f"{m}_b"] = vb
-            
-            if va is not None and vb is not None and not np.isnan(va) and not np.isnan(vb):
+
+            a_nan = va is None or (isinstance(va, float) and np.isnan(va))
+            b_nan = vb is None or (isinstance(vb, float) and np.isnan(vb))
+
+            # En bilgilendirici disagreement: bir evaluator NaN, diğeri valid
+            if a_nan and not b_nan:
+                high_disagreement.append({
+                    "soru_id": question_id,
+                    "metric": m,
+                    "score_a": "NaN",
+                    "score_b": vb,
+                    "delta": "NaN (A failed)",
+                })
+            elif b_nan and not a_nan:
+                high_disagreement.append({
+                    "soru_id": question_id,
+                    "metric": m,
+                    "score_a": va,
+                    "score_b": "NaN",
+                    "delta": "NaN (B failed)",
+                })
+            elif not a_nan and not b_nan:
                 delta = abs(va - vb)
                 if delta > 0.25:
                     high_disagreement.append({
@@ -116,9 +136,9 @@ def main():
                         "metric": m,
                         "score_a": va,
                         "score_b": vb,
-                        "delta": round(delta, 4)
+                        "delta": round(delta, 4),
                     })
-                    
+
         per_question.append(q_entry)
         
     output = {
@@ -151,15 +171,31 @@ def main():
             d_str = f"{d:.2f}" if d is not None else "N/A"
             f.write(f"| {m} | {r_str} | {d_str} | {stat['n_nan_a']} | {stat['n_nan_b']} |\n")
             
-        f.write("\n## Yüksek Disagreement (|Δ| > 0.25)\n")
+        f.write("\n## Yüksek Disagreement (|Δ| > 0.25 veya NaN vs valid skor)\n")
         f.write("| Soru ID | Metrik | Skor A | Skor B | Δ |\n")
         f.write("|---|---|---|---|---|\n")
         for hd in high_disagreement:
-            f.write(f"| {hd['soru_id']} | {hd['metric']} | {hd['score_a']:.2f} | {hd['score_b']:.2f} | {hd['delta']:.2f} |\n")
-            
+            sa = f"{hd['score_a']:.2f}" if isinstance(hd['score_a'], float) else hd['score_a']
+            sb = f"{hd['score_b']:.2f}" if isinstance(hd['score_b'], float) else hd['score_b']
+            d = f"{hd['delta']:.2f}" if isinstance(hd['delta'], float) else hd['delta']
+            f.write(f"| {hd['soru_id']} | {hd['metric']} | {sa} | {sb} | {d} |\n")
+
+        # En çok anlaşmazlık olan metrik (en düşük r veya en yüksek delta)
+        valid_metrics = [(m, per_metric[m]) for m in metrics if per_metric[m]["pearson_r"] is not None]
+        if valid_metrics:
+            worst = min(valid_metrics, key=lambda x: x[1]["pearson_r"])
+            best = max(valid_metrics, key=lambda x: x[1]["pearson_r"])
+            worst_str = f"{worst[0]} (r={worst[1]['pearson_r']:.2f})"
+            best_str = f"{best[0]} (r={best[1]['pearson_r']:.2f})"
+        else:
+            worst_str = "N/A"
+            best_str = "N/A"
+
         f.write("\n## Yorum\n")
-        f.write("- Korelasyon yorumu (0.7+ = acceptable, 0.5-0.7 = moderate, <0.5 = low)\n")
-        f.write("- En çok anlaşmazlık olan metrik: (TBD)\n")
+        f.write("- **Korelasyon eşikleri:** 0.7+ = acceptable, 0.5–0.7 = moderate, <0.5 = low\n")
+        f.write(f"- **En yüksek anlaşma:** {best_str}\n")
+        f.write(f"- **En düşük anlaşma:** {worst_str}\n")
+        f.write(f"- **Toplam high-disagreement vakası:** {len(high_disagreement)} (33 soru × 3 metrik = 99 değerlendirmeden)\n")
         
     print(f"[{datetime.now().time()}] Done! Wrote to {out_json} and {out_md}")
 
