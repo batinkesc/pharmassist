@@ -141,7 +141,7 @@ PENDING_DETAIL → READY → IN_PROGRESS → DONE → VERIFIED
 |---|------|--------------|-----------|--------|
 | 1 | KÜB Versioning + Cevap Footer | 1 gün | Antigravity | `VERIFIED` ✅ |
 | 2 | Aggregate Confidence Label | 1 gün | Antigravity | `VERIFIED` ✅ |
-| 3 | Cross-Evaluator Agreement Script | 1.5 gün | Antigravity | `PENDING_DETAIL` |
+| 3 | Cross-Evaluator Agreement Script | 1.5 gün | Antigravity | `READY` |
 | 4 | VALIDATE Coverage Metric | 1 gün | Antigravity | `PENDING_DETAIL` |
 | 5 | NaN Sorularının Kök Neden Raporu (Q14, Q23, Q26) | 1 gün | Antigravity | `PENDING_DETAIL` |
 | 6 | Final RAGAS Run + Konsolide Rapor | 0.5 gün | Sen | `PENDING_DETAIL` |
@@ -390,23 +390,164 @@ VALIDATE tag substring'leri doğru (`[DOĞRULANAMADI]` verbatim, `[AŞIRI YORUM`
 
 ### Task 3: Cross-Evaluator Agreement Script
 
-**Status:** `PENDING_DETAIL`  
-**Atanan:** —  
-**Tahmini Süre:** 1.5 gün
+**Status:** `READY`  
+**Atanan:** Antigravity  
+**Tahmini Süre:** 1.5 gün  
+**Bağımlılık:** Yok (Task 1/2'den bağımsız)
 
 #### Goal
-Aynı soru setini Qwen3-235B + Haiku 4.5 ile paralel evaluate et, evaluator'lar arası korelasyon ve disagreement raporla.
+Run 20 yanıtlarını ikinci bir evaluator ile yeniden skorla; evaluator'lar arası Pearson r + mean absolute delta + yüksek-disagreement soruları raporla.
 
 #### Why
-RAGAS gürültüsünü ölç → "Run 20 baseline" iddiasının istatistiksel temelini kur. Sunumda "evaluator gürültüsünü ölçtük, korelasyon 0.X" cümlesini hak edersin. Tek evaluator bağımlılığını kırar.
+RAGAS gürültüsünü ölç → "Run 20 baseline" iddiasının istatistiksel temelini kur. Sunumda "evaluator gürültüsünü ölçtük, Pearson r=0.X" cümlesini hak edersin. Haiku yerine Together AI modeli kullanıldığı için maliyet düşer, Türkçe cevaplarda "İngilizce prompt + Türkçe output" kuralcılık sorunu da çözülür.
 
-#### Detay Spec
-*(Task 2 doğrulandıktan sonra Claude Code yazacak. Şu an PENDING_DETAIL — Antigravity başlatamaz.)*
+#### Model Seçimi — Haiku YOK
 
-Ön düşünceler:
-- Mevcut 33 soru üzerinde Haiku 4.5 maliyet kestirimi: ~5 soru için $0.70 görüldü → 33 soru ~$5. Kabul edilebilir tek seferlik maliyet.
-- Output: per-soru F skor karşılaştırma tablosu + Pearson r + Cohen's kappa.
-- `scripts/cross_evaluator.py` yeni dosya, `data/eval/cross_evaluator_report.md` çıktı.
+**Primer evaluator (A):** `Qwen/Qwen3-235B-A22B-Instruct-2507-tput` (mevcut, Run 20 sonuçları zaten var)  
+**Sekonder evaluator (B):** `deepseek-ai/DeepSeek-V3-1` — $0.60/$1.70/1M token
+
+Neden Deepseek V3.1:
+- Qwen3'ten farklı mimari (MoE) → disagreement anlamlı
+- Haiku'nun kuralcı Türkçe davranışı yok (aynı OpenAI-compat API, aynı RAGAS prompt)
+- Together AI endpoint üzerinde çalışır — `.env`'e `RAGAS_MODEL_2` eklemek yeterli
+- Maliyet: 33 soru × 3 metrik × ~1.5K token ≈ 150K token ≈ $0.09 (A için sıfır, B için ~$0.09)
+
+Alternatif tercih yaparsan `.env` içinde `RAGAS_MODEL_2` değerini değiştir:
+```
+# Together AI model page'den kopyala (exact ID)
+RAGAS_MODEL_2=deepseek-ai/DeepSeek-V3-1     # önerilen
+# RAGAS_MODEL_2=meta-llama/Llama-3.3-70B-Instruct-Turbo  # ucuz alternatif
+# RAGAS_MODEL_2=google/gemma-4-31b-it-FP8   # en ucuz
+```
+
+#### Concrete Spec
+
+**Strateji:** Run 20 sonuçları (`data/eval/ragas_run20_results.json`) içindeki answer+contexts zaten var. Yeniden RAG koşturma YOK — sadece evaluator B ile yeniden skora.
+
+**Adımlar:**
+1. Run 20 `per_question` verisinden `eval_records` oluştur:
+   ```python
+   records = [
+       {
+           "question":     pq["question"],
+           "answer":       pq["ragas_answer"],   # run_20'deki RAGAS-cleaned answer
+           "contexts":     pq["contexts"],
+           "ground_truth": pq["ground_truth"],
+       }
+       for pq in run20["per_question"]
+   ]
+   ```
+2. `run_ragas_evaluation(records, evaluator_provider="model_b")` — yeni provider ekleyeceksin (aşağıda).
+3. Run 20 per-question skorları (A) vs yeni skorlar (B) → karşılaştır.
+
+**`src/evaluation/ragas_eval.py` değişikliği:**
+`_get_llm()` fonksiyonuna `"model_b"` provider tipi ekle:
+```python
+if provider == "model_b":
+    model_b = os.environ.get("RAGAS_MODEL_2", "deepseek-ai/DeepSeek-V3-1")
+    api_key  = os.environ.get("TOGETHER_API_KEY") or os.environ.get("LM_STUDIO_API_KEY")
+    base_url = os.environ.get("LM_STUDIO_URL", "https://api.together.xyz/v1")
+    logger.info(f"Değerlendirici B: {model_b}")
+    return ChatOpenAI(
+        base_url=base_url, api_key=api_key, model=model_b,
+        temperature=0, max_tokens=4096, timeout=600,
+    )
+```
+
+**Yeni script: `scripts/cross_eval_agreement.py`**
+
+Yapı:
+```python
+"""
+Cross-Evaluator Agreement — Run 20 yanıtlarını B evaluator ile yeniden skorla.
+
+Kullanım:
+  python scripts/cross_eval_agreement.py
+  python scripts/cross_eval_agreement.py --run data/eval/ragas_run20_results.json
+
+Çıktı:
+  data/eval/cross_eval_agreement.json
+  data/eval/cross_eval_agreement_report.md
+"""
+```
+
+Hesaplanacak istatistikler (per metrik: faithfulness, context_utilization, context_recall):
+- `pearson_r`: `scipy.stats.pearsonr` — NaN'lar çıkarılır
+- `mean_abs_delta`: `mean(|score_A - score_B|)` — NaN hariç
+- `n_nan_A`, `n_nan_B`: NaN sayıları ayrı ayrı
+- `high_disagreement`: `|score_A - score_B| > 0.25` olan soru listesi (soru_id + her iki skor)
+
+Çıktı formatı `cross_eval_agreement.json`:
+```json
+{
+  "run_a": "ragas_run20_results.json",
+  "evaluator_a": "Qwen/Qwen3-235B-A22B-Instruct-2507-tput",
+  "evaluator_b": "deepseek-ai/DeepSeek-V3-1",
+  "date": "2026-XX-XX",
+  "per_metric": {
+    "faithfulness":        {"pearson_r": 0.72, "mean_abs_delta": 0.11, "n_nan_a": 3, "n_nan_b": 1},
+    "context_utilization": {"pearson_r": 0.85, "mean_abs_delta": 0.08, "n_nan_a": 0, "n_nan_b": 0},
+    "context_recall":      {"pearson_r": 0.79, "mean_abs_delta": 0.12, "n_nan_a": 0, "n_nan_b": 0}
+  },
+  "high_disagreement": [
+    {"soru_id": "Q14", "metric": "faithfulness", "score_a": 0.41, "score_b": 0.89, "delta": 0.48}
+  ],
+  "per_question": [
+    {"soru_id": "Q01", "faithfulness_a": 0.72, "faithfulness_b": 0.68,
+     "context_utilization_a": 0.80, "context_utilization_b": 0.79,
+     "context_recall_a": 0.90, "context_recall_b": 0.88}
+  ]
+}
+```
+
+`cross_eval_agreement_report.md` formatı:
+```markdown
+# Cross-Evaluator Agreement Raporu
+Tarih: ...  |  Evaluator A: Qwen3-235B  |  Evaluator B: DeepSeek-V3-1
+
+## Özet
+| Metrik | Pearson r | Mean |Δ| | A NaN | B NaN |
+...
+
+## Yüksek Disagreement (|Δ| > 0.25)
+| Soru ID | Metrik | Skor A | Skor B | Δ |
+...
+
+## Yorum
+- Korelasyon yorumu (0.7+ = acceptable, 0.5-0.7 = moderate, <0.5 = low)
+- En çok anlaşmazlık olan metrik
+```
+
+#### Files
+- `scripts/cross_eval_agreement.py` (yeni)
+- `src/evaluation/ragas_eval.py` (`_get_llm` + `"model_b"` provider)
+- `.env.example` (`RAGAS_MODEL_2` satırı eklenir)
+- `tests/test_cross_eval.py` (yeni)
+
+#### Acceptance Criteria
+- [ ] `scripts/cross_eval_agreement.py` çalışır, çıktı dosyaları üretilir.
+- [ ] `data/eval/cross_eval_agreement.json` + `data/eval/cross_eval_agreement_report.md` oluşur.
+- [ ] Her metrik için Pearson r raporlanır (NaN'lar hariç tutuluyor).
+- [ ] `high_disagreement` listesi Q14, Q23, Q26 (bilinen NaN'lar) için tutarlı değerler içeriyor.
+- [ ] `ragas_eval._get_llm("model_b")` `RAGAS_MODEL_2` env değişkenini kullanıyor.
+- [ ] Mevcut 104 test geçiyor (kırılmış test yok).
+- [ ] Test: `_get_llm("model_b")` doğru model ID ile `ChatOpenAI` döndürüyor (mock env).
+
+#### Verification Commands
+```bash
+pytest tests/test_cross_eval.py -v
+python scripts/cross_eval_agreement.py
+cat data/eval/cross_eval_agreement_report.md
+```
+
+#### Antigravity Notları
+*(Burayı yapan ajan doldurur)*
+
+#### Doğrulama Notları
+*(Burayı Claude Code doldurur)*
+
+#### Blockerlar
+*(varsa)*
 
 ---
 
