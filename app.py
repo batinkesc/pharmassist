@@ -624,6 +624,11 @@ def _yanit_goster(response, ctx: ExtractedContext):
     # Klinik yanıt
     st.markdown(response.yanit)
 
+    # KÜB Versioning Footer
+    if hasattr(response, "kub_tarihleri") and response.kub_tarihleri:
+        tarih_str = ", ".join(response.kub_tarihleri)
+        st.markdown(f'<div style="color:black; font-style:italic; font-size:0.8rem; margin-top:10px;">Kaynak KÜB Tarihleri: {tarih_str}</div>', unsafe_allow_html=True)
+
     # CYP450 kaynak notu
     cyp_src = getattr(response, "cyp_source", "unknown")
     if cyp_src == "llm_extraction":

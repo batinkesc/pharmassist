@@ -477,6 +477,7 @@ Birden fazla ilacın aynı organ sistemini olumsuz etkilemesi durumunda kümüla
 ### Veri Kalitesi ✅ (2026-04-26 itibarıyla)
 Corpus, pipeline ve graf verisi büyük sıçrama yaptı:
 - **501 ilaç**, **10.588 chunk** (4.4 sub-chunking sonrası), ChromaDB'de aktif
+- **KÜB Versioning:** Tüm chunk'lar PDF parse tarihi (modDate) ve SHA-1 hash metadata'sı barındırır.
 - **4.021 INTERACTS_WITH** ilişkisi (%0 unknown — named node bağlantılar)
 - **969 CONTRAINDICATED_FOR**, **891 CYP edge**, **158 REQUIRES_DOSE_ADJUSTMENT**
 - **CYP450:** 84 kayıt statik tablo + Neo4j CYP edge + LLM fallback extraction
@@ -585,6 +586,7 @@ Ayrıca Run 12 öncesinde:
   "kumlatif_riskler": [...],
   "cyp_etkilesimler": [...],
   "soru_turleri": ["kontrendikasyon"],
+  "kub_tarihleri": ["AUGMENTIN (2026-05-01)"],
   "model": "claude-haiku-4-5-20251001",
   "prompt_token_sayisi": 2847,
   "yanit_token_sayisi": 412

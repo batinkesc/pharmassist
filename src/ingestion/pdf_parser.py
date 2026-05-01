@@ -18,6 +18,7 @@ Standart:
 
 import re
 import json
+import os
 import hashlib
 from pathlib import Path
 from datetime import datetime
@@ -274,7 +275,8 @@ def _extract_drug_name(first_page_text: str) -> str:
 # ---------------------------------------------------------------------------
 
 def _extract_ozel_uyari(
-    full_text: str, drug_name: str, source_file: str, total_pages: int
+    full_text: str, drug_name: str, source_file: str, total_pages: int,
+    kub_parse_date: str = "", kub_pdf_hash: str = ""
 ) -> Optional[dict]:
     """
     Madde 1'den önce gelen özel uyarı bloğunu tespit eder.
@@ -334,6 +336,8 @@ def _extract_ozel_uyari(
         "oncelik": "critical",
         "toplam_sayfa": total_pages,
         "parse_tarihi": datetime.now().isoformat(),
+        "kub_parse_date": kub_parse_date,
+        "kub_pdf_hash": kub_pdf_hash,
     }
 
 
@@ -462,6 +466,8 @@ def _split_into_chunks(
     source_file: str,
     total_pages: int,
     page_offsets: list[int],
+    kub_parse_date: str = "",
+    kub_pdf_hash: str = "",
 ) -> list[dict]:
     """
     Tespit edilen bölümlere göre metni chunk'lara böler.
@@ -513,6 +519,8 @@ def _split_into_chunks(
             ),
             "toplam_sayfa": total_pages,
             "parse_tarihi": datetime.now().isoformat(),
+            "kub_parse_date": kub_parse_date,
+            "kub_pdf_hash": kub_pdf_hash,
         }
         chunks.append(chunk)
 
@@ -565,6 +573,34 @@ class KUBParser:
 
         doc = pymupdf.open(str(pdf_path))
         total_pages = len(doc)
+
+        # --- Task 1: KÜB Versioning Metadata ---
+        try:
+            with open(pdf_path, "rb") as f:
+                pdf_bytes = f.read()
+            kub_pdf_hash = hashlib.sha1(pdf_bytes).hexdigest()[:16]
+        except Exception as e:
+            logger.error(f"PDF hash hesaplanamadı: {e}")
+            kub_pdf_hash = "unknown"
+
+        kub_parse_date = ""
+        meta = doc.metadata or {}
+        date_str = meta.get("modDate") or meta.get("creationDate") or ""
+        if date_str.startswith("D:") and len(date_str) >= 10:
+            try:
+                year = date_str[2:6]
+                month = date_str[6:8]
+                day = date_str[8:10]
+                kub_parse_date = f"{year}-{month}-{day}"
+            except Exception:
+                pass
+        
+        if not kub_parse_date:
+            try:
+                mtime = os.path.getmtime(pdf_path)
+                kub_parse_date = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d")
+            except Exception:
+                kub_parse_date = datetime.now().strftime("%Y-%m-%d")
 
         # P0.4 — Resim bazlı PDF kontrolü
         is_image_based = _check_image_based(doc)
@@ -654,11 +690,12 @@ class KUBParser:
 
         # Chunk'lara böl
         chunks = _split_into_chunks(
-            full_text, sections, drug_name, pdf_path.name, total_pages, page_offsets
+            full_text, sections, drug_name, pdf_path.name, total_pages, page_offsets,
+            kub_parse_date, kub_pdf_hash
         )
 
         # P0.3 — Özel uyarı bloğunu ekle (varsa)
-        ozel_uyari = _extract_ozel_uyari(full_text, drug_name, pdf_path.name, total_pages)
+        ozel_uyari = _extract_ozel_uyari(full_text, drug_name, pdf_path.name, total_pages, kub_parse_date, kub_pdf_hash)
         if ozel_uyari:
             chunks.insert(0, ozel_uyari)
 

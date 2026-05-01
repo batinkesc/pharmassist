@@ -58,6 +58,10 @@ def _chunk_to_metadata(chunk: dict) -> dict:
         "sayfa":            chunk["sayfa"],
         "kaynak_dosya":     chunk["kaynak_dosya"],
     }
+    # Versioning
+    meta["kub_parse_date"] = chunk.get("kub_parse_date", "unknown")
+    meta["kub_pdf_hash"]   = chunk.get("kub_pdf_hash", "unknown")
+
     # Opsiyonel alanlar
     if "alt_madde" in chunk:
         meta["alt_madde"] = chunk["alt_madde"]
@@ -473,6 +477,44 @@ def hybrid_batch_search(
             results.append(bm25_extra[cid])
 
     return results
+
+
+def migrate_add_kub_dates() -> None:
+    """Mevcut chunk'lara kub_parse_date ve kub_pdf_hash ekler (idempotent)."""
+    client = get_chroma_client()
+    collection = get_or_create_collection(client)
+    
+    data = collection.get(include=["metadatas"])
+    if not data["ids"]:
+        logger.info("Koleksiyon boş, migration gerekmiyor.")
+        return
+
+    ids_to_update = []
+    new_metadatas = []
+
+    for chunk_id, meta in zip(data["ids"], data["metadatas"]):
+        if "kub_parse_date" in meta and "kub_pdf_hash" in meta:
+            continue
+            
+        new_meta = meta.copy()
+        new_meta["kub_parse_date"] = "2026-04-25"
+        new_meta["kub_pdf_hash"] = "legacy_data_1234"
+        
+        ids_to_update.append(chunk_id)
+        new_metadatas.append(new_meta)
+
+    if ids_to_update:
+        logger.info(f"{len(ids_to_update)} chunk için metadata update ediliyor...")
+        # Batch update (ChromaDB limitleri için max 5000)
+        batch_size = 5000
+        for i in range(0, len(ids_to_update), batch_size):
+            collection.update(
+                ids=ids_to_update[i:i+batch_size],
+                metadatas=new_metadatas[i:i+batch_size]
+            )
+        logger.info("Migration tamamlandı.")
+    else:
+        logger.info("Tüm chunk'lar güncel, migration gerekmiyor.")
 
 
 def collection_stats() -> dict:

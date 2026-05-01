@@ -189,6 +189,8 @@ def extract_42_subchunks(base_chunk: dict) -> list[dict]:
             "toplam_sayfa": base_chunk["toplam_sayfa"],
             "parse_tarihi": base_chunk["parse_tarihi"],
             "ust_chunk_id": base_chunk["chunk_id"],  # base'e referans
+            "kub_parse_date": base_chunk.get("kub_parse_date", ""),
+            "kub_pdf_hash": base_chunk.get("kub_pdf_hash", ""),
         }
         sub_chunks.append(chunk)
         logger.debug(f"  + Sub-chunk: {hit['key']} ({len(sub_content)} karakter)")
@@ -304,6 +306,8 @@ def extract_44_subchunks(base_chunk: dict) -> list[dict]:
             "toplam_sayfa":      toplam_sayfa,
             "parse_tarihi":      parse_tarihi,
             "ust_chunk_id":      base_chunk_id,
+            "kub_parse_date":    base_chunk.get("kub_parse_date", ""),
+            "kub_pdf_hash":      base_chunk.get("kub_pdf_hash", ""),
         }
         sub_chunks.append(chunk)
         logger.debug(f"  + 4.4 sub-chunk: part{idx} ({len(content)} karakter)")
@@ -411,6 +415,8 @@ def extract_48_subchunks(base_chunk: dict) -> list[dict]:
             "toplam_sayfa":      toplam_sayfa,
             "parse_tarihi":      parse_tarihi,
             "ust_chunk_id":      base_chunk_id,
+            "kub_parse_date":    base_chunk.get("kub_parse_date", ""),
+            "kub_pdf_hash":      base_chunk.get("kub_pdf_hash", ""),
         }
         sub_chunks.append(chunk)
 

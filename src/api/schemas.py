@@ -112,6 +112,7 @@ class QueryResponse(BaseModel):
     cyp_etkilesimler: list[CYPEtkilesimItem] = []
     cyp_source: str = "unknown"
     quarantine_warnings: list[str] = []
+    kub_tarihleri: list[str] = []
 
 
 class StatsResponse(BaseModel):

@@ -109,6 +109,8 @@ class RetrievedChunk:
     sayfa: int
     kaynak_dosya: str
     alt_madde: str = ""
+    kub_parse_date: str = ""
+    kub_pdf_hash: str = ""
 
     def kaynak_etiketi(self) -> str:
         """Prompt içinde kullanılacak kaynak etiketi."""
@@ -132,6 +134,7 @@ class RAGResponse:
     kumlatif_riskler: list = field(default_factory=list)   # KumulatifRisk listesi
     cyp_etkilesimler: list = field(default_factory=list)   # CYPEtkilesim listesi
     quarantine_warnings: list = field(default_factory=list)  # Karantina uyarıları
+    kub_tarihleri: list[str] = field(default_factory=list)
     cyp_source: str = "unknown"  # "static_table" | "llm_extraction" | "unavailable" | "unknown"
     graf_baglami: str = ""      # Neo4j özet metni (RAGAS contexts için)
     kumlatif_metin: str = ""    # Kümülatif risk özet metni (RAGAS contexts için)
@@ -376,6 +379,8 @@ def _to_retrieved_chunk(raw: dict) -> RetrievedChunk:
         sayfa=raw.get("sayfa", 0),
         kaynak_dosya=raw.get("kaynak_dosya", ""),
         alt_madde=raw.get("alt_madde", ""),
+        kub_parse_date=raw.get("kub_parse_date", ""),
+        kub_pdf_hash=raw.get("kub_pdf_hash", ""),
     )
 
 
@@ -2006,6 +2011,13 @@ def run_rag(
             if normalized in q_list:
                 quarantine_warnings.append(ilac)
 
+    # 7. Tarihleri topla
+    tarih_kumesi = set()
+    for c in chunklar:
+        if c.kub_parse_date and c.kub_parse_date != "unknown":
+            tarih_kumesi.add(f"{c.ilac_adi} ({c.kub_parse_date})")
+    kub_tarihleri = sorted(list(tarih_kumesi))
+
     return RAGResponse(
         soru=soru,
         yanit=yanit,
@@ -2022,6 +2034,7 @@ def run_rag(
         kumlatif_metin=kumlatif_metin,
         cyp_metin=cyp_metin,
         quarantine_warnings=quarantine_warnings,
+        kub_tarihleri=kub_tarihleri,
     )
 
 

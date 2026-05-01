@@ -128,7 +128,7 @@ PENDING_DETAIL → READY → IN_PROGRESS → DONE → VERIFIED
 
 | # | Task | Tahmini Süre | Atanabilir | Status |
 |---|------|--------------|-----------|--------|
-| 1 | KÜB Versioning + Cevap Footer | 1 gün | Antigravity | `READY` |
+| 1 | KÜB Versioning + Cevap Footer | 1 gün | Antigravity | `IN_PROGRESS` |
 | 2 | Aggregate Confidence Label | 1 gün | Antigravity | `READY` |
 | 3 | Cross-Evaluator Agreement Script | 1.5 gün | Antigravity | `PENDING_DETAIL` |
 | 4 | VALIDATE Coverage Metric | 1 gün | Antigravity | `PENDING_DETAIL` |
@@ -147,8 +147,8 @@ PENDING_DETAIL → READY → IN_PROGRESS → DONE → VERIFIED
 
 ### Task 1: KÜB Versioning + Cevap Footer
 
-**Status:** `READY`  
-**Atanan:** —  
+**Status:** `IN_PROGRESS`  
+**Atanan:** Antigravity  
 **Tahmini Süre:** 1 gün
 
 #### Goal
