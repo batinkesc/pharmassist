@@ -33,6 +33,7 @@ data/chromadb/
 # Root log txt dosyaları
 logs_api.txt
 logs_ui.txt
+test_log*.txt
 
 # Claude Code (kişisel ayarlar)
 .claude/

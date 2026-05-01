@@ -479,33 +479,125 @@ def hybrid_batch_search(
     return results
 
 
-def migrate_add_kub_dates() -> None:
-    """Mevcut chunk'lara kub_parse_date ve kub_pdf_hash ekler (idempotent)."""
+def _extract_pdf_date_and_hash(pdf_path: Path) -> tuple[str, str]:
+    """
+    Bir PDF dosyasından (kub_parse_date, kub_pdf_hash) çıkarır.
+    pdf_parser.KUBParser ile aynı mantık — tek doğru kaynak.
+    """
+    import os
+    import hashlib
+    from datetime import datetime
+    import pymupdf
+
+    # SHA-1 (ilk 16 karakter)
+    try:
+        with open(pdf_path, "rb") as f:
+            kub_pdf_hash = hashlib.sha1(f.read()).hexdigest()[:16]
+    except Exception as e:
+        logger.warning(f"PDF hash hesaplanamadı ({pdf_path.name}): {e}")
+        kub_pdf_hash = "unknown"
+
+    # modDate / creationDate / mtime fallback
+    kub_parse_date = ""
+    try:
+        doc = pymupdf.open(str(pdf_path))
+        meta = doc.metadata or {}
+        date_str = meta.get("modDate") or meta.get("creationDate") or ""
+        doc.close()
+        if date_str.startswith("D:") and len(date_str) >= 10:
+            kub_parse_date = f"{date_str[2:6]}-{date_str[6:8]}-{date_str[8:10]}"
+    except Exception as e:
+        logger.warning(f"PDF metadata okunamadı ({pdf_path.name}): {e}")
+
+    if not kub_parse_date:
+        try:
+            mtime = os.path.getmtime(pdf_path)
+            kub_parse_date = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d")
+        except Exception:
+            kub_parse_date = "unknown"
+
+    return kub_parse_date, kub_pdf_hash
+
+
+def migrate_add_kub_dates(pdf_dir: str = "data/raw_pdfs", force: bool = False) -> dict:
+    """
+    Mevcut chunk'lara gerçek kub_parse_date ve kub_pdf_hash ekler.
+
+    Her chunk'ın kaynak PDF'ini açar, modDate ve SHA-1 hesaplar.
+    PDF bulunamazsa "unknown" yazar. Idempotent: zaten gerçek değer varsa atlar
+    (force=True ile zorla yeniden hesaplar — eski legacy placeholder'ları temizlemek için).
+
+    Returns:
+        {"updated": int, "skipped": int, "missing_pdfs": int}
+    """
     client = get_chroma_client()
     collection = get_or_create_collection(client)
-    
+    pdf_root = Path(pdf_dir)
+
     data = collection.get(include=["metadatas"])
     if not data["ids"]:
         logger.info("Koleksiyon boş, migration gerekmiyor.")
-        return
+        return {"updated": 0, "skipped": 0, "missing_pdfs": 0}
+
+    # PDF başına bir kez hesapla — 11k chunk için 500 PDF açımı yerine 500 cache hit
+    pdf_cache: dict[str, tuple[str, str]] = {}
+    missing_pdfs: set[str] = set()
+
+    LEGACY_PLACEHOLDERS = {"legacy_data_1234", "2026-04-25"}
+
+    def _get_for_source(kaynak_dosya: str) -> tuple[str, str]:
+        if kaynak_dosya in pdf_cache:
+            return pdf_cache[kaynak_dosya]
+        pdf_path = pdf_root / kaynak_dosya
+        if not pdf_path.exists():
+            missing_pdfs.add(kaynak_dosya)
+            pdf_cache[kaynak_dosya] = ("unknown", "unknown")
+            return pdf_cache[kaynak_dosya]
+        result = _extract_pdf_date_and_hash(pdf_path)
+        pdf_cache[kaynak_dosya] = result
+        return result
 
     ids_to_update = []
     new_metadatas = []
+    skipped = 0
 
     for chunk_id, meta in zip(data["ids"], data["metadatas"]):
-        if "kub_parse_date" in meta and "kub_pdf_hash" in meta:
+        existing_date = meta.get("kub_parse_date", "")
+        existing_hash = meta.get("kub_pdf_hash", "")
+
+        is_legacy = (
+            existing_hash in LEGACY_PLACEHOLDERS
+            or existing_date in LEGACY_PLACEHOLDERS
+        )
+        is_real = (
+            existing_date and existing_hash
+            and existing_date != "unknown" and existing_hash != "unknown"
+            and not is_legacy
+        )
+
+        if is_real and not force:
+            skipped += 1
             continue
-            
+
+        kaynak_dosya = meta.get("kaynak_dosya", "")
+        if not kaynak_dosya:
+            skipped += 1
+            continue
+
+        kub_parse_date, kub_pdf_hash = _get_for_source(kaynak_dosya)
+
         new_meta = meta.copy()
-        new_meta["kub_parse_date"] = "2026-04-25"
-        new_meta["kub_pdf_hash"] = "legacy_data_1234"
-        
+        new_meta["kub_parse_date"] = kub_parse_date
+        new_meta["kub_pdf_hash"] = kub_pdf_hash
+
         ids_to_update.append(chunk_id)
         new_metadatas.append(new_meta)
 
     if ids_to_update:
-        logger.info(f"{len(ids_to_update)} chunk için metadata update ediliyor...")
-        # Batch update (ChromaDB limitleri için max 5000)
+        logger.info(
+            f"{len(ids_to_update)} chunk güncelleniyor (PDF cache: {len(pdf_cache)} dosya, "
+            f"missing: {len(missing_pdfs)})..."
+        )
         batch_size = 5000
         for i in range(0, len(ids_to_update), batch_size):
             collection.update(
@@ -514,7 +606,19 @@ def migrate_add_kub_dates() -> None:
             )
         logger.info("Migration tamamlandı.")
     else:
-        logger.info("Tüm chunk'lar güncel, migration gerekmiyor.")
+        logger.info(f"Güncellenecek chunk yok (skipped: {skipped}).")
+
+    if missing_pdfs:
+        logger.warning(
+            f"{len(missing_pdfs)} PDF bulunamadı (örn: {list(missing_pdfs)[:3]}). "
+            f"Bu chunk'lara 'unknown' yazıldı."
+        )
+
+    return {
+        "updated": len(ids_to_update),
+        "skipped": skipped,
+        "missing_pdfs": len(missing_pdfs),
+    }
 
 
 def collection_stats() -> dict:

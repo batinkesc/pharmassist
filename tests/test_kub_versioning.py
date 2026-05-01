@@ -2,8 +2,10 @@
 KÜB Versioning (Task 1) için birim testleri.
 """
 
+import re
 import pytest
 from datetime import datetime
+from pathlib import Path
 from src.agents.rag_engine import RetrievedChunk, RAGResponse
 
 def test_chunk_tarih_toplama():
@@ -56,3 +58,117 @@ def test_response_schema_tarih():
     )
     assert hasattr(resp, "kub_tarihleri")
     assert resp.kub_tarihleri == ["Lustral (2026-05-01)"]
+
+
+# ---------------------------------------------------------------------------
+# Gerçek PDF üzerinden parser ve metadata propagation testleri
+# ---------------------------------------------------------------------------
+
+PDF_DIR = Path("data/raw_pdfs")
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+HASH_RE = re.compile(r"^[0-9a-f]{16}$")
+
+
+def _pick_sample_pdf() -> Path | None:
+    """Test için ilk uygun PDF'i seçer; corpus yoksa None döner."""
+    if not PDF_DIR.exists():
+        return None
+    pdfs = sorted(PDF_DIR.glob("*.pdf"))
+    return pdfs[0] if pdfs else None
+
+
+@pytest.mark.skipif(_pick_sample_pdf() is None, reason="data/raw_pdfs/ corpus yok")
+def test_pdf_parser_real_date_and_hash():
+    """KUBParser bir gerçek PDF'i parse edip kub_parse_date + kub_pdf_hash dolduruyor mu?"""
+    from src.ingestion.pdf_parser import KUBParser
+
+    pdf_path = _pick_sample_pdf()
+    parser = KUBParser()
+    result = parser.parse(pdf_path)
+    chunks = result["chunks"]
+
+    assert len(chunks) > 0, "Parser hiç chunk üretmedi"
+
+    for chunk in chunks:
+        assert "kub_parse_date" in chunk, f"chunk {chunk.get('chunk_id')} kub_parse_date eksik"
+        assert "kub_pdf_hash" in chunk, f"chunk {chunk.get('chunk_id')} kub_pdf_hash eksik"
+
+    # Tarih boş olmamalı (modDate / mtime / now() fallback'ten biri yakalar)
+    sample = chunks[0]
+    assert sample["kub_parse_date"], "kub_parse_date boş — fallback zinciri kırık"
+    assert DATE_RE.match(sample["kub_parse_date"]), (
+        f"Tarih formatı YYYY-MM-DD değil: {sample['kub_parse_date']!r}"
+    )
+
+    # Hash 16 hex karakter olmalı (veya 'unknown' fallback — ama dosya okunabildiği için olmamalı)
+    assert HASH_RE.match(sample["kub_pdf_hash"]), (
+        f"Hash 16 hex değil: {sample['kub_pdf_hash']!r}"
+    )
+
+    # Aynı PDF'in tüm chunk'larında tarih ve hash tutarlı olmalı
+    dates = {c["kub_parse_date"] for c in chunks}
+    hashes = {c["kub_pdf_hash"] for c in chunks}
+    assert len(dates) == 1, f"Tek PDF'de birden fazla tarih: {dates}"
+    assert len(hashes) == 1, f"Tek PDF'de birden fazla hash: {hashes}"
+
+
+@pytest.mark.skipif(_pick_sample_pdf() is None, reason="data/raw_pdfs/ corpus yok")
+def test_migration_helper_extracts_real_values():
+    """_extract_pdf_date_and_hash gerçek bir PDF üzerinde dummy değer üretmiyor mu?"""
+    from src.retrieval.chroma_store import _extract_pdf_date_and_hash
+
+    pdf_path = _pick_sample_pdf()
+    parse_date, pdf_hash = _extract_pdf_date_and_hash(pdf_path)
+
+    assert parse_date != "unknown", "Mevcut PDF için 'unknown' tarih dönmemeli"
+    assert pdf_hash != "unknown", "Mevcut PDF için 'unknown' hash dönmemeli"
+    assert pdf_hash != "legacy_data_1234", "Legacy placeholder döndü"
+    assert parse_date != "2026-04-25" or DATE_RE.match(parse_date), (
+        "Tarih hâlâ legacy placeholder gibi görünüyor"
+    )
+    assert DATE_RE.match(parse_date), f"Tarih formatı bozuk: {parse_date!r}"
+    assert HASH_RE.match(pdf_hash), f"Hash 16 hex değil: {pdf_hash!r}"
+
+
+def test_chroma_metadata_has_real_versioning():
+    """
+    ChromaDB metadata'sı migration sonrası gerçek değerler içeriyor mu?
+    Legacy placeholder'lar (legacy_data_1234) silinmiş olmalı.
+    """
+    try:
+        from src.retrieval.chroma_store import get_chroma_client, get_or_create_collection
+    except Exception as e:
+        pytest.skip(f"ChromaDB import edilemedi: {e}")
+
+    try:
+        col = get_or_create_collection(get_chroma_client())
+        data = col.get(include=["metadatas"])
+    except Exception as e:
+        pytest.skip(f"ChromaDB erişimi yok: {e}")
+
+    if not data["ids"]:
+        pytest.skip("ChromaDB boş — migration test edilemez")
+
+    dates = set()
+    hashes = set()
+    legacy_hits = 0
+    for m in data["metadatas"]:
+        d = m.get("kub_parse_date", "")
+        h = m.get("kub_pdf_hash", "")
+        dates.add(d)
+        hashes.add(h)
+        if h == "legacy_data_1234":
+            legacy_hits += 1
+
+    assert legacy_hits == 0, (
+        f"{legacy_hits} chunk hâlâ 'legacy_data_1234' placeholder hash içeriyor"
+    )
+    # En az 2 farklı tarih olmalı (gerçek corpus farklı tarihli ilaç içerir)
+    real_dates = {d for d in dates if d and d != "unknown"}
+    assert len(real_dates) >= 2, (
+        f"Gerçek tarih çeşitliliği yok ({len(real_dates)}): {real_dates}"
+    )
+    real_hashes = {h for h in hashes if h and h != "unknown"}
+    assert len(real_hashes) >= 2, (
+        f"Hash çeşitliliği yok ({len(real_hashes)})"
+    )
