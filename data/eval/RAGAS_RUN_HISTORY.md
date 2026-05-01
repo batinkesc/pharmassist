@@ -152,3 +152,12 @@ Bu çalıştırmalar evaluator seçimi, NaN sorunu ve Turkish patch gibi konular
 - **NaN:** Mistral'ın RAGAS JSON çıktısını parse edemediği durumlarda NaN oluşur — o soru ortalamadan çıkarılır.
 - **Together AI Qwen3-235B:** Run 11+ evaluator. Mistral/qwen2.5'ten daha tutarlı JSON çıktısı; NaN oranı düşük. Context_utilization NaN: LLM karmaşık sorularda CU judgment üretemediğinde (Q14 ALDACTONE+PLASORİN, Q23 TEGRETOL+LAMICTAL).
 - **Context Utilization (CU):** Run 11'den itibaren standart metrik. Rakam interpretation: 0.80+ = iyi retrieval-answer alignment, 0.50 altı = getirilen chunk'lar cevaba yansımıyor.
+
+---
+
+## Session 2026-05-01 Notları
+AC (Answer Correctness) mini testi yapıldı (5 soru):
+- Qwen3 ile: 2/5 NaN (citation bracket + `<` + çift tırnak parse sorunu)
+- Haiku ile: 0/5 NaN ama $0.70/5 soru → çok pahalı
+- AC fix: _strip_citations_for_ac() eklendi, max_workers=1 — hâlâ 1 NaN kaldı (Q02)
+- Karar: AC rafa, CU+CR+FF (referans) ile devam

@@ -1,8 +1,8 @@
 # PharmAssist — Proje Dokümantasyonu
 
-**Versiyon:** 1.8.0  
-**Son Güncelleme:** 2026-04-30  
-**Durum:** 3-katman yanıt formatı ([KÜB Aktarımı]/[Sistem Tespitleri]/[Değerlendirme]) uygulandı. VALIDATE step 7 eklendi. CYP extraction Neo4j'e taşındı (API maliyeti azaltıldı). **Run 20: F:0.7192 | CU:0.7823 | CR:0.9010 | Ort:0.8008** — baseline Run 18'e göre +0.1pp; CU +3.1pp ↑. **AKTİF BASELINE: Run 18** (F:0.7127 | CU:0.7516 | CR:0.9343 | Ort:0.7995 ✓). **95 test geçiyor.** Eski baseline: Run 12 (F:0.7607 | CU:0.8028 | CR:0.7250).
+**Versiyon:** 1.9.0  
+**Son Güncelleme:** 2026-05-01  
+**Durum:** 3-katman yanıt formatı ([KÜB Aktarımı]/[Sistem Tespitleri]/[Değerlendirme]) uygulandı. CYP extraction Neo4j'e taşındı. HyDE Together AI'a taşındı (4→1 API çağrısı). **AKTİF BASELINE: Run 20** (F:0.7192 | CU:0.7823 | CR:0.9010 | Ort:0.8008 ✓). AC metrik araştırması yapıldı (rafa kaldırıldı). **Aktif geliştirme durduruldu — proje analiz + sunum hazırlığı aşamasına geçildi.**
 
 ---
 
@@ -1341,3 +1341,11 @@ for r in rows: print(r['m.name'], r['c'])
 - **v1.0 Stable kararı:** Faithfulness >0.70 ✅ aşıldı; CR >0.80 hedefi kalan
 - **OCR genişleme:** Karantinadaki 47 PDF işlenmesi (~$30 maliyet)
 - **RAG prompt optimizasyonu:** Context Recall 0.8065 → hedef 0.85+
+
+---
+
+## Session 2026-05-01 Notları
+- Answer Correctness (AC) metriği denendi — Qwen3 ile NaN sorunu (citation bracket + < + çift tırnak), Haiku ile pahalı ($0.70/5 soru)
+- Karar: AC şimdilik rafa, CU+CR+FF (bilgi amaçlı) ile devam
+- ragas_eval.py'e AC desteği eklendi (mode="ac"), _strip_citations_for_ac() fonksiyonu eklendi
+- Aktif geliştirme durduruldu, proje analiz + sunum hazırlığı aşamasına geçildi
