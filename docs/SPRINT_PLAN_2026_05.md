@@ -1,7 +1,8 @@
 # Sprint Planı — Sunum Hazırlığı (2026-05-01 → 2026-05-14)
 
-**Versiyon:** 1.1  
+**Versiyon:** 1.2  
 **Oluşturma:** 2026-05-01  
+**Son Güncelleme:** 2026-05-01 (Task 1 VERIFIED + retrospektif)  
 **Sunum Tarihi:** 2026-05-14/15  
 **Durum:** AKTİF
 
@@ -59,6 +60,16 @@ PharmAssist'in sunuma hazır hale gelmesi için tespit edilen açıkları kapatm
 8. **Türkçe değişken/fonksiyon adları** kullanılıyor — yenide aynı stili sürdür.
 9. **ChromaDB persistent veriyi WIPE ETME.** Migration gerekiyorsa idempotent script yaz.
 10. **Antigravity ya da Claude Code:** task'ı bitirdikten sonra `## Antigravity Notları` veya `## Doğrulama Notları` bölümünü doldur, status'u güncelle, **sıradaki task'ı kendiliğinden başlatma**.
+
+### Task 1 Retrospektifi — Sonraki Task'lar İçin Notlar (Antigravity'ye)
+
+Task 1 doğrulamada 3 sorun çıktı; aynı hatalar tekrar etmesin:
+
+1. **Placeholder/dummy değer YASAK.** Migration veya yeni alan eklerken "anlamlı görünen ama uydurulmuş" sabitler yazma (ör. `"legacy_data_1234"`, sabit tarih). Gerçek değer henüz hesaplanamıyorsa `"unknown"` yaz — test bunu yakalayabilir. Task 1'de tüm 11.843 chunk aynı sahte tarihle güncellenmişti, footer anlamsız çalışırdı.
+2. **Test "dataclass plumbing"den ileri gitmeli.** Sadece `dataclass(field=...)` doğrulayan birim test geçer ama bir şey ispatlamaz. Eklediğin alanın **gerçek veri yolunu** (PDF parse → ChromaDB metadata → retrieval → response) en az bir noktada gerçek fixture ile test et. ChromaDB persistent veriye karşı sanity check (`legacy_hits == 0`, `unique_count >= 2`) yazmak hızlı ve etkili.
+3. **Shell debug log'ları commit'leme.** `> test_log.txt` gibi dosyalar artık `.gitignore`'da (`test_log*.txt`). `git add` öncesi `git status` çıktısını kontrol et — çıkmaması gereken dosya görürsen ekleme.
+
+Ek ipucu: Task spec'indeki "Acceptance Criteria"yı yazılı doğrulama komutuyla test et, "görsel kontrol" yetmez. Task 1 AC "peek çıktısında alan görünmeli" diyordu ama görünüyor olması anlamlı olmasını garantilemiyordu — daha sıkı AC: "≥2 unique tarih, ≥2 unique hash".
 
 ### Çıktı Format Standardı (her task sonunda)
 ```
@@ -128,7 +139,7 @@ PENDING_DETAIL → READY → IN_PROGRESS → DONE → VERIFIED
 
 | # | Task | Tahmini Süre | Atanabilir | Status |
 |---|------|--------------|-----------|--------|
-| 1 | KÜB Versioning + Cevap Footer | 1 gün | Antigravity | `IN_PROGRESS` |
+| 1 | KÜB Versioning + Cevap Footer | 1 gün | Antigravity | `VERIFIED` ✅ |
 | 2 | Aggregate Confidence Label | 1 gün | Antigravity | `READY` |
 | 3 | Cross-Evaluator Agreement Script | 1.5 gün | Antigravity | `PENDING_DETAIL` |
 | 4 | VALIDATE Coverage Metric | 1 gün | Antigravity | `PENDING_DETAIL` |
