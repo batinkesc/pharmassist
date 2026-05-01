@@ -113,6 +113,8 @@ class QueryResponse(BaseModel):
     cyp_source: str = "unknown"
     quarantine_warnings: list[str] = []
     kub_tarihleri: list[str] = []
+    guven_skoru: float = 0.0
+    guven_etiketi: str = ""
 
 
 class StatsResponse(BaseModel):

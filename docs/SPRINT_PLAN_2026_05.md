@@ -269,8 +269,8 @@ Yapılan düzeltmeler (Claude Code, commit: TBD):
 
 ### Task 2: Aggregate Confidence Label
 
-**Status:** `READY`  
-**Atanan:** —  
+**Status:** `IN_PROGRESS`  
+**Atanan:** Antigravity  
 **Tahmini Süre:** 1 gün  
 **Bağımlılık:** Yok (Task 1'den bağımsız)
 

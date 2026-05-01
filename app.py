@@ -621,6 +621,20 @@ def _yanit_goster(response, ctx: ExtractedContext):
     # Risk badge'leri
     _risk_badges(response, ctx)
 
+    # Güven Skoru Badge
+    if hasattr(response, "guven_etiketi") and response.guven_etiketi:
+        if "Yüksek" in response.guven_etiketi:
+            renk = "#16a34a"  # yeşil
+        elif "Orta" in response.guven_etiketi:
+            renk = "#ca8a04"  # sarı
+        elif "Düşük" in response.guven_etiketi:
+            renk = "#dc2626"  # kırmızı
+        else:
+            renk = "#6b7280"  # gri
+        
+        guven_str = f"⬤ {response.guven_etiketi} ({response.guven_skoru:.2f})"
+        st.markdown(f'<div style="color:{renk}; font-weight:600; font-size:0.9rem; margin-bottom:12px;">{guven_str}</div>', unsafe_allow_html=True)
+
     # Klinik yanıt
     st.markdown(response.yanit)
 

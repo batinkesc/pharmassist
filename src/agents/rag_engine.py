@@ -139,6 +139,8 @@ class RAGResponse:
     graf_baglami: str = ""      # Neo4j özet metni (RAGAS contexts için)
     kumlatif_metin: str = ""    # Kümülatif risk özet metni (RAGAS contexts için)
     cyp_metin: str = ""         # CYP450 özet metni (RAGAS contexts için)
+    guven_skoru: float = 0.0
+    guven_etiketi: str = ""
 
     def kaynak_listesi(self) -> str:
         """Kullanılan kaynakları formatlı liste olarak döner."""
@@ -1811,6 +1813,40 @@ def _auto_detect_drugs_from_query(soru: str) -> list[str]:
     return detected
 
 
+def _hesapla_guven_skoru(
+    kaynaklar: list[RetrievedChunk],
+    yanit_metni: str,
+) -> tuple[float, str]:
+    """
+    0.0-1.0 arası güven skoru ve etiket döner.
+    """
+    import re
+    if not kaynaklar or not yanit_metni.strip():
+        return 0.0, "Kaynak yok — yanıt üretilmedi"
+
+    # retrieval_skoru = mean(top-3 chunk score)
+    top_scores = [c.score for c in sorted(kaynaklar, key=lambda x: x.score, reverse=True)[:3]]
+    retrieval_skoru = sum(top_scores) / len(top_scores) if top_scores else 0.0
+
+    # Cümle sayımı
+    cumleler = [c.strip() for c in re.split(r'[.!?]+', yanit_metni) if c.strip()]
+    cumle_sayisi = len(cumleler)
+    
+    validate_sayisi = yanit_metni.count("[DOĞRULANAMADI]") + yanit_metni.count("[AŞIRI YORUM")
+    validate_orani = max(0.0, 1.0 - (validate_sayisi / max(cumle_sayisi, 1)))
+
+    guven = 0.6 * retrieval_skoru + 0.4 * validate_orani
+
+    if guven >= 0.75:
+        etiket = "Yüksek güven"
+    elif guven >= 0.55:
+        etiket = "Orta güven"
+    else:
+        etiket = "Düşük güven — manuel doğrulama önerilir"
+
+    return guven, etiket
+
+
 def run_rag(
     soru: str,
     profil: PatientProfile,
@@ -2017,6 +2053,7 @@ def run_rag(
         if c.kub_parse_date and c.kub_parse_date != "unknown":
             tarih_kumesi.add(f"{c.ilac_adi} ({c.kub_parse_date})")
     kub_tarihleri = sorted(list(tarih_kumesi))
+    guven_skoru, guven_etiketi = _hesapla_guven_skoru(chunklar, yanit)
 
     return RAGResponse(
         soru=soru,
@@ -2035,6 +2072,8 @@ def run_rag(
         cyp_metin=cyp_metin,
         quarantine_warnings=quarantine_warnings,
         kub_tarihleri=kub_tarihleri,
+        guven_skoru=guven_skoru,
+        guven_etiketi=guven_etiketi,
     )
 
 
