@@ -81,6 +81,16 @@ def _get_llm(provider: str | None = None):
             max_tokens=4096,
         )
 
+    if provider == "model_b":
+        model_b = os.environ.get("RAGAS_MODEL_2", "deepseek-ai/DeepSeek-V3-1")
+        api_key  = os.environ.get("TOGETHER_API_KEY") or os.environ.get("LM_STUDIO_API_KEY")
+        base_url = os.environ.get("LM_STUDIO_URL", "https://api.together.xyz/v1")
+        logger.info(f"Değerlendirici B: {model_b}")
+        return ChatOpenAI(
+            base_url=base_url, api_key=api_key, model=model_b,
+            temperature=0, max_tokens=4096, timeout=600,
+        )
+
     lm_studio_url = os.environ.get("LM_STUDIO_URL", "http://localhost:1234/v1")
     model_name = (
         os.environ.get("RAGAS_MODEL")
