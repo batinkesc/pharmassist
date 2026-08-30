@@ -195,7 +195,7 @@ pytest tests/ -v              # 96 unit tests, no live services required
 - [`PROJE_DOKUMANTASYONU.md`](PROJE_DOKUMANTASYONU.md) — full technical documentation (Turkish)
 - [`docs/ARCHITECTURE_STANDARDS.md`](docs/ARCHITECTURE_STANDARDS.md) — architecture standards (Turkish)
 - [`data/eval/RAGAS_RUN_HISTORY.md`](data/eval/RAGAS_RUN_HISTORY.md) — all 20 evaluation runs
-- [`data/diagrams/english/`](data/diagrams/english/) — UML diagrams in English (sequence, class)
+- [`data/diagrams/english/`](data/diagrams/english/) — UML diagrams in English (sequence, class, use case, activity)
 - [`README_TR.md`](README_TR.md) — this README in Turkish
 
 ## License

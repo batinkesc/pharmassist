@@ -1,0 +1,15 @@
+@startuml UC4_CYP_Activity_EN
+skinparam monochrome true
+skinparam shadowing false
+start
+:Fetch CYP450 profiles of drugs\n(Neo4j records + static table);
+:Check enzyme overlaps\n(substrate vs. inhibitor/inducer);
+if (Inhibitor or inducer?) then (Inhibitor)
+  :Toxicity risk warning\n(substrate exposure ↑);
+else (Inducer)
+  :Reduced efficacy warning\n(substrate exposure ↓);
+endif
+:Build clinical recommendation;
+:Generate CYP interaction report;
+stop
+@enduml

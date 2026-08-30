@@ -1,0 +1,16 @@
+@startuml UC2_Risk_Activity_EN
+skinparam monochrome true
+skinparam shadowing false
+start
+:Read patient profile\n(age, GFR, liver score, drugs, labs);
+:Scan section 4.3 for contraindications;
+:Check lab values against thresholds;
+:Score risks\n(cumulative side-effect categories);
+if (Critical risk found?) then (Yes)
+  :Hard warning / contraindicated verdict;
+else (No)
+  :Precaution / dose-adjustment note;
+endif
+:Generate risk analysis report;
+stop
+@enduml

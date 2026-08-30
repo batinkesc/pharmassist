@@ -1,0 +1,48 @@
+@startuml PharmAssist_UseCase_EN
+left to right direction
+skinparam monochrome true
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+actor "Clinician" as User
+
+package "PharmAssist" {
+  usecase "Enter Patient Profile\n(age, GFR, drugs, allergies)" as UC_Profile
+  usecase "Upload Lab Report PDF\n(44+ parameters, auto-parsed)" as UC_Lab
+  usecase "Ask Drug Combination Question\n(e.g. Augmentin + Warfarin)" as UC_Query
+  usecase "Analyze Drug Interactions" as UC_Interact
+  usecase "Check Contraindications" as UC_Contra
+  usecase "Compute Cumulative Risk" as UC_Risk
+  usecase "Map CYP450 Enzymes" as UC_CYP
+  usecase "Show Answer + Citations\n(3-layer, VALIDATE-tagged)" as UC_Response
+  usecase "Add Risk Warnings" as UC_Alert
+}
+
+database "ChromaDB" as DB_Vector
+database "Neo4j" as DB_Graph
+cloud "Claude Haiku API" as AI_Engine
+
+User --> UC_Profile : enters
+User --> UC_Lab : uploads
+User --> UC_Query : asks
+UC_Lab ..> UC_Profile : <<extend>>
+UC_Profile ..> UC_Query : <<include>>
+
+UC_Query --> UC_Interact
+UC_Query --> UC_Contra
+UC_Query --> UC_Risk
+UC_Query --> UC_CYP
+
+UC_Interact --> DB_Graph : query interactions
+UC_Contra --> DB_Graph : query contraindications
+UC_Interact --> DB_Vector : search SmPC text
+UC_CYP --> DB_Graph : fetch CYP450 records
+
+UC_Interact --> AI_Engine
+UC_Contra --> AI_Engine
+UC_Risk --> AI_Engine
+UC_CYP --> AI_Engine
+
+UC_Response --> User
+UC_Response --> UC_Alert
+@enduml

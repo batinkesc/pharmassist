@@ -1,0 +1,13 @@
+@startuml UC1_Interaction_Activity_EN
+skinparam monochrome true
+skinparam shadowing false
+start
+:Get drug names from query/profile;
+:Normalize drug names\n(NameResolver, trademark symbols);
+:Neo4j: query interaction graph\n(INTERACTS_WITH edges);
+:ChromaDB: retrieve section 4.5 texts\n(hybrid BM25 + semantic);
+:Merge graph and text evidence;
+:Determine severity level;
+:Generate interaction report;
+stop
+@enduml

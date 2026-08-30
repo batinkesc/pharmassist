@@ -167,7 +167,7 @@ pytest tests/ -v              # 96 birim test, canlı servis gerektirmez
 - [`PROJE_DOKUMANTASYONU.md`](PROJE_DOKUMANTASYONU.md) — mimari, pipeline, API, RAGAS geçmişi
 - [`docs/ARCHITECTURE_STANDARDS.md`](docs/ARCHITECTURE_STANDARDS.md) — mimari standartlar
 - [`data/eval/RAGAS_RUN_HISTORY.md`](data/eval/RAGAS_RUN_HISTORY.md) — tüm run geçmişi
-- [`data/diagrams/english/`](data/diagrams/english/) — İngilizce UML diyagramları (sequence, class)
+- [`data/diagrams/english/`](data/diagrams/english/) — İngilizce UML diyagramları (sequence, class, use case, activity)
 - [`README.md`](README.md) — English version
 
 ## Lisans

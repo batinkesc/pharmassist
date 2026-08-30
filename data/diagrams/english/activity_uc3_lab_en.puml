@@ -1,0 +1,16 @@
+@startuml UC3_Lab_Activity_EN
+skinparam monochrome true
+skinparam shadowing false
+start
+:Upload lab report PDF;
+:Extract text (PyMuPDF);
+if (Text extractable?) then (Yes)
+else (No — scanned image)
+  :OCR fallback (pytesseract);
+endif
+:Parse rows with regex patterns\n(44+ lab parameters, units);
+:Validate against reference ranges;
+:Flag values\n(critical / abnormal / normal);
+:Merge into patient profile;
+stop
+@enduml
