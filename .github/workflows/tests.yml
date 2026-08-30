@@ -25,6 +25,3 @@ jobs:
 
       - name: Run unit tests
         run: pytest tests/ -q
-        env:
-          # Tests run without live services or real API keys
-          ANTHROPIC_API_KEY: ""

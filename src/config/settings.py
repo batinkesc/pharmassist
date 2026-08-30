@@ -64,6 +64,9 @@ class Settings(BaseSettings):
     def validate_anthropic_key(cls, v: Optional[str], info) -> Optional[str]:
         # Sadece llm_provider=claude ise zorunlu — provider değerini values'dan okuyamayız
         # çünkü henüz validate edilmemiş olabilir; runtime'da main.py'den kontrol edilir.
+        # Boş string = tanımsız say (.env.example'daki boş satır veya CI env'i).
+        if v is not None:
+            v = v.strip() or None
         if v is not None and not v.startswith("sk-ant-"):
             raise ValueError("ANTHROPIC_API_KEY geçersiz format (sk-ant- ile başlamalı)")
         return v

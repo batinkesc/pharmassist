@@ -29,6 +29,13 @@ class TestSettings:
         with pytest.raises(ValidationError):
             Settings(_env_file=None)
 
+    def test_empty_anthropic_key_treated_as_none(self, monkeypatch):
+        # .env.example'daki boş `ANTHROPIC_API_KEY=` satırı veya CI'daki boş env
+        # crash'e yol açmamalı — boş string tanımsız sayılır.
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+        s = Settings(_env_file=None)
+        assert s.anthropic_api_key is None
+
     def test_invalid_neo4j_url(self, monkeypatch):
         from pydantic import ValidationError
         monkeypatch.setenv("NEO4J_URL", "http://localhost:7687")

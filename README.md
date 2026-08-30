@@ -76,7 +76,7 @@ Answers use a 3-layer format separating **verbatim label transfer**, **system fi
 | API | FastAPI |
 | Frontend | Streamlit |
 | Evaluation | RAGAS (3 metrics) |
-| Tests | pytest — 95 tests |
+| Tests | pytest — 96 tests |
 
 ## Corpus
 
@@ -165,7 +165,7 @@ python scripts/run_eval.py    # RAGAS evaluation (requires evaluator API key in 
 ```
 
 ```bash
-pytest tests/ -v              # 95 unit tests, no live services required
+pytest tests/ -v              # 96 unit tests, no live services required
 ```
 
 ## Project Structure
@@ -183,7 +183,7 @@ pytest tests/ -v              # 95 unit tests, no live services required
 │   ├── api/                    # FastAPI routes and schemas
 │   └── evaluation/             # RAGAS integration
 ├── scripts/                    # Ingestion, graph loading, evaluation
-├── tests/                      # 95 pytest tests
+├── tests/                      # 96 pytest tests
 ├── data/
 │   ├── eval/                   # RAGAS results + run history
 │   └── diagrams/               # UML diagrams (class, sequence, use case, activity)

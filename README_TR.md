@@ -70,7 +70,7 @@ Yanıtlar **[KÜB Aktarımı]** / **[Sistem Tespitleri]** / **[Değerlendirme]**
 | API | FastAPI |
 | Frontend | Streamlit |
 | Değerlendirme | RAGAS (3 metrik) |
-| Test | pytest — 95 test |
+| Test | pytest — 96 test |
 
 ## Corpus
 
@@ -159,7 +159,7 @@ python scripts/run_eval.py    # RAGAS değerlendirmesi (.env'de evaluator API an
 ```
 
 ```bash
-pytest tests/ -v              # 95 birim test, canlı servis gerektirmez
+pytest tests/ -v              # 96 birim test, canlı servis gerektirmez
 ```
 
 ## Detaylı Dokümantasyon
