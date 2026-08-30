@@ -1145,7 +1145,7 @@ Resim bazlı PDF'leri işlemek için Claude Haiku Vision tabanlı OCR sistemi ge
 **Sorun:** İlaç adlarındaki trademark (®/™) sembolleri ve Unicode karakter uyumsuzlukları retrieval recall kaybına yol açıyordu.
 
 **Çözüm:** 
-- Merkezi [normalization.py](file:///c:/Users/kesic/Desktop/PharmAssistVersion2/src/data/normalization.py) modülü oluşturuldu.
+- Merkezi [normalization.py](src/data/normalization.py) modülü oluşturuldu.
 - Neo4j ve ChromaDB veritabanları kalıcı olarak normalize edildi.
 - **Sonuç:** Trademark sembolü içeren 0 kayıt kaldı; recall hataları çözüldü.
 
@@ -1154,7 +1154,7 @@ Resim bazlı PDF'leri işlemek için Claude Haiku Vision tabanlı OCR sistemi ge
 **Sorun:** Manuel CYP450 listesinin bakımı zordur ve yeni ilaçları kapsayamazdı.
 
 **Çözüm:** 
-- [cyp450_extractor.py](file:///c:/Users/kesic/Desktop/PharmAssistVersion2/src/analysis/cyp450_extractor.py) ile LLM tabanlı fallback extraction eklendi.
+- [cyp450_extractor.py](src/analysis/cyp450_extractor.py) ile LLM tabanlı fallback extraction eklendi.
 - **Sonuç:** Manuel veri girişi zorunluluğu ortadan kalktı.
 
 ---

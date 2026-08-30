@@ -60,3 +60,11 @@ Thumbs.db
 # Ollama / model dosyaları
 *.gguf
 *.bin
+
+# Kişisel MCP konfigürasyonu (makineye özel path'ler içerir)
+.mcp.json
+
+# Arşivler — git history'de mevcut, public görünümden çıkarıldı
+scripts/archive_oneoff/
+data/eval/archive/
+docs/archive/

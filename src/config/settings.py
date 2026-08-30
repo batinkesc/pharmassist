@@ -32,12 +32,6 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------
     # Veritabanları
     # ------------------------------------------------------------------
-    postgres_host: str = "localhost"
-    postgres_port: int = 5432
-    postgres_db: str = "pharmassist"
-    postgres_user: str = "postgres"
-    postgres_password: Optional[str] = Field(None, alias="POSTGRES_PASSWORD")
-
     neo4j_url: str = "bolt://localhost:7687"
     neo4j_username: str = "neo4j"
     neo4j_password: Optional[str] = Field(None, alias="NEO4J_PASSWORD")

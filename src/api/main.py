@@ -40,8 +40,6 @@ async def lifespan(_app: FastAPI):
             "ANTHROPIC_API_KEY ayarlanmamış! .env dosyasını kontrol edin. "
             "API başlatılamadı."
         )
-    if not settings.postgres_password:
-        logger.warning("POSTGRES_PASSWORD ayarlanmamış — .env dosyasını kontrol edin.")
     if not settings.neo4j_password:
         logger.warning("NEO4J_PASSWORD ayarlanmamış — .env dosyasını kontrol edin.")
     if settings.auth_enabled:
