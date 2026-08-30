@@ -1,0 +1,62 @@
+@startuml PharmAssist_Sequence_EN
+skinparam monochrome true
+skinparam shadowing false
+
+actor Clinician as User
+participant "Streamlit UI" as UI
+participant "ProfileExtractor" as Profiler
+participant "RAG Engine" as Engine
+participant "HyDE\n(OpenAI-compatible endpoint)" as HyDE
+database "ChromaDB" as Vector
+database "Neo4j" as Graph
+participant "Claude Haiku" as LLM
+
+User -> UI : Enter free-text query\n(+ optional lab report PDF)
+UI -> Profiler : extract_context(text)
+Profiler --> UI : PatientProfile\n(age, GFR, drugs, diagnoses, labs)
+UI -> Engine : run_rag(query, profile)
+
+activate Engine
+
+' --- Query preparation ---
+Engine -> Engine : Normalize target drug names\n(NameResolver, trademark symbols)
+Engine -> Engine : QueryAugmentor: classify question type\n(contraindication / interaction / dose / side effect)\n+ prioritize SmPC sections
+
+' --- HyDE ---
+Engine -> HyDE : Generate hypothetical SmPC paragraph
+HyDE --> Engine : HyDE document (improves semantic recall)
+
+' --- Retrieval ---
+Engine -> Vector : Hybrid search (BM25 + semantic, RRF)\nsection-aware: 4.2 / 4.3 / 4.4 / 4.5 / 4.8
+Vector --> Engine : Candidate chunks (11,843 chunks, 501 drugs)
+Engine -> Engine : Cross-encoder reranking\n→ top-k chunks
+
+Engine -> Graph : Cypher query (INTERACTS_WITH, CYP450 edges)
+Graph --> Engine : Graph context (4,021 interactions + CYP records)
+
+Engine -> Engine : Cumulative risk analysis (9 categories)
+Engine -> Engine : Section coverage check
+
+' --- Pre-LLM: answer calibration ---
+Engine -> Engine : answer_calibration_label(chunks)\n[4.3 → CONTRAINDICATED | 4.4 → CAUTION | 4.2 → DOSE ADJUSTMENT]
+
+' --- LLM call ---
+Engine -> LLM : Generate answer\n(context + clinical label + 3-layer format prompt,\ndynamic max_tokens)
+LLM --> Engine : Raw clinical answer
+
+' --- Post-LLM: VALIDATE pipeline (7 deterministic checks) ---
+group VALIDATE Pipeline
+  Engine -> Engine : 1. Absolute safety claims → replaced with warning
+  Engine -> Engine : 2. Contraindication claim vs. section 4.3\n(synonym matching) → [OVER-INTERPRETATION]
+  Engine -> Engine : 3. Uncited medical claims → [UNVERIFIED]
+  Engine -> Engine : 4. Numeric claims vs. cited chunk values
+  Engine -> Engine : 5. CYP450 direction check\n(inhibitor ↑ / inducer ↓)
+  Engine -> Engine : 6. Verdict / severity alignment
+  Engine -> Engine : 7. 3-layer format structure check
+end group
+
+Engine --> UI : Final answer + citations + token stats\n(with VALIDATE tags)
+deactivate Engine
+
+UI -> User : Render 3-layer report\n[Label Transfer] / [System Findings] / [Assessment]
+@enduml
